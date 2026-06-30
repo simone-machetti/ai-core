@@ -1,0 +1,101 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\setlength{\mathindent}{0pt}
+\setlength{\abovedisplayskip}{6pt plus 2pt minus 2pt}
+\setlength{\belowdisplayskip}{6pt plus 2pt minus 2pt}
+\setlength{\abovedisplayshortskip}{3pt plus 1pt}
+\setlength{\belowdisplayshortskip}{3pt plus 1pt}
+\allowdisplaybreaks
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 12 --- Complex}}\\[4pt]
+{\large C-DP4 (C16$\times$C16) $\rightarrow$ DP8 (16$\times$16) $\rightarrow$ DP8 (16$\times$8) $\rightarrow$ DP8 (16$\times$4) $\rightarrow$ DP8 (8$\times$4)}
+\end{center}
+
+\vspace{1.5em}
+
+\noindent\textbf{Step 1 --- C-DP4 (C16$\times$C16)}
+\[
+\text{C-DP4}\,(\mathrm{C16}\!\times\!\mathrm{C16}) = D = \sum_{i=0}^{3} a_i \, b_i, \qquad
+a_i = a_i^{re} + \mathrm{j}\,a_i^{im}, \quad
+b_i = b_i^{re} + \mathrm{j}\,b_i^{im}
+\]
+
+\vspace{0.3em}
+
+\noindent\textbf{Step 2 --- DP8 (16$\times$16)}
+\[
+\mathrm{Re}(D) = \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{re}
+  - \sum_{i=0}^{3} a_i^{im} b_i^{im}}_{\DPop{8}{16}{16}}
+\]
+\[
+\mathrm{Im}(D) = \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{im}
+  + \sum_{i=0}^{3} a_i^{im} b_i^{re}}_{\DPop{8}{16}{16}}
+\]
+
+\vspace{0.3em}
+
+\noindent\textbf{Step 3 --- DP8 (16$\times$8) \quad (byte-split $b = 2^{8} b^{hi} + b^{lo}$)}
+\[
+\mathrm{Re}(D) = \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{re,hi}
+  - 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{im,hi}}_{\DPop{8}{16}{8}}
+  + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{re,lo}
+  - \sum_{i=0}^{3} a_i^{im} b_i^{im,lo}}_{\DPop{8}{16}{8}}
+\]
+\[
+\mathrm{Im}(D) = \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{im,hi}
+  + 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{re,hi}}_{\DPop{8}{16}{8}}
+  + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{im,lo}
+  + \sum_{i=0}^{3} a_i^{im} b_i^{re,lo}}_{\DPop{8}{16}{8}}
+\]
+
+\vspace{0.3em}
+
+\noindent\textbf{Step 4 --- DP8 (16$\times$4) \quad (nibble-split each byte)}
+\begin{align*}
+\mathrm{Re}(D) = {}
+  & \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re} b_i^{re,hh} - 2^{12}\sum_{i=0}^{3} a_i^{im} b_i^{im,hh}}_{\DPop{8}{16}{4}} \\[0.7em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{re,hl} - 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{im,hl}}_{\DPop{8}{16}{4}} \\[0.7em]
+  & + \underbrace{2^{4}\sum_{i=0}^{3} a_i^{re} b_i^{re,lh} - 2^{4}\sum_{i=0}^{3} a_i^{im} b_i^{im,lh}}_{\DPop{8}{16}{4}} \\[0.7em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{re,ll} - \sum_{i=0}^{3} a_i^{im} b_i^{im,ll}}_{\DPop{8}{16}{4}}
+\end{align*}
+\begin{align*}
+\mathrm{Im}(D) = {}
+  & \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re} b_i^{im,hh} + 2^{12}\sum_{i=0}^{3} a_i^{im} b_i^{re,hh}}_{\DPop{8}{16}{4}} \\[0.7em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{im,hl} + 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{re,hl}}_{\DPop{8}{16}{4}} \\[0.7em]
+  & + \underbrace{2^{4}\sum_{i=0}^{3} a_i^{re} b_i^{im,lh} + 2^{4}\sum_{i=0}^{3} a_i^{im} b_i^{re,lh}}_{\DPop{8}{16}{4}} \\[0.7em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{im,ll} + \sum_{i=0}^{3} a_i^{im} b_i^{re,ll}}_{\DPop{8}{16}{4}}
+\end{align*}
+
+\vspace{0.3em}
+
+\noindent\textbf{Step 5 --- DP8 (8$\times$4) \quad (byte-split $a = 2^{8} a^{hi} + a^{lo}$)}
+\begin{align*}
+\mathrm{Re}(D) = {}
+  & \underbrace{2^{20}\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,hh} - 2^{20}\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,hh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,hh} - 2^{12}\sum_{i=0}^{3} a_i^{im,lo} b_i^{im,hh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{16}\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,hl} - 2^{16}\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,hl}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,hl} - 2^{8}\sum_{i=0}^{3} a_i^{im,lo} b_i^{im,hl}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,lh} - 2^{12}\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,lh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{4}\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,lh} - 2^{4}\sum_{i=0}^{3} a_i^{im,lo} b_i^{im,lh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,ll} - 2^{8}\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,ll}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,ll} - \sum_{i=0}^{3} a_i^{im,lo} b_i^{im,ll}}_{\DPop{8}{8}{4}}
+\end{align*}
+\begin{align*}
+\mathrm{Im}(D) = {}
+  & \underbrace{2^{20}\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,hh} + 2^{20}\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,hh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,hh} + 2^{12}\sum_{i=0}^{3} a_i^{im,lo} b_i^{re,hh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{16}\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,hl} + 2^{16}\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,hl}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,hl} + 2^{8}\sum_{i=0}^{3} a_i^{im,lo} b_i^{re,hl}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,lh} + 2^{12}\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,lh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{4}\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,lh} + 2^{4}\sum_{i=0}^{3} a_i^{im,lo} b_i^{re,lh}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,ll} + 2^{8}\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,ll}}_{\DPop{8}{8}{4}} \\[0.7em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,ll} + \sum_{i=0}^{3} a_i^{im,lo} b_i^{re,ll}}_{\DPop{8}{8}{4}}
+\end{align*}
+
+\end{document}

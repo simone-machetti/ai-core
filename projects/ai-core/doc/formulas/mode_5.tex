@@ -1,0 +1,42 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\setlength{\mathindent}{1.5em}
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 5}}\\[4pt]
+{\large DP32 (8$\times$4) $\rightarrow$ DP16 (8$\times$4) $\rightarrow$ DP8 (8$\times$4)}
+\end{center}
+
+\vspace{4em}
+
+\noindent\textbf{Step 1 --- DP32 (8$\times$4)}
+\[
+\DPop{32}{8}{4} = \sum_{i=0}^{31} a_i \, b_i
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- DP16 (8$\times$4)}
+\[
+\DPop{32}{8}{4}
+  = \underbrace{\sum_{i=0}^{15} a_i \, b_i}_{\DPop{16}{8}{4}}
+  \; + \; \underbrace{\sum_{i=16}^{31} a_i \, b_i}_{\DPop{16}{8}{4}}
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 3 --- DP8 (8$\times$4)}
+\[
+\DPop{32}{8}{4}
+  = \underbrace{\sum_{i=0}^{7} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_i \, b_i}_{\DPop{8}{8}{4}}
+\]
+
+\end{document}

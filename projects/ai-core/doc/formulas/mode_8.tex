@@ -1,0 +1,82 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\setlength{\mathindent}{0pt}
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 8}}\\[4pt]
+{\large DP16 (16$\times$16) $\rightarrow$ DP8 (16$\times$16) $\rightarrow$ DP8 (16$\times$8) $\rightarrow$ DP8 (16$\times$4) $\rightarrow$ DP8 (8$\times$4)}
+\end{center}
+
+\vspace{4em}
+
+\noindent\textbf{Step 1 --- DP16 (16$\times$16)}
+\[
+\DPop{16}{16}{16} = \sum_{i=0}^{15} a_i \, b_i
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- DP8 (16$\times$16)}
+\[
+\DPop{16}{16}{16}
+  = \underbrace{\sum_{i=0}^{7} a_i \, b_i}_{\DPop{8}{16}{16}}
+  \; + \; \underbrace{\sum_{i=8}^{15} a_i \, b_i}_{\DPop{8}{16}{16}}
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 3 --- DP8 (16$\times$8)}
+\[
+\DPop{16}{16}{16}
+  = 2^{8} \underbrace{\sum_{i=0}^{7} a_i \, b_i^{hi}}_{\DPop{8}{16}{8}}
+  + \underbrace{\sum_{i=0}^{7} a_i \, b_i^{lo}}_{\DPop{8}{16}{8}}
+  + 2^{8} \underbrace{\sum_{i=8}^{15} a_i \, b_i^{hi}}_{\DPop{8}{16}{8}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i^{lo}}_{\DPop{8}{16}{8}}
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 4 --- DP8 (16$\times$4)}
+\begin{align*}
+\DPop{16}{16}{16} = {}
+  & 2^{12} \underbrace{\sum_{i=0}^{7} a_i \, b_i^{hh}}_{\DPop{8}{16}{4}}
+  + 2^{8} \underbrace{\sum_{i=0}^{7} a_i \, b_i^{hl}}_{\DPop{8}{16}{4}}
+  + 2^{4} \underbrace{\sum_{i=0}^{7} a_i \, b_i^{lh}}_{\DPop{8}{16}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_i \, b_i^{ll}}_{\DPop{8}{16}{4}} \\[1em]
+  & + 2^{12} \underbrace{\sum_{i=8}^{15} a_i \, b_i^{hh}}_{\DPop{8}{16}{4}}
+  + 2^{8} \underbrace{\sum_{i=8}^{15} a_i \, b_i^{hl}}_{\DPop{8}{16}{4}}
+  + 2^{4} \underbrace{\sum_{i=8}^{15} a_i \, b_i^{lh}}_{\DPop{8}{16}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i^{ll}}_{\DPop{8}{16}{4}}
+\end{align*}
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 5 --- DP8 (8$\times$4)}
+{\medmuskip=3.0mu plus 1.0mu minus 1.0mu
+\begin{align*}
+\DPop{16}{16}{16} = {}
+  & 2^{20} \underbrace{\sum_{i=0}^{7} a_i^{hi} b_i^{hh}}_{\DPop{8}{8}{4}}
+  + 2^{20} \underbrace{\sum_{i=8}^{15} a_i^{hi} b_i^{hh}}_{\DPop{8}{8}{4}}
+  + 2^{16} \underbrace{\sum_{i=0}^{7} a_i^{hi} b_i^{hl}}_{\DPop{8}{8}{4}}
+  + 2^{16} \underbrace{\sum_{i=8}^{15} a_i^{hi} b_i^{hl}}_{\DPop{8}{8}{4}} \\[1em]
+  & + 2^{12} \underbrace{\sum_{i=0}^{7} a_i^{lo} b_i^{hh}}_{\DPop{8}{8}{4}}
+  + 2^{12} \underbrace{\sum_{i=8}^{15} a_i^{lo} b_i^{hh}}_{\DPop{8}{8}{4}}
+  + 2^{12} \underbrace{\sum_{i=0}^{7} a_i^{hi} b_i^{lh}}_{\DPop{8}{8}{4}}
+  + 2^{12} \underbrace{\sum_{i=8}^{15} a_i^{hi} b_i^{lh}}_{\DPop{8}{8}{4}} \\[1em]
+  & + 2^{8} \underbrace{\sum_{i=0}^{7} a_i^{lo} b_i^{hl}}_{\DPop{8}{8}{4}}
+  + 2^{8} \underbrace{\sum_{i=8}^{15} a_i^{lo} b_i^{hl}}_{\DPop{8}{8}{4}}
+  + 2^{8} \underbrace{\sum_{i=0}^{7} a_i^{hi} b_i^{ll}}_{\DPop{8}{8}{4}}
+  + 2^{8} \underbrace{\sum_{i=8}^{15} a_i^{hi} b_i^{ll}}_{\DPop{8}{8}{4}} \\[1em]
+  & + 2^{4} \underbrace{\sum_{i=0}^{7} a_i^{lo} b_i^{lh}}_{\DPop{8}{8}{4}}
+  + 2^{4} \underbrace{\sum_{i=8}^{15} a_i^{lo} b_i^{lh}}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_i^{lo} b_i^{ll}}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i^{lo} b_i^{ll}}_{\DPop{8}{8}{4}}
+\end{align*}
+}
+
+\end{document}
