@@ -34,11 +34,11 @@ verilator \
     -DPOST_SYNTH=1 \
     --x-initial fast \
     --x-assign fast \
-    -f "${CODE_HOME}/ai-core/scripts/post-syn-sim/filelist.f" \
-       "${CODE_HOME}/ai-core/projects/${SEL_PROJECT}/tb/tb_${SEL_TOP_LEVEL}.sv" \
-    -Mdir "${CODE_HOME}/ai-core/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/build/obj_dir" \
-    -o "${CODE_HOME}/ai-core/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/build/simv" \
-    | tee "${CODE_HOME}/ai-core/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/output/compile.log"
+    -f "${REPO_HOME}/scripts/post-syn-sim/filelist.f" \
+       "${REPO_HOME}/projects/${SEL_PROJECT}/tb/tb_${SEL_TOP_LEVEL}.sv" \
+    -Mdir "${REPO_HOME}/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/build/obj_dir" \
+    -o "${REPO_HOME}/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/build/simv" \
+    | tee "${REPO_HOME}/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/output/compile.log"
 
-exec "${CODE_HOME}/ai-core/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/build/simv" "$@" \
-    | tee "${CODE_HOME}/ai-core/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/output/run.log"
+exec "${REPO_HOME}/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/build/simv" "$@" \
+    | tee "${REPO_HOME}/projects/${SEL_PROJECT}/sim/${SEL_OUT_DIR}/output/run.log"

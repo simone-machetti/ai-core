@@ -12,7 +12,7 @@ PARAMS         ?= none
 KEEP_HIERARCHY ?= 0
 EXP            ?=
 
-PROJ_DIR := $(CODE_HOME)/ai-core/projects/$(PROJECT)
+PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
 export SEL_PROJECT        := $(PROJECT)
 export SEL_TOP_LEVEL      := $(TOP_LEVEL)
@@ -30,45 +30,45 @@ init:
 	mkdir -p $(PROJ_DIR)/imp
 
 sim: clean-sim
-	cd $(CODE_HOME)/ai-core/scripts/sim && \
+	cd $(REPO_HOME)/scripts/sim && \
 	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR) && \
 	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR)/build && \
 	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR)/output && \
 	./run.sh && \
-	if [ -f $(CODE_HOME)/ai-core/scripts/sim/activity.vcd ]; then \
-	mv $(CODE_HOME)/ai-core/scripts/sim/activity.vcd $(PROJ_DIR)/sim/$(OUT_DIR)/output; \
+	if [ -f $(REPO_HOME)/scripts/sim/activity.vcd ]; then \
+	mv $(REPO_HOME)/scripts/sim/activity.vcd $(PROJ_DIR)/sim/$(OUT_DIR)/output; \
 	fi
 
 syn: clean-imp
-	cd $(CODE_HOME)/ai-core/scripts/syn && \
+	cd $(REPO_HOME)/scripts/syn && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR) && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
-	yosys -l $(PROJ_DIR)/imp/$(OUT_DIR)/output/yosys.log -c $(CODE_HOME)/ai-core/scripts/syn/run.tcl
+	yosys -l $(PROJ_DIR)/imp/$(OUT_DIR)/output/yosys.log -c $(REPO_HOME)/scripts/syn/run.tcl
 
 post-syn-sta: clean-imp
-	cd $(CODE_HOME)/ai-core/scripts/post-syn-sta && \
+	cd $(REPO_HOME)/scripts/post-syn-sta && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR) && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
-	sta -no_splash -exit $(CODE_HOME)/ai-core/scripts/post-syn-sta/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
+	sta -no_splash -exit $(REPO_HOME)/scripts/post-syn-sta/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
 
 post-syn-sim: clean-sim
-	cd $(CODE_HOME)/ai-core/scripts/post-syn-sim && \
+	cd $(REPO_HOME)/scripts/post-syn-sim && \
 	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR) && \
 	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR)/build && \
 	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR)/output && \
 	./run.sh && \
-	if [ -f $(CODE_HOME)/ai-core/scripts/post-syn-sim/activity.vcd ]; then \
-	mv $(CODE_HOME)/ai-core/scripts/post-syn-sim/activity.vcd $(PROJ_DIR)/sim/$(OUT_DIR)/output; \
+	if [ -f $(REPO_HOME)/scripts/post-syn-sim/activity.vcd ]; then \
+	mv $(REPO_HOME)/scripts/post-syn-sim/activity.vcd $(PROJ_DIR)/sim/$(OUT_DIR)/output; \
 	fi
 
 post-syn-dpa: clean-imp
-	cd $(CODE_HOME)/ai-core/scripts/post-syn-dpa && \
+	cd $(REPO_HOME)/scripts/post-syn-dpa && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR) && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
-	sta -no_splash -exit $(CODE_HOME)/ai-core/scripts/post-syn-dpa/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
+	sta -no_splash -exit $(REPO_HOME)/scripts/post-syn-dpa/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
 
 flow-list:
 	@echo "Experiments in project '$(PROJECT)':"

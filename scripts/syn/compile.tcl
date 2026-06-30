@@ -15,16 +15,22 @@ yosys "plugin -i $env(YOSYS_SLANG_HOME)/bin/slang.so"
 # -----------------------------------------------------------------------------
 # Read libraries to Yosys database
 # -----------------------------------------------------------------------------
-yosys "read_liberty -lib $env(TOOLS_HOME)/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"
-yosys "read_liberty -lib $env(TOOLS_HOME)/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib"
-yosys "read_liberty -lib $env(TOOLS_HOME)/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib"
-yosys "read_liberty -lib $env(TOOLS_HOME)/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib"
-yosys "read_liberty -lib $env(TOOLS_HOME)/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib"
+yosys "read_liberty -lib $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"
+yosys "read_liberty -lib $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib"
+yosys "read_liberty -lib $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib"
+yosys "read_liberty -lib $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib"
+yosys "read_liberty -lib $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib"
 
 # -----------------------------------------------------------------------------
 # Read SystemVerilog sources
 # -----------------------------------------------------------------------------
-set rtl_files [lsort [glob "$env(CODE_HOME)/ai-core/projects/$env(SEL_PROJECT)/rtl/*.sv"]]
+set rtl_dir "$env(REPO_HOME)/projects/$env(SEL_PROJECT)/rtl"
+set rtl_files [lsort [split [exec find $rtl_dir -name "*.sv"] "\n"]]
+
+set inc_flags ""
+foreach dir [lsort [split [exec find $rtl_dir -type d] "\n"]] {
+    append inc_flags " -I $dir"
+}
 
 set g_flags ""
 if {$env(SEL_PARAMS) ne "none"} {
@@ -38,4 +44,4 @@ if {$env(SEL_KEEP_HIERARCHY) eq "1"} {
     set kh_flag " --keep-hierarchy"
 }
 
-yosys "read_slang [join $rtl_files] --top $env(SEL_TOP_LEVEL)$g_flags$kh_flag"
+yosys "read_slang --single-unit [join $rtl_files]$inc_flags --top $env(SEL_TOP_LEVEL)$g_flags$kh_flag"

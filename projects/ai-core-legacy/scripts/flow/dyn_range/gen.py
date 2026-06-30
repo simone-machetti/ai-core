@@ -25,10 +25,10 @@ B_VALUES = (1, 19, 37, 55, 73, 91, 109, 127)
 
 
 def repo_root() -> Path:
-    code_home = os.environ.get("CODE_HOME")
-    if not code_home:
-        sys.exit("CODE_HOME is not set; run `source sourceme.sh` first.")
-    return Path(code_home) / "ai-core" / "projects" / "ai-core"
+    repo_home = os.environ.get("REPO_HOME")
+    if not repo_home:
+        sys.exit("REPO_HOME is not set; run `source sourceme.sh` first.")
+    return Path(repo_home) / "projects" / "ai-core-legacy"
 
 
 def load_2d(wb, sheet: str) -> np.ndarray:

@@ -4,7 +4,8 @@ Multi-project sandbox for prototyping RTL designs, built around the `ai-core` de
 
 Projects:
 
-- [`ai-core`](projects/ai-core/README.md) — fixed-point multiply-accumulate Processing Elements (PEs) for AI/ML inference. The reference project.
+- [`ai-core`](projects/ai-core/README.md) — next-generation AI-Core architecture (clean redesign, in progress).
+- [`ai-core-legacy`](projects/ai-core-legacy/README.md) — fixed-point multiply-accumulate Processing Elements (PEs) for AI/ML inference. The original reference design.
 
 This README documents the shared EDA flow: the `make` targets, their parameters, and the typical pipeline. For a project's designs, top-levels, RTL parameters, and experiments, see that project's own README.
 
@@ -128,7 +129,7 @@ make post-syn-dpa PROJECT=<project> TOP_LEVEL=<top_level> CLK_PERIOD_NS=1.0 OUT_
 │       ├── sim/          # Simulation outputs (generated)
 │       └── imp/          # Synthesis/STA/DPA outputs (generated)
 ├── Makefile              # Build system entry point (PROJECT=<name> selects project)
-├── sourceme.sh           # Environment setup (tool paths, CODE_HOME)
+├── sourceme.sh           # Environment setup (sources ~/.bashrc, derives REPO_HOME)
 └── CLAUDE.md             # AI assistant guidance for this repository
 ```
 
@@ -136,11 +137,39 @@ All `make` targets require `PROJECT=<name>` to select the project they operate o
 
 ## Environment setup
 
-Source the environment script once before running any command. It sets tool paths for Verilator, Yosys, Yosys-Slang, OpenSTA, OpenROAD, and sets `CODE_HOME`:
+Tool and PDK install locations are **per-user**: you declare them in your `~/.bashrc`, and `sourceme.sh` sources that file and derives the rest. Run this once per shell before any `make` command:
 
 ```bash
 source sourceme.sh
 ```
+
+`sourceme.sh` sets `REPO_HOME` from its own location, sources `~/.bashrc`, then derives `ASAP7_HOME` from `PDK_HOME`. You therefore export only the install **roots** in your `~/.bashrc` — the shared flow itself is project- and machine-agnostic:
+
+| Variable | Purpose |
+| --- | --- |
+| `EDA_HOME` | Root holding the EDA tool installs. |
+| `VERILATOR_HOME`, `YOSYS_HOME`, `YOSYS_SLANG_HOME`, `OPENSTA_HOME` | Per-tool install dirs (conventionally `$EDA_HOME/<tool>`); each tool's `bin/` must be on `PATH`. |
+| `PDK_HOME` | Root holding the PDK trees — the ASAP7 standard-cell liberty (`.lib`) and verilog (`.v`) consumed by synthesis, STA, DPA and post-synthesis simulation. |
+
+A minimal `~/.bashrc` block — add this and adjust the two roots (`EDA_HOME` and `PDK_HOME`) to your machine:
+
+```bash
+# --- EDA tool binaries ---
+export EDA_HOME=/opt/eda
+export VERILATOR_HOME=$EDA_HOME/verilator
+export YOSYS_HOME=$EDA_HOME/yosys
+export YOSYS_SLANG_HOME=$EDA_HOME/yosys-slang
+export OPENSTA_HOME=$EDA_HOME/opensta
+export PATH=$VERILATOR_HOME/bin:$YOSYS_HOME/bin:$YOSYS_SLANG_HOME/bin:$OPENSTA_HOME/bin:$PATH
+
+# --- PDK ---
+export PDK_HOME=/opt/pdks
+```
+
+Notes:
+
+- **Do not** set `REPO_HOME` — `sourceme.sh` derives it from its own location, so the repo works unchanged if renamed or reused for a different project.
+- `ASAP7_HOME` defaults to `$PDK_HOME/OpenROAD-flow-scripts/flow/platforms/asap7`; export it in `~/.bashrc` to target a different platform/technology.
 
 ## Typical workflow
 

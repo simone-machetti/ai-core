@@ -21,10 +21,10 @@ SUFFIX = "asw"
 
 
 def repo_root() -> Path:
-    code_home = os.environ.get("CODE_HOME")
-    if not code_home:
-        sys.exit("CODE_HOME is not set; run `source sourceme.sh` first.")
-    return Path(code_home) / "ai-core" / "projects" / "ai-core"
+    repo_home = os.environ.get("REPO_HOME")
+    if not repo_home:
+        sys.exit("REPO_HOME is not set; run `source sourceme.sh` first.")
+    return Path(repo_home) / "projects" / "ai-core-legacy"
 
 
 def read_power_w(rpt: Path) -> float:

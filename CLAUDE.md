@@ -28,4 +28,4 @@ Always source the environment script before running any command:
 source sourceme.sh
 ```
 
-This sets `CODE_HOME` (the parent of this repo) and the paths for Verilator, Yosys, Yosys-Slang, OpenSTA, and OpenROAD. Paths inside the flow are resolved as `$CODE_HOME/ai-core/projects/$PROJECT/...`.
+This derives `REPO_HOME` (the repo root) from the script's own location, then sources your `~/.bashrc` — where you export the tool/PDK install **roots**: `EDA_HOME` (puts Verilator, Yosys, Yosys-Slang and OpenSTA on `PATH`) and `PDK_HOME`. It then derives `ASAP7_HOME` (from `PDK_HOME`). The repo-root variable is intentionally generic — the shared flow hardcodes no project or repo name — so paths inside the flow are resolved as `$REPO_HOME/projects/$PROJECT/...`.
