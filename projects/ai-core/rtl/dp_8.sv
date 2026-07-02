@@ -16,18 +16,20 @@
 //   Widths, minimum for this size:
 //     stage                    width   dynamic range + headroom
 //     -----------------------  -----   ------------------------------------
-//     Booth partial product     10     int8 * {0,+-1,+-2}          (exact)
-//     per-weight CPR 8:2 (x3)    14     13b sum-of-8   + 1 guard bit
-//     weight-2^4 align (<< 4)    18     14b row shifted << 4
-//     final CPR 6:2 / output     18     holds 16b dot product + guard
+//     Booth partial product     10     int8 * {0,+-1,+-2} (exact)
+//     per-weight CPR 8:2 (x3)   14     13b sum-of-8   + 1 guard bit
+//     weight-2^4 align (<< 4)   18     14b row shifted << 4
+//     final CPR 6:2             18     six carry-save pairs -> two rows
+//     output (top bit dropped)  17     16b dot product + 1 guard bit
 //
 //   Worst-case output is the unsigned x unsigned corner: 8 * 255 * 15 = 30600
 //   (and -16320 for unsigned-a x signed-b) - a 16-bit signed range. The final
 //   CPR 6:2 takes no width growth (EXT = 0): its six inputs are three carry-save
-//   pairs whose sum is the dot product, already inside FINAL_IN; OUT_WIDTH is set
-//   by the weight-2^4 aligned rows (18). Each carry-save pair carries one guard
-//   bit so it stays sign-consistent - for the weight alignment and for pe_array
-//   to sign-extend the output. Purely combinational.
+//   pairs whose sum is the dot product, already inside FINAL_IN (18, set by the
+//   weight-2^4 aligned rows). That 16-bit value leaves two guard bits at 18; one
+//   is redundant, so the top bit is dropped and the output is 17 bits (16b value
+//   + 1 guard) - still sign-consistent, so pe_array can sign-extend it. Each
+//   carry-save pair carries one guard bit for the weight alignment. Combinational.
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
@@ -40,7 +42,7 @@ module dp_8 #(
     localparam int PP_WIDTH   = IN_WIDTH_A + 2,
     localparam int CPR2_WIDTH = PP_WIDTH + $clog2(LANES) + 1,
     localparam int FINAL_IN   = CPR2_WIDTH + 2 * (PP_SIZE - 1),
-    localparam int OUT_WIDTH  = FINAL_IN
+    localparam int OUT_WIDTH  = FINAL_IN - 1
 )(
     input  logic [IN_WIDTH_A-1:0] a_i [0:LANES-1],
     input  logic [IN_WIDTH_B-1:0] b_i [0:LANES-1],
@@ -54,6 +56,11 @@ module dp_8 #(
     logic [CPR2_WIDTH-1:0] col_sum   [0:PP_SIZE-1];
     logic [CPR2_WIDTH-1:0] col_carry [0:PP_SIZE-1];
     logic [  FINAL_IN-1:0] final_in  [0:2*PP_SIZE-1];
+
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [  FINAL_IN-1:0] final_sum;
+    logic [  FINAL_IN-1:0] final_carry;
+    /* verilator lint_on UNUSEDSIGNAL */
 
     genvar inst, j, k;
 
@@ -100,8 +107,11 @@ module dp_8 #(
         .IS_SIGNED(1'b1)
     ) cpr_w_n_final_i (
         .in_i   (final_in),
-        .sum_o  (sum_o),
-        .carry_o(carry_o)
+        .sum_o  (final_sum),
+        .carry_o(final_carry)
     );
+
+    assign sum_o   = final_sum[OUT_WIDTH-1:0];
+    assign carry_o = final_carry[OUT_WIDTH-1:0];
 
 endmodule

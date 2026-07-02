@@ -16,7 +16,7 @@ parameters are listed per primitive.
 
 | Primitive                              | Params                                    | Appears in               | Count       | Function                                                                                                                                                                                                                                          |
 | -------------------------------------- | ----------------------------------------- | ------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **DP8** (`dp_8`)                       | — (fixed 8·8b×4b)                         | pe_array                 | 16          | Length-8 dot product `Σ aᵢ·bᵢ`; `booth_r4` + `cpr_w_n`; 18-bit carry-save output; per-operand runtime `is_signed_a_i`/`is_signed_b_i`. Fixed size, minimal widths.                                                                                |
+| **DP8** (`dp_8`)                       | — (fixed 8·8b×4b)                         | pe_array                 | 16          | Length-8 dot product `Σ aᵢ·bᵢ`; `booth_r4` + `cpr_w_n`; 17-bit carry-save output; per-operand runtime `is_signed_a_i`/`is_signed_b_i`. Fixed size, minimal widths.                                                                                |
 | **Compressor** (`cpr_c_n` / `cpr_w_n`) | `IN_WIDTH`, `IN_SIZE`, `EXT`, `IS_SIGNED` | dp8, pe_array, acc_array | 16 + 15 + 8 | N:2 carry-save compressor, same interface, two builds: `cpr_c_n` serial cascade (min area, depth `IN_SIZE−2`), `cpr_w_n` Wallace tree (max throughput, ~log depth). 8:2 in DP, 4:2 tree, 3:2 lanes; compile-time `IS_SIGNED` for input extension. |
 | **ADD** (`add_n`)                      | `WIDTH`                                   | acc_array                | 8           | Two-input adder, `WIDTH + 1` output (overflow-safe); runtime `is_signed_i`.                                                                                                                                                                       |
 
@@ -26,8 +26,8 @@ parameters are listed per primitive.
 | ----------------------- | ------------------------ | --------------------- | ------- | ------------------------------------------------------------------------------------------------------- |
 | **MUX (N→1)** (`mux_n`) | `WIDTH`, `SIZE`          | disp_array, acc_array | 16 + 16 | Operand block select (4→1); tap select (≤4→1) + accumulate select (2→1).                                |
 | **Shifter** (`shift_n`) | `WIDTH`, `SIZE`, `SHIFT` | pe_array              | 14      | Conditional left-shift by `SHIFT` (width-growing) or pass-through; 1-bit `sel` + runtime `is_signed_i`. |
-| **Gate-A** (`gate_a_n`) | `WIDTH`, `SIZE`          | disp_array, acc_array | 8 + 4   | Pass / zero (1-bit select); operand-A masking, and carry enable at `WIDTH = 1`.                         |
-| **Gate-B** (`gate_b_n`) | `WIDTH`, `SIZE`          | disp_array            | 16      | Pass / zero / negate (2-bit select); operand-B masking + sign negation.                                 |
+| **Gate-A** (`gate_a_n`) | `WIDTH`, `SIZE`          | acc_array             | 4       | Pass / zero (1-bit select); acc-lane carry enable / masking (`WIDTH = 1`).                              |
+| **Gate-B** (`gate_b_n`) | `WIDTH`, `SIZE`          | disp_array            | 16      | Pass / zero / negate (2-bit select); operand-B masking (idle lanes) + sign negation (complex modes).    |
 
 ## State
 
@@ -55,19 +55,20 @@ Booth, from ai-core-legacy, with per-operand runtime `is_signed_a_i`/`is_signed_
   parallel per layer, ~`log₁.₅(IN_SIZE)` depth, max throughput). The CSA core (the `fa` rows) is
   signedness-agnostic, but both widen each input to `OUT_WIDTH`, so they take a compile-time
   `IS_SIGNED` parameter for that extension.
-- **Gates** — split by operand: `gate_a_n` (pass/zero, 1-bit) for A, which only needs masking;
-  `gate_b_n` (pass/zero/negate, 2-bit) for B, which needs masking (idle DP8s, e.g. mode 6) and sign
-  negation (complex modes). The acc carry gate is `gate_a_n` at `WIDTH = 1`. Their selects are the
-  `ctr_*` / `prop_carry` signals in the diagrams.
+- **Gates** — `gate_b_n` (pass/zero/negate, 2-bit) handles operand B in `disp_array`: masking idle
+  lanes (a lane is idled by zeroing its B, since `a·0 = 0`) and sign negation (complex modes 10–12).
+  `gate_a_n` (pass/zero, 1-bit) is the acc-lane carry gate at `WIDTH = 1` in `acc_array`. `disp_array`
+  needs no A gate. Their selects are the `ctr_*` / `prop_carry` signals in the diagrams.
 - **DP8** (`dp_8`) is composite and **fixed to 8 lanes of int8·int4** (not parameterized — specialized
   for minimal width): 8 radix-4 Booth multipliers (`booth_r4`) → three per-weight Wallace compressions
   (`cpr_w_n`, 8:2, weights `2^0`/`2^2`/`2^4`) → sign-extend + weight-align the carry-save rows → final
-  `cpr_w_n` (6:2) → 18-bit carry-save output. **Per-operand signedness** (`is_signed_a_i` /
+  `cpr_w_n` (6:2) → 17-bit carry-save output. **Per-operand signedness** (`is_signed_a_i` /
   `is_signed_b_i`): each operand's high field is signed and low field unsigned, so all four sign combos
   occur; an unsigned `b` needs a **third** Booth partial product (weight `2^4`), `0` when `b` is signed.
   Fully carry-save (no resolve adders): each pair carries **one guard bit** to stay sign-consistent.
   The dot product spans 16 bits (`u×u` → `8·255·15 = 30600`, `u×s` → `−16320`); the final 6:2 takes no
-  width growth (`EXT = 0`), and the 18-bit output width is set by the weight-`2^4` aligned rows.
+  width growth (`EXT = 0`) and produces 18-bit rows (set by the weight-`2^4` aligned rows), of which the
+  redundant top bit is dropped → a **17-bit** output (16-bit value + 1 guard, still sign-consistent).
 - The **H/L split** in `disp_array` is bit-slicing / wiring, not a cell — so it is not a primitive.
 - **Status** — all primitives built: `reg_n`, `mux_n`, `shift_n`, `add_n`, `ext_n`, `gate_a_n`,
   `gate_b_n`, `cpr_c_n`, `cpr_w_n`, `dp_8` (+ helpers `fa`, `booth_r4`, `booth_r4_cell`). Next: the

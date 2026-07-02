@@ -26,7 +26,7 @@ module tb_dp_8 #(
     localparam int LANES     = 8;
     localparam int WIDTH_A   = 8;
     localparam int WIDTH_B   = 4;
-    localparam int OUT_WIDTH = 18;
+    localparam int OUT_WIDTH = 17;
 
     localparam logic [WIDTH_A-1:0] A_ZERO     = '0;
     localparam logic [WIDTH_A-1:0] A_ALL_ONES = {WIDTH_A{1'b1}};

@@ -8,7 +8,7 @@ one lane of the `pe_array` (instanced ×16). Phase-A interface check.
 > **Figure is behind the RTL.** The drawing shows the earlier signed-only path — 2 partial-product
 > weights (`CPR 8:2` ×2, one `<< 2`, `CPR 4:2`), signed `b`, 16-bit output. The implemented
 > [`dp_8`](../../rtl/dp_8.sv) adds **per-operand signedness**: an unsigned `b` needs a **third** Booth
-> partial product, so it has `CPR 8:2` ×3, shifts `<< 2` **and** `<< 4`, a `CPR 6:2`, and an **18-bit**
+> partial product, so it has `CPR 8:2` ×3, shifts `<< 2` **and** `<< 4`, a `CPR 6:2`, and a **17-bit**
 > output. Text below describes the implemented block; redraw the figure to match.
 
 ## Purpose
@@ -26,14 +26,15 @@ every width at its minimum.
 | `b_i[0:7]`      | in  | 4 each | Multiplier elements (`int4`), radix-4 Booth-recoded, one per lane.|
 | `is_signed_a_i` | in  | 1      | Multiplicand signedness: `1` = signed, `0` = unsigned (control). |
 | `is_signed_b_i` | in  | 1      | Multiplier signedness: `1` = signed, `0` = unsigned (control).   |
-| `sum_o`         | out | 18     | Sum row of the carry-save result.                                |
-| `carry_o`       | out | 18     | Carry row; `sum_o + carry_o = Σ aₖ·bₖ` (mod `2^18`).             |
+| `sum_o`         | out | 17     | Sum row of the carry-save result.                                |
+| `carry_o`       | out | 17     | Carry row; `sum_o + carry_o = Σ aₖ·bₖ` (mod `2^17`).             |
 
 `a` and `b` are signed/unsigned **independently** (per the operating modes: a field's high half is
 signed, its low half unsigned). The dot product spans a 16-bit signed range `[−16320, +30600]` (the
-`u×u` corner `8·255·15` and the `u×s` corner `8·255·(−8)`); the 18-bit output holds it with the guard
-bit, at the width set by the weight-`2^4` aligned rows. See [`dp_8`](../../rtl/dp_8.sv) for the
-per-stage width breakdown.
+`u×u` corner `8·255·15` and the `u×s` corner `8·255·(−8)`); the final 6:2 compressor produces 18-bit
+rows (set by the weight-`2^4` aligned rows), but that leaves two guard bits, so the redundant top bit
+is dropped and the output is **17 bits** (16-bit value + 1 guard). See [`dp_8`](../../rtl/dp_8.sv) for
+the per-stage width breakdown.
 
 ## Internal structure
 

@@ -6,14 +6,14 @@ okf_version: "0.1"
 
 LLM-authored design documentation for the **ai-core** project, written in the Open Knowledge Format (OKF v0.1). Each page summarizes and cross-references the project's own `rtl/`, `tb/`, and `doc/` sources and links back to them through its `resource:` field. See [log.md](log.md) for the change history.
 
-> The **built-and-verified modules** are documented below (the primitive library plus the DP8 core).
-> Higher-level blocks (`disp_array`, `pe_array`, `acc_array`, `pe_ctrl`, `pe_top`) are not yet defined
-> and are intentionally not documented here. Pages are added under the matching folder
+> The **built-and-verified** blocks are documented below (the primitive library, the DP8 core, and
+> the dispatch array). Higher-level blocks (`pe_array`, `acc_array`, `pe_ctrl`, `pe_top`) are not yet
+> defined and are intentionally not documented here. Pages are added under the matching folder
 > (`architecture/`, `modules/`, `concepts/`, `decisions/`, `experiments/`, `references/`).
 
 ## Architecture
 
-_None yet._
+* [Dispatch Array](architecture/disp_array.md) — `disp_array`: routes the two 256-bit operands to the 16 DP8s (per-pair 4→1 block select + B high/low split + B-gate).
 
 ## Modules
 

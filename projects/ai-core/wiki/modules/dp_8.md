@@ -25,8 +25,8 @@ Computes the length-8 dot product of eight `int8 × int4` products and returns i
 | `b_i[0:7]`      | in  | 4 each | Multiplier elements (`int4`), radix-4 Booth-recoded.         |
 | `is_signed_a_i` | in  | 1      | Multiplicand (`a`) signedness: `1` = signed, `0` = unsigned. |
 | `is_signed_b_i` | in  | 1      | Multiplier (`b`) signedness: `1` = signed, `0` = unsigned.   |
-| `sum_o`         | out | 18     | Carry-save sum row.                                          |
-| `carry_o`       | out | 18     | Carry-save carry row; `sum_o + carry_o` = `Σ a_k·b_k`.       |
+| `sum_o`         | out | 17     | Carry-save sum row.                                          |
+| `carry_o`       | out | 17     | Carry-save carry row; `sum_o + carry_o` = `Σ a_k·b_k`.       |
 
 ## Internal logic
 
@@ -39,9 +39,10 @@ Three combinational stages, carry-save throughout. First, eight radix-4 Booth ge
 | Booth partial product          | 10    | `int8 · {0,±1,±2}` — exact range.    |
 | Per-weight sum (CPR 8:2, ×3)    | 14    | 13-bit sum-of-8 range + 1 guard bit. |
 | Weight-`2^4` aligned (`<< 4`)   | 18    | 14-bit row shifted `<< 4`.           |
-| Dot product (CPR 6:2, output)   | 18    | holds the 16-bit dot range + guard.  |
+| Final reduce (CPR 6:2)          | 18    | six carry-save pairs → two rows.     |
+| Output (top bit dropped)        | 17    | 16-bit dot range + 1 guard bit.      |
 
-The dot product spans a 16-bit signed range `[−16320, +30600]` — the `u×u` corner `8·255·15 = 30600` and the `u×s` corner `8·255·(−8) = −16320`. The final 6:2 compressor takes no width growth (`OUT_WIDTH = FINAL_IN`); the 18-bit output width is set by the weight-`2^4` aligned rows.
+The dot product spans a 16-bit signed range `[−16320, +30600]` — the `u×u` corner `8·255·15 = 30600` and the `u×s` corner `8·255·(−8) = −16320`. The final 6:2 compressor takes no width growth, producing 18-bit rows (the width set by the weight-`2^4` aligned rows). That 16-bit value leaves two guard bits at 18, so the redundant top bit is dropped and the output is **17 bits** (16-bit value + 1 guard) — still sign-consistent, so `pe_array` can sign-extend it.
 
 ## Instantiation
 
