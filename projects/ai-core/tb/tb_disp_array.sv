@@ -67,7 +67,7 @@ module tb_disp_array #(
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 1
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 2
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 3
-        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd1, 2'd1, 2'd1, 2'd1},  // mode 5
+        '{2'd1, 2'd1, 2'd1, 2'd1, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 5
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd1, 2'd1, 2'd1, 2'd1},  // mode 6
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 7
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 8
@@ -81,7 +81,7 @@ module tb_disp_array #(
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 1
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 2
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 3
-        '{2'd1, 2'd1, 2'd1, 2'd1, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 5
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd1, 2'd1, 2'd1, 2'd1},  // mode 5
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd1, 2'd1, 2'd1, 2'd1},  // mode 6
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 7
         '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},  // mode 8
@@ -151,8 +151,8 @@ module tb_disp_array #(
             b_sel = pe_in_b[ob +: BLK_WIDTH];
             a_exp[2*p+0] = a_sel;
             a_exp[2*p+1] = a_sel;
-            b_exp[2*p+0] = gate32(b_sel[B_DP8_WIDTH-1:0],        CTR_L[mi][p]);
-            b_exp[2*p+1] = gate32(b_sel[BLK_WIDTH-1:B_DP8_WIDTH], CTR_H[mi][p]);
+            b_exp[2*p+0] = gate32(b_sel[BLK_WIDTH-1:B_DP8_WIDTH], CTR_H[mi][p]);
+            b_exp[2*p+1] = gate32(b_sel[B_DP8_WIDTH-1:0],        CTR_L[mi][p]);
         end
         for (int i = 0; i < NUM_DP8; i++) begin
             if (a_dp8[i] !== a_exp[i]) begin

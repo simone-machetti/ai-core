@@ -14,11 +14,12 @@
 //   Per pair p:
 //     - MUX A (4->1, 64b) selects one A block; it feeds BOTH DP8s of the pair
 //       (a_dp8_o[2p] = a_dp8_o[2p+1]).
-//     - MUX B (4->1, 64b) selects one B block; its low 32 bits go to the even
-//       DP8 (2p), its high 32 bits to the odd DP8 (2p+1).
+//     - MUX B (4->1, 64b) selects one B block; its high 32 bits (H) go to the
+//       even DP8 (2p), its low 32 bits (L) to the odd DP8 (2p+1) - matching the
+//       dispatch, where the even lane carries the high nibble.
 //     - Each B half passes through a gate_b_n (per int4 element): pass / zero
-//       (idle lane) / negate (complex-mode imaginary term), per ctr_l_i[p] /
-//       ctr_h_i[p].
+//       (idle lane) / negate (complex-mode imaginary term); ctr_h_i[p] gates the
+//       even (H) lane, ctr_l_i[p] the odd (L) lane.
 //
 //   Data-path only: operand signedness (is_signed_a/b per DP8) is a control the
 //   mode decoder (pe_ctrl) sends straight to the DP8s, not routed here. The two
@@ -139,8 +140,8 @@ module disp_array #(
             );
 
             for (e = 0; e < NUM_B_ELEM; e++) begin : gen_pack
-                assign b_dp8_o[2*p+0][e*B_ELEM_WIDTH +: B_ELEM_WIDTH] = blo_gated[e];
-                assign b_dp8_o[2*p+1][e*B_ELEM_WIDTH +: B_ELEM_WIDTH] = bhi_gated[e];
+                assign b_dp8_o[2*p+0][e*B_ELEM_WIDTH +: B_ELEM_WIDTH] = bhi_gated[e];
+                assign b_dp8_o[2*p+1][e*B_ELEM_WIDTH +: B_ELEM_WIDTH] = blo_gated[e];
             end
         end
     endgenerate

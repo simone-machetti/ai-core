@@ -22,8 +22,8 @@ Route the two 256-bit operands into the 16 per-DP8 operands using **one 4→1 MU
 | `pe_in_b_i`     | in  | 256     | Operand B (4 × 64-bit blocks).                               |
 | `sel_a_i[0:7]`  | in  | 2 each  | Per-pair A-block select (4→1).                               |
 | `sel_b_i[0:7]`  | in  | 2 each  | Per-pair B-block select (4→1).                               |
-| `ctr_l_i[0:7]`  | in  | 2 each  | Even-DP8 B gate: `0` pass, `1` zero, `2` negate.             |
-| `ctr_h_i[0:7]`  | in  | 2 each  | Odd-DP8 B gate: `0` pass, `1` zero, `2` negate.              |
+| `ctr_l_i[0:7]`  | in  | 2 each  | Odd-DP8 (low L) B gate: `0` pass, `1` zero, `2` negate.      |
+| `ctr_h_i[0:7]`  | in  | 2 each  | Even-DP8 (high H) B gate: `0` pass, `1` zero, `2` negate.    |
 | `a_dp8_o[0:15]` | out | 64 each | A operand per DP8 (8 × int8).                                |
 | `b_dp8_o[0:15]` | out | 32 each | B operand per DP8 (8 × int4).                                |
 
@@ -43,14 +43,14 @@ Counts: 2 `REG` banks (4 + 4 × 64b), 16 `MUX` (8 A + 8 B), 16 `gate_b_n` (2 per
         │               │
    per pair p (0..7):
    MUX A(4→1) sel_a[p] ─→ a_dp8_o[2p] = a_dp8_o[2p+1]     (shared A block)
-   MUX B(4→1) sel_b[p] ─→ low32 → gate_b_n(ctr_l) → b_dp8_o[2p]
-                          high32 → gate_b_n(ctr_h) → b_dp8_o[2p+1]
+   MUX B(4→1) sel_b[p] ─→ high32 → gate_b_n(ctr_h) → b_dp8_o[2p]
+                          low32  → gate_b_n(ctr_l) → b_dp8_o[2p+1]
 ```
 
 ## High-level behavior
 
 For each pair `p` (0..7): `mux_a` selects one A block, feeding both DP8s of the pair; `mux_b` selects
-one B block, its low 32 bits going to the even DP8 (`2p`) and high 32 to the odd DP8 (`2p+1`); each B
+one B block, its high 32 bits (H) going to the even DP8 (`2p`) and low 32 (L) to the odd DP8 (`2p+1`); each B
 half passes through a `gate_b_n` that per int4 element passes, zeros (idle lane), or two's-complement-
 negates (complex-mode imaginary term). The dispatch is combinational after the input registers. The
 per-mode `sel_*`/`ctr_*` vectors are the `modes.xlsx` dispatch map (the reference for `pe_ctrl`).
@@ -59,6 +59,7 @@ per-mode `sel_*`/`ctr_*` vectors are the `modes.xlsx` dispatch map (the referenc
 
 - **B-gate only** (no A gate): zeroing B idles a lane (`a·0 = 0`); negation is only ever on B. The
   figure's earlier "24 gates" / A-zero were Phase-A guesses — the build uses 16 `gate_b_n`, B-only.
-- **H/L split**: low 32 → even DP8 (`2p`), high 32 → odd DP8 (`2p+1`).
+- **H/L split**: high 32 (H) → even DP8 (`2p`), low 32 (L) → odd DP8 (`2p+1`) — the even lane carries
+  the high nibble (per `modes.xlsx`), gated by `ctr_h`; the odd lane the low nibble, gated by `ctr_l`.
 - **Signedness** is a `pe_ctrl`→DP8 control, not routed through here.
 - **Registers** sit on the input (matches the figure).
