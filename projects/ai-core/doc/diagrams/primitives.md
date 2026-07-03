@@ -25,7 +25,7 @@ parameters are listed per primitive.
 | Primitive               | Params                   | Appears in            | Count   | Function                                                                                                |
 | ----------------------- | ------------------------ | --------------------- | ------- | ------------------------------------------------------------------------------------------------------- |
 | **MUX (N→1)** (`mux_n`) | `WIDTH`, `SIZE`          | disp_array, acc_array | 16 + 16 | Operand block select (4→1); tap select (≤4→1) + accumulate select (2→1).                                |
-| **Shifter** (`shift_n`) | `WIDTH`, `SIZE`, `SHIFT` | pe_array              | 14      | Conditional left-shift by `SHIFT` (width-growing) or pass-through; 1-bit `sel` + runtime `is_signed_i`. |
+| **Shifter** (`shift_n`) | `WIDTH`, `SIZE`, `SHIFT`, `IS_SIGNED` | pe_array | 14 | Conditional left-shift by `SHIFT` (width-growing) or pass-through; 1-bit `sel`; compile-time `IS_SIGNED` for pass-through extension. |
 | **Gate-A** (`gate_a_n`) | `WIDTH`, `SIZE`          | acc_array             | 4       | Pass / zero (1-bit select); acc-lane carry enable / masking (`WIDTH = 1`).                              |
 | **Gate-B** (`gate_b_n`) | `WIDTH`, `SIZE`          | disp_array            | 16      | Pass / zero / negate (2-bit select); operand-B masking (idle lanes) + sign negation (complex modes).    |
 
@@ -35,7 +35,7 @@ parameters are listed per primitive.
 | ----------------- | --------------- | ------------------------------- | --------- | --------------------------------------------------------------- |
 | **REG** (`reg_n`) | `WIDTH`, `SIZE` | disp_array, pe_array, acc_array | 8 + 8 + 8 | Register bank (async `rst_ni`) — pipeline stages + accumulator. |
 
-**8 primitives total.** Helpers also built: `ext_n` (`WIDTH`, `SIZE`, `EXT`; runtime `is_signed_i`),
+**8 primitives total.** Helpers also built: `ext_n` (`WIDTH`, `SIZE`, `EXT`, `IS_SIGNED`),
 the sign/zero extender reused inside the compressors / DP; and `fa` (1-bit full adder, reused from
 ai-core-legacy) as the 3:2 cell inside the compressors; plus `booth_r4` + `booth_r4_cell` (radix-4
 Booth, from ai-core-legacy, with per-operand runtime `is_signed_a_i`/`is_signed_b_i`) for the DP multiplier.
@@ -43,11 +43,12 @@ Booth, from ai-core-legacy, with per-operand runtime `is_signed_a_i`/`is_signed_
 ## Notes
 
 - **Runtime vs parameter** — dimensions (widths, sizes, shift/ext amounts) are compile-time
-  parameters; **signedness is a runtime input** (`is_signed_i`) on `shift_n`, `ext_n`, `add_n` (and
-  per-operand on the DP) because it changes with the operating mode — e.g. the low word of a fused
-  accumulator resolves unsigned while the high/standalone word resolves signed. The **compressors are
-  the exception**: their signedness is a compile-time `IS_SIGNED` parameter, because a compressor's
-  input signedness is fixed by where it sits in the datapath and never switches with the mode.
+  parameters. **Signedness is a compile-time `IS_SIGNED` parameter** on the datapath primitives whose
+  sign-ness is fixed by where they sit — `cpr_c_n`/`cpr_w_n`, `shift_n`, `ext_n` — since a given
+  instance is always signed or always unsigned. It stays a **runtime `is_signed_i` input** only where
+  it genuinely switches with the mode: `add_n` (a fused accumulator's low word resolves unsigned while
+  the high/standalone word resolves signed) and the DP's per-operand `is_signed_a_i`/`is_signed_b_i`
+  (the mode reinterprets the operands every cycle).
 - **Compressor** — one `IN_SIZE`-parameterized IP for all arities (8:2, 4:2, 3:2), *not* a runtime
   mux: a node's arity is fixed by where it sits. Two interchangeable builds with the **same
   interface**: `cpr_c_n` (serial cascade, running pair seeded from the first two inputs, depth

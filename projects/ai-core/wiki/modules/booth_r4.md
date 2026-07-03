@@ -3,7 +3,11 @@ type: module
 title: Booth Radix-4
 description: Radix-4 Booth partial-product generator with per-operand signedness.
 resource: rtl/booth_r4.sv
-tags: [module, arithmetic, booth, multiplier]
+tags:
+  - module
+  - arithmetic
+  - booth
+  - multiplier
 timestamp: 2026-07-01
 ---
 

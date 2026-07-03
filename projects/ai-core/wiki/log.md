@@ -4,6 +4,9 @@ Change history for the AI-Core wiki — newest first. Entries follow OKF: groupe
 
 ## 2026-07-02
 
+- **[Creation]**: Documented [pe_array](architecture/pe_array.md) — built-and-verified 16-DP8 carry-save reduction tree (15 `cpr_w_n` 4:2 + 14 `shift_n` + 15 `ext_n` + L0 `reg_n`; crossed L0 pairs, per-level `<<8`/`<<4`/`<<8`, node widths 25/30/38/39, taps 17/29/37/39). Verified with an integrated `disp_array→pe_array` testbench (11 modes × 2000 random + ramp; golden = `Σ dp8·2^weight` per tap subtree), which passes `-Wall`-clean.
+- **[Change]**: `shift_n` and `ext_n` moved `is_signed_i` from a runtime port to a compile-time `IS_SIGNED` parameter (structural-signedness convention, joining `cpr_w_n`); `cpr_w_n`/`cpr_c_n` instantiations updated, re-verified. Updated their module pages, [primitives](../doc/diagrams/primitives.md), and `doc/code_style.md`.
+- **[Update]**: `index.md` — added `pe_array` to the Architecture section.
 - **[Creation]**: Documented [disp_array](architecture/disp_array.md) — built-and-verified operand-dispatch array (8 pairs × MUX A + MUX B + high/low B split + B-gate, from `reg_n`/`mux_n`/`gate_b_n`; data-only, B-gate-only, input-registered). Its per-mode control vectors were extracted from `doc/formulas/modes.xlsx` and drive an 11-mode self-checking testbench, which passes.
 - **[Update]**: `index.md` — added the Architecture section (first entry: `disp_array`) and updated the scope note.
 

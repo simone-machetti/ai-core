@@ -50,13 +50,13 @@ module cpr_c_n #(
             end
         end else begin : gen_ext
             ext_n #(
-                .WIDTH(IN_WIDTH),
-                .SIZE (IN_SIZE),
-                .EXT  (EXT)
+                .WIDTH    (IN_WIDTH),
+                .SIZE     (IN_SIZE),
+                .EXT      (EXT),
+                .IS_SIGNED(IS_SIGNED)
             ) ext_n_i (
-                .in_i       (in_i),
-                .is_signed_i(IS_SIGNED),
-                .out_o      (ext_in)
+                .in_i (in_i),
+                .out_o(ext_in)
             );
         end
     endgenerate

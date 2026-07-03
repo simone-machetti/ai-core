@@ -19,9 +19,10 @@ Applies a programmable power-of-two weight (`2^SHIFT`) to a group of values, or 
 
 | Parameter | Default | Description                                    |
 | --------- | ------- | ---------------------------------------------- |
-| `WIDTH`   | 8       | Bit width of each input word.                  |
-| `SIZE`    | 4       | Number of input words (all share the selects). |
-| `SHIFT`   | 4       | Left-shift amount applied when selected.       |
+| `WIDTH`     | 8     | Bit width of each input word.                  |
+| `SIZE`      | 4     | Number of input words (all share the selects). |
+| `SHIFT`     | 4     | Left-shift amount applied when selected.       |
+| `IS_SIGNED` | 1     | Pass-through extension: `1` = sign-extend, `0` = zero-extend. |
 
 `OUT_WIDTH` (derived) `= WIDTH + SHIFT`.
 
@@ -31,18 +32,17 @@ Applies a programmable power-of-two weight (`2^SHIFT`) to a group of values, or 
 | ------------- | --- | -------------------- | ------------------------------------------------------------- |
 | `in_i`        | in  | `SIZE` × `WIDTH`     | Input words — unpacked array `[0:SIZE-1]`.                    |
 | `sel_i`       | in  | 1                    | `1` = shift left by `SHIFT`; `0` = pass through.              |
-| `is_signed_i` | in  | 1                    | Pass-through extension: `1` = sign-extend, `0` = zero-extend. |
 | `out_o`       | out | `SIZE` × `OUT_WIDTH` | Result words — unpacked array `[0:SIZE-1]`.                   |
 
 ## Internal logic
 
-Purely combinational, applied independently to each input `i` (all sharing `sel_i` / `is_signed_i`). When `sel_i = 1` the output is `{in_i[i], SHIFT zeros}` — the value multiplied by `2^SHIFT`, filling the full `OUT_WIDTH` with no loss, independent of `is_signed_i`. When `sel_i = 0` the output is `in_i[i]` extended to `OUT_WIDTH` — sign-extended when `is_signed_i`, otherwise zero-extended.
+Purely combinational, applied independently to each input `i` (all sharing `sel_i`). When `sel_i = 1` the output is `{in_i[i], SHIFT zeros}` — the value multiplied by `2^SHIFT`, filling the full `OUT_WIDTH` with no loss, independent of `IS_SIGNED`. When `sel_i = 0` the output is `in_i[i]` extended to `OUT_WIDTH` — sign-extended when `IS_SIGNED`, otherwise zero-extended. Signedness is a compile-time parameter because a shifter's datapath position fixes it (same rationale as `cpr_w_n`).
 
 ## Instantiation
 
 ```systemverilog
-shift_n #(.WIDTH(8), .SIZE(4), .SHIFT(4)) shift_n_i (
-    .in_i(in), .sel_i(sel), .is_signed_i(is_signed), .out_o(out)
+shift_n #(.WIDTH(8), .SIZE(4), .SHIFT(4), .IS_SIGNED(1'b1)) shift_n_i (
+    .in_i(in), .sel_i(sel), .out_o(out)
 );
 ```
 

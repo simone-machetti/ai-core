@@ -19,7 +19,12 @@
 //       dispatch, where the even lane carries the high nibble.
 //     - Each B half passes through a gate_b_n (per int4 element): pass / zero
 //       (idle lane) / negate (complex-mode imaginary term); ctr_h_i[p] gates the
-//       even (H) lane, ctr_l_i[p] the odd (L) lane.
+//       even (H) lane, ctr_l_i[p] the odd (L) lane. Negating an int8 B means
+//       negating its two int4 nibbles, which sit in different halves, so the
+//       low (L) gate does the two's-complement negate and its carry-out is
+//       routed into the high (H) gate as the carry-in of a negate-carry, making
+//       the full-width negation exact (the L gate uses GATE_NEG, the H gate
+//       GATE_NEG_CARRY).
 //
 //   Data-path only: operand signedness (is_signed_a/b per DP8) is a control the
 //   mode decoder (pe_ctrl) sends straight to the DP8s, not routed here. The two
@@ -94,6 +99,8 @@ module disp_array #(
             logic [B_ELEM_WIDTH-1:0] bhi_nib   [0:NUM_B_ELEM-1];
             logic [B_ELEM_WIDTH-1:0] blo_gated [0:NUM_B_ELEM-1];
             logic [B_ELEM_WIDTH-1:0] bhi_gated [0:NUM_B_ELEM-1];
+            logic                    blo_cin   [0:NUM_B_ELEM-1];
+            logic                    blo_carry [0:NUM_B_ELEM-1];
 
             mux_n #(
                 .WIDTH(BLK_WIDTH),
@@ -119,25 +126,32 @@ module disp_array #(
             for (e = 0; e < NUM_B_ELEM; e++) begin : gen_split
                 assign blo_nib[e] = b_sel[e*B_ELEM_WIDTH +: B_ELEM_WIDTH];
                 assign bhi_nib[e] = b_sel[B_DP8_WIDTH + e*B_ELEM_WIDTH +: B_ELEM_WIDTH];
+                assign blo_cin[e] = 1'b0;
             end
 
             gate_b_n #(
                 .WIDTH(B_ELEM_WIDTH),
                 .SIZE (NUM_B_ELEM)
             ) gate_b_n_l_i (
-                .in_i (blo_nib),
-                .sel_i(ctr_l_i[p]),
-                .out_o(blo_gated)
+                .in_i   (blo_nib),
+                .carry_i(blo_cin),
+                .sel_i  (ctr_l_i[p]),
+                .out_o  (blo_gated),
+                .carry_o(blo_carry)
             );
 
+            /* verilator lint_off PINCONNECTEMPTY */
             gate_b_n #(
                 .WIDTH(B_ELEM_WIDTH),
                 .SIZE (NUM_B_ELEM)
             ) gate_b_n_h_i (
-                .in_i (bhi_nib),
-                .sel_i(ctr_h_i[p]),
-                .out_o(bhi_gated)
+                .in_i   (bhi_nib),
+                .carry_i(blo_carry),
+                .sel_i  (ctr_h_i[p]),
+                .out_o  (bhi_gated),
+                .carry_o()
             );
+            /* verilator lint_on PINCONNECTEMPTY */
 
             for (e = 0; e < NUM_B_ELEM; e++) begin : gen_pack
                 assign b_dp8_o[2*p+0][e*B_ELEM_WIDTH +: B_ELEM_WIDTH] = bhi_gated[e];

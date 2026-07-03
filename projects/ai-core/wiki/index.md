@@ -14,6 +14,7 @@ LLM-authored design documentation for the **ai-core** project, written in the Op
 ## Architecture
 
 * [Dispatch Array](architecture/disp_array.md) — `disp_array`: routes the two 256-bit operands to the 16 DP8s (per-pair 4→1 block select + B high/low split + B-gate).
+* [PE Array](architecture/pe_array.md) — `pe_array`: 16 DP8s + 4-level carry-save shift/compress tree, with a tap (L0–L3) at every level.
 
 ## Modules
 
