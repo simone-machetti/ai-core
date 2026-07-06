@@ -1,10 +1,3 @@
----
-type: architecture
-title: Dispatch Array
-description: Operand router — dispatches the two 256-bit PE operands to the 16 DP8s via per-pair 4->1 block selects, a B high/low split, and per-DP8 B gating.
-resource: rtl/disp_array.sv
----
-
 # Dispatch Array
 
 `disp_array` — operand-dispatch array: it registers the two 256-bit PE operands (`pe_in_a_i`, `pe_in_b_i`) and routes them to the 16 [dp_8](../modules/dp_8.md) cores using one 4→1 block select per operand per pair, a fixed B high/low split, and per-DP8 B gating. It is instantiated inside [pe_array](./pe_array.md).

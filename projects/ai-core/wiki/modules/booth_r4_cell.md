@@ -1,10 +1,3 @@
----
-type: module
-title: Booth Radix-4 Cell
-description: Radix-4 Booth encoder cell — one 3-bit selector to one partial product of the multiplicand.
-resource: rtl/booth_r4_cell.sv
----
-
 # Booth Radix-4 Cell
 
 `booth_r4_cell` — a single radix-4 Booth selector: turns one 3-bit window of the recoded multiplier into one partial product of the multiplicand.

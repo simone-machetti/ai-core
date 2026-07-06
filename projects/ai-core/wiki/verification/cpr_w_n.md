@@ -1,10 +1,3 @@
----
-type: experiment
-title: Wallace Compressor N Testbench
-description: Self-checking testbench for cpr_w_n — the carry-save output must resolve to the arithmetic sum of the inputs.
-resource: tb/tb_cpr_w_n.sv
----
-
 # Wallace Compressor N Testbench
 
 ## Purpose

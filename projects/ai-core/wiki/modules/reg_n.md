@@ -1,10 +1,3 @@
----
-type: module
-title: Register N
-description: Parameterized register bank — SIZE independent WIDTH-bit registers with a shared async active-low reset.
-resource: rtl/reg_n.sv
----
-
 # Register N
 
 `reg_n` — Parameterized register-bank primitive: `SIZE` independent `WIDTH`-bit registers with a shared asynchronous active-low reset.

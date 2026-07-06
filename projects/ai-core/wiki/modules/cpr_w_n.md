@@ -1,10 +1,3 @@
----
-type: module
-title: Wallace Compressor N
-description: N-to-2 carry-save compressor, Wallace-tree build (maximal throughput).
-resource: rtl/cpr_w_n.sv
----
-
 # Wallace Compressor N
 
 `cpr_w_n` — Parameterized N-to-2 carry-save compressor, Wallace-tree build: reduces `IN_SIZE` `IN_WIDTH`-bit inputs to two rows whose arithmetic sum equals the sum of all inputs, in logarithmic depth.

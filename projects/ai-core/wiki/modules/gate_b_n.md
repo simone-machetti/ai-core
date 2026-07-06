@@ -1,10 +1,3 @@
----
-type: module
-title: Gate B N
-description: Parameterized conditioning gate — pass / zero / negate / carry-chained negate SIZE words under a shared 2-bit select.
-resource: rtl/gate_b_n.sv
----
-
 # Gate B N
 
 `gate_b_n` — Parameterized conditioning gate: passes, zeros, two's-complement-negates, or carry-chained-negates a group of `SIZE` `WIDTH`-bit words under a shared 2-bit select, with per-word carry-in and carry-out for chaining.

@@ -1,10 +1,3 @@
----
-type: module
-title: Cascade Compressor N
-description: N-to-2 carry-save compressor, serial-cascade build (minimal area).
-resource: rtl/cpr_c_n.sv
----
-
 # Cascade Compressor N
 
 `cpr_c_n` — Parameterized N-to-2 carry-save compressor, serial-cascade build: reduces `IN_SIZE` `IN_WIDTH`-bit inputs to two rows whose arithmetic sum equals the sum of all inputs, in minimal area.

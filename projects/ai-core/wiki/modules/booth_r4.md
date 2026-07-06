@@ -1,10 +1,3 @@
----
-type: module
-title: Booth Radix-4
-description: Radix-4 Booth partial-product generator with per-operand signedness.
-resource: rtl/booth_r4.sv
----
-
 # Booth Radix-4
 
 `booth_r4` — radix-4 Booth partial-product generator with per-operand runtime signedness: recodes the multiplier into overlapping 3-bit windows and emits `PP_SIZE` partial products of the multiplicand.

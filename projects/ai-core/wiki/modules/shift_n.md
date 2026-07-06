@@ -1,10 +1,3 @@
----
-type: module
-title: Shifter N
-description: Parameterized conditional left shifter — optionally shifts each of SIZE words left by SHIFT, widening to WIDTH+SHIFT.
-resource: rtl/shift_n.sv
----
-
 # Shifter N
 
 `shift_n` — Parameterized conditional left shifter: optionally shifts each of `SIZE` `WIDTH`-bit inputs left by `SHIFT`, widening the output to `WIDTH + SHIFT` bits so the shifted value is never truncated.

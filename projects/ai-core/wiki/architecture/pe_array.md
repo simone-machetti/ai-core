@@ -1,10 +1,3 @@
----
-type: architecture
-title: PE Array
-description: The 16-DP8 carry-save reduction tree — computes the 16 DP8 dot products and reduces them through a 4-level shift/compress tree, exposing a carry-save tap at every level.
-resource: rtl/pe_array.sv
----
-
 # PE Array
 
 `pe_array` — instantiates the 16 [dp_8](../modules/dp_8.md) cores and reduces their carry-save outputs through a 4-level tree with programmable per-level shifts, exposing a carry-save tap at every level so a mode reads its results at the depth matching its output count.

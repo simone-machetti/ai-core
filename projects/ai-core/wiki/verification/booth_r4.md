@@ -1,10 +1,3 @@
----
-type: experiment
-title: Booth Radix-4 Testbench
-description: Self-checking testbench for booth_r4 — the weighted partial-product sum must equal a·b under all four signedness combinations.
-resource: tb/tb_booth_r4.sv
----
-
 # Booth Radix-4 Testbench
 
 ## Purpose

@@ -1,10 +1,3 @@
----
-type: module
-title: Adder N
-description: Parameterized two-input adder with a WIDTH+1 result so the sum never overflows.
-resource: rtl/add_n.sv
----
-
 # Adder N
 
 `add_n` — Parameterized two-input adder producing a `WIDTH + 1`-bit result so the sum never overflows.

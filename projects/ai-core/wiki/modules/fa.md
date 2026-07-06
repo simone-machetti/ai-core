@@ -1,10 +1,3 @@
----
-type: module
-title: Full Adder
-description: One-bit full adder — the 3:2 cell inside the carry-save compressors.
-resource: rtl/fa.sv
----
-
 # Full Adder
 
 `fa` — One-bit full adder: sums three input bits into a sum bit and a carry-out bit.

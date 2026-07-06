@@ -1,10 +1,3 @@
----
-type: experiment
-title: Cascade Compressor N Testbench
-description: Self-checking testbench for cpr_c_n — the carry-save output must resolve to the arithmetic sum of the inputs.
-resource: tb/tb_cpr_c_n.sv
----
-
 # Cascade Compressor N Testbench
 
 ## Purpose

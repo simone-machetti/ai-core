@@ -1,10 +1,3 @@
----
-type: module
-title: Extender N
-description: Parameterized extender — widens each of SIZE WIDTH-bit inputs by EXT bits (sign or zero).
-resource: rtl/ext_n.sv
----
-
 # Extender N
 
 `ext_n` — Parameterized extender: widens each of `SIZE` `WIDTH`-bit inputs by `EXT` bits, to `WIDTH + EXT`.

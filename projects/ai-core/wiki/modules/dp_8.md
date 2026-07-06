@@ -1,10 +1,3 @@
----
-type: module
-title: Dot Product 8
-description: DP8 (8×4) dot-product core with per-operand signedness — eight int8×int4 MACs in carry-save.
-resource: rtl/dp_8.sv
----
-
 # Dot Product 8
 
 `dp_8` is the core MAC primitive: it multiply-accumulates eight `int8 × int4` products into a single carry-save dot product, with each operand's signedness chosen at runtime. See the diagram companion at [doc/diagrams/dp_8.md](../../doc/diagrams/dp_8.md).

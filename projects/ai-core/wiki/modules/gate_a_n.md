@@ -1,10 +1,3 @@
----
-type: module
-title: Gate A N
-description: Parameterized zero gate — passes or forces to zero SIZE WIDTH-bit words under a shared 1-bit select.
-resource: rtl/gate_a_n.sv
----
-
 # Gate A N
 
 `gate_a_n` — Parameterized zero gate: passes or forces to zero a group of `SIZE` `WIDTH`-bit words under a shared 1-bit select.

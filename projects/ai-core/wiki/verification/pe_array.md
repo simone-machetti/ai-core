@@ -1,10 +1,3 @@
----
-type: experiment
-title: PE Array Testbench
-description: Independent matrix-multiply testbench for pe_array (wired downstream of disp_array) — verifies every mode as a plain A·B, catching tree, weight, and routing errors.
-resource: tb/tb_pe_array.sv
----
-
 # PE Array Testbench
 
 ## Purpose

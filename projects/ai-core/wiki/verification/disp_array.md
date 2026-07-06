@@ -1,10 +1,3 @@
----
-type: experiment
-title: Dispatch Array Testbench
-description: Self-checking testbench for disp_array — checks every DP8 operand against a golden router model across all 11 modes.
-resource: tb/tb_disp_array.sv
----
-
 # Dispatch Array Testbench
 
 ## Purpose

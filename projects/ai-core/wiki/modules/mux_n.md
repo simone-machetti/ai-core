@@ -1,10 +1,3 @@
----
-type: module
-title: Multiplexer N
-description: Parameterized SIZE-to-1 multiplexer over WIDTH-bit words.
-resource: rtl/mux_n.sv
----
-
 # Multiplexer N
 
 `mux_n` — Parameterized `SIZE`-to-1 multiplexer over `WIDTH`-bit words.

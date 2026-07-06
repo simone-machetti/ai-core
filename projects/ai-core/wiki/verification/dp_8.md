@@ -1,10 +1,3 @@
----
-type: experiment
-title: Dot Product 8 Testbench
-description: Self-checking testbench for dp_8 — verifies both resolve and sign-consistency of the carry-save dot product across all signedness combinations.
-resource: tb/tb_dp_8.sv
----
-
 # Dot Product 8 Testbench
 
 ## Purpose
