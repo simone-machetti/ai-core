@@ -39,10 +39,10 @@ module tb_pe_array #(
     localparam int NUM_L0       = 8;
     localparam int NUM_L1       = 4;
     localparam int NUM_L2       = 2;
-    localparam int L0_TAP_WIDTH = 17;
+    localparam int L0_TAP_WIDTH = 18;
     localparam int L1_TAP_WIDTH = 29;
     localparam int L2_TAP_WIDTH = 37;
-    localparam int L3_TAP_WIDTH = 39;
+    localparam int L3_TAP_WIDTH = 38;
     localparam int NUM_MODE     = 11;
     localparam int MAXM         = 2;
     localparam int MAXK         = 32;
@@ -220,11 +220,13 @@ module tb_pe_array #(
 
     function automatic logic signed [15:0] rand_signed(input int width);
         logic [15:0] r;
+        int pk;
         r = 16'($urandom);
+        pk = $urandom % 5;
         case (width)
-            4:       return 16'($signed(r[3:0]));
-            8:       return 16'($signed(r[7:0]));
-            default: return $signed(r);
+            4:       return (pk == 0) ? -16'sd8     : (pk == 1) ? 16'sd7     : 16'($signed(r[3:0]));
+            8:       return (pk == 0) ? -16'sd128   : (pk == 1) ? 16'sd127   : 16'($signed(r[7:0]));
+            default: return (pk == 0) ? -16'sd32768 : (pk == 1) ? 16'sd32767 : $signed(r);
         endcase
     endfunction
 

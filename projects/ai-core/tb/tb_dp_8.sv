@@ -4,12 +4,14 @@
 // Description:
 //   Self-checking testbench for dp_8. Drives NUM_RAND random (a, b) vector pairs,
 //   each checked under all four per-operand signedness combinations, plus
-//   directed corner cases, and verifies two properties of the 18-bit carry-save
-//   output:
-//     - resolve:        sum_o + carry_o == sum_i(a_i * b_i) modulo 2^18
+//   directed corner cases, and verifies two properties of the carry-save output:
+//     - resolve:        sum_o + carry_o == sum_i(a_i * b_i) modulo 2^OUT_WIDTH
 //     - sign-consistent: signext(sum_o) + signext(carry_o) == sum_i(a_i * b_i)
-//   The second guarantees the output can be sign-extended by pe_array downstream.
-//   Reports a fatal error on any mismatch. Dumps activity.vcd.
+//   The second (stronger) property guarantees the output can be sign-extended by
+//   pe_array downstream. Lanes are biased toward the extreme values (most-negative
+//   / max-positive) so the rare sign-consistency corners are hit; a plain uniform
+//   distribution needs millions of vectors to reach them. Reports a fatal error
+//   on any mismatch. Dumps activity.vcd.
 //
 // Parameters:
 //   NUM_RAND - number of random vectors
@@ -26,7 +28,7 @@ module tb_dp_8 #(
     localparam int LANES     = 8;
     localparam int WIDTH_A   = 8;
     localparam int WIDTH_B   = 4;
-    localparam int OUT_WIDTH = 17;
+    localparam int OUT_WIDTH = 20;
 
     localparam logic [WIDTH_A-1:0] A_ZERO     = '0;
     localparam logic [WIDTH_A-1:0] A_ALL_ONES = {WIDTH_A{1'b1}};
@@ -92,9 +94,12 @@ module tb_dp_8 #(
     endtask
 
     task automatic rand_vec;
+        int pa, pb;
         for (int i = 0; i < LANES; i++) begin
-            a_v[i] = WIDTH_A'($urandom);
-            b_v[i] = WIDTH_B'($urandom);
+            pa = $urandom % 5;
+            pb = $urandom % 5;
+            a_v[i] = (pa == 0) ? A_MIN_NEG : (pa == 1) ? A_MAX_POS : WIDTH_A'($urandom);
+            b_v[i] = (pb == 0) ? B_MIN_NEG : (pb == 1) ? B_MAX_POS : WIDTH_B'($urandom);
         end
     endtask
 

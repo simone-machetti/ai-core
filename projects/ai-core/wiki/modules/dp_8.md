@@ -26,7 +26,8 @@ resource: rtl/dp_8.sv
 | `PP_WIDTH`   | `IN_WIDTH_A + 2` = `10`               | Width of each Booth partial product (holds `±2·a`).                       |
 | `CPR2_WIDTH` | `PP_WIDTH + $clog2(LANES) + 1` = `14` | Output width of each per-weight 8:2 compressor (13-bit sum-of-8 + guard). |
 | `FINAL_IN`   | `CPR2_WIDTH + 2·(PP_SIZE-1)` = `18`   | Input width of the final compressor, set by the `<< 4` weight-`2^4` row.  |
-| `OUT_WIDTH`  | `FINAL_IN - 1` = `17`                 | Carry-save output width (16-bit dot-product value + 1 guard bit).         |
+| `FINAL_EXT`  | `2`                                   | Guard bits on the final compressor — the minimum for sign-consistency.    |
+| `OUT_WIDTH`  | `FINAL_IN + FINAL_EXT` = `20`         | Carry-save output width (16-bit dot-product value + 4 guard bits).        |
 
 ## Interface
 
@@ -36,8 +37,8 @@ resource: rtl/dp_8.sv
 | `b_i[0:7]`      | in  | 4 each | Multiplier elements (`int4`), one per lane, radix-4 Booth-recoded. |
 | `is_signed_a_i` | in  | 1      | Multiplicand (`a`) signedness: `1` = signed, `0` = unsigned.       |
 | `is_signed_b_i` | in  | 1      | Multiplier (`b`) signedness: `1` = signed, `0` = unsigned.         |
-| `sum_o`         | out | 17     | Carry-save sum row.                                                |
-| `carry_o`       | out | 17     | Carry-save carry row; `sum_o + carry_o` = `Σ a_k·b_k`.             |
+| `sum_o`         | out | 20     | Carry-save sum row.                                                |
+| `carry_o`       | out | 20     | Carry-save carry row; `sum_o + carry_o` = `Σ a_k·b_k`.             |
 
 ## Instantiation
 
@@ -49,8 +50,8 @@ dp_8 dp_8_i (
     .b_i          (b),            // logic [3:0] b [0:7]
     .is_signed_a_i(is_signed_a),
     .is_signed_b_i(is_signed_b),
-    .sum_o        (sum),          // logic [16:0]
-    .carry_o      (carry)         // logic [16:0]
+    .sum_o        (sum),          // logic [19:0]
+    .carry_o      (carry)         // logic [19:0]
 );
 ```
 
@@ -59,8 +60,8 @@ dp_8 dp_8_i (
 `dp_8` is fully **combinational** and stays in **carry-save** (redundant, two-row) form from the first reduction to the output — there is no carry-propagate adder inside. The datapath is:
 
 ```
-8× booth_r4  →  3 per-weight 8:2 cpr_w_n  →  sign-extend + shift-align  →  1 final 6:2 cpr_w_n  →  truncate 18→17
- (24 PPs)        (weights 2^0, 2^2, 2^4)      (place each pair at 2^(2j))     (6 rows → 2 rows)      (sum_o, carry_o)
+8× booth_r4  →  3 per-weight 8:2 cpr_w_n  →  sign-extend + shift-align  →  1 final 6:2 cpr_w_n (EXT=2)
+ (24 PPs)        (weights 2^0, 2^2, 2^4)      (place each pair at 2^(2j))     (6 rows → 2 rows, 20b: sum_o, carry_o)
 ```
 
 The internal storage declares exactly these arrays:
@@ -142,13 +143,13 @@ Because each pair is sign-consistent, sign-extending and shifting it preserves i
 
 ### Final compression (6:2)
 
-The six aligned 18-bit rows are reduced to the two carry-save outputs by one more [cpr_w_n](./cpr_w_n.md), this time 6:2 with **no width growth**:
+The six aligned 18-bit rows are reduced to the two carry-save outputs by one more [cpr_w_n](./cpr_w_n.md), this time 6:2 with **two guard bits** (`EXT = 2`):
 
 ```systemverilog
 cpr_w_n #(
     .IN_WIDTH (FINAL_IN),    // 18
     .IN_SIZE  (2*PP_SIZE),   // 6 → 6:2 compression
-    .EXT      (0),           // no growth
+    .EXT      (FINAL_EXT),   // 2 guard bits — required for sign-consistency
     .IS_SIGNED(1'b1)
 ) cpr_w_n_final_i (
     .in_i   (final_in),
@@ -157,18 +158,18 @@ cpr_w_n #(
 );
 ```
 
-`EXT = 0` is deliberate: the six inputs are three carry-save pairs whose *combined* value is the full dot product, which already fits inside `FINAL_IN = 18` bits (established by the `<< 4` aligned row), so no extra bits are needed. The compressor sums all six rows into two 18-bit rows, `final_sum` and `final_carry`, still in carry-save.
+`EXT = 2` is **required, not optional**. `cpr_w_n` drops any carry out of its top bit (its carry row is `cout << 1`), so a Wallace reduction of sign-extended rows is only sign-consistent when the rows carry enough guard bits above the widest input. The six inputs reach magnitudes `2^13 / 2^15 / 2^17` (weights `2^0 / 2^2 / 2^4`), so their absolute sum is bounded by `2^14 + 2^16 + 2^18 = 344064`; the pair stays sign-consistent only while `2^(OUT_WIDTH-1) > 344064`, i.e. `OUT_WIDTH ≥ 20`, hence `FINAL_EXT = 2` on top of `FINAL_IN = 18`. With `EXT = 0` the resolve (`sum + carry mod 2^W`) still holds, but at rare extreme-operand corners the top carry is lost and the pair is **not** sign-consistent — a silent bug that only a corner-biased, sign-extended check catches. The compressor sums all six rows into two **20-bit** rows, `final_sum` and `final_carry`, still in carry-save.
 
-### The 18→17-bit output and the guard bit
+### The 20-bit output
 
-The 18-bit result carries the 16-bit dot-product value plus **two** guard bits; one is redundant, so the top bit of each row is dropped and the outputs are 17 bits:
+The two 20-bit rows are the output directly — no truncation:
 
 ```systemverilog
-assign sum_o   = final_sum[OUT_WIDTH-1:0];    // final_sum[16:0]
-assign carry_o = final_carry[OUT_WIDTH-1:0];  // final_carry[16:0]
+assign sum_o   = final_sum;    // logic [19:0]
+assign carry_o = final_carry;  // logic [19:0]
 ```
 
-`OUT_WIDTH = FINAL_IN - 1 = 17`. The kept 17 bits hold the 16-bit dot-product value plus **one** guard bit. The crucial invariant is that the pair stays **sign-consistent**: `signext(sum_o) + signext(carry_o)` equals the true dot product (not just modulo `2^17`). Each carry-save row therefore carries a single guard bit above the value, so its sign bit is meaningful and the pair can be sign-extended as a unit. This is what allows [pe_array](../architecture/pe_array.md) to sign-extend and re-align `dp_8`'s output when it accumulates the 16 DP8 results downstream. The testbench checks both facets on every vector: `sum_o + carry_o == Σ a_k·b_k (mod 2^17)` (**resolve**) and `signext(sum_o) + signext(carry_o) == Σ a_k·b_k` (**sign-consistent**).
+`OUT_WIDTH = FINAL_IN + FINAL_EXT = 20` holds the 16-bit dot-product value plus **4 guard bits** of carry-save headroom. The crucial invariant is that the pair stays **sign-consistent**: `signext(sum_o) + signext(carry_o)` equals the true dot product (not just modulo `2^20`). This is a *stronger* property than a correct resolve, and it is what allows [pe_array](../architecture/pe_array.md) to sign-extend and re-align `dp_8`'s output when it accumulates the 16 DP8 results downstream — a carry-save pair whose sign bit is wrong would corrupt every downstream sign-extension. The testbench checks both facets on every vector, with lanes biased toward the extreme values so the corners are reached: `sum_o + carry_o == Σ a_k·b_k (mod 2^20)` (**resolve**) and `signext(sum_o) + signext(carry_o) == Σ a_k·b_k` (**sign-consistent**).
 
 ### Per-operand signedness & the four sign combinations
 
@@ -195,9 +196,9 @@ so the true result lives in `[−16320, +30600]` — a 16-bit signed quantity. T
 | Booth partial product         | 10    | `int8 · {0,±1,±2}` — exact range.    |
 | Per-weight sum (8:2 cpr, ×3)  | 14    | 13-bit sum-of-8 range + 1 guard bit. |
 | Weight-`2^4` aligned (`<< 4`) | 18    | 14-bit row shifted `<< 4`.           |
-| Final reduce (6:2 cpr)        | 18    | six carry-save rows → two rows.      |
-| Output (top bit dropped)      | 17    | 16-bit dot value + 1 guard bit.      |
+| Final reduce (6:2 cpr, EXT=2) | 20    | six carry-save rows → two rows.      |
+| Output                        | 20    | 16-bit dot value + 4 guard bits.     |
 
-The 16-bit value leaves two guard bits at 18; the redundant top bit is dropped to give the **17-bit** sign-consistent output.
+The 16-bit value plus the guard bits that keep the redundant carry-save pair sign-consistent (`Σ|rows|` needs `2^(W-1) > 344064`, so `W = 20`) give the **20-bit** output — see [Final compression](#final-compression-62) above.
 
 Source: [dp_8.sv](../../rtl/dp_8.sv) — Testbench: [tb_dp_8.sv](../../tb/tb_dp_8.sv)

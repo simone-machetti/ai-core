@@ -11,7 +11,7 @@ resource: rtl/pe_array.sv
 
 ## Purpose
 
-Each DP8 produces one length-8 dot product in 17-bit carry-save form; the tree sums those 16 partial results with the per-mode radix weights and leaves the result in carry-save for the accumulator to resolve. A mode's outputs appear at the tree level whose node count matches the number of parallel results: 8 results at L0, 4 at L1, 2 at L2, 1 at L3. The 16 DP8s live here, so their per-lane signedness (`is_signed_a`/`is_signed_b`) arrives from `pe_ctrl` and is wired straight to them; the routed operands arrive from the [disp_array](./disp_array.md).
+Each DP8 produces one length-8 dot product in 20-bit carry-save form; the tree sums those 16 partial results with the per-mode radix weights and leaves the result in carry-save for the accumulator to resolve. A mode's outputs appear at the tree level whose node count matches the number of parallel results: 8 results at L0, 4 at L1, 2 at L2, 1 at L3. The 16 DP8s live here, so their per-lane signedness (`is_signed_a`/`is_signed_b`) arrives from `pe_ctrl` and is wired straight to them; the routed operands arrive from the [disp_array](./disp_array.md).
 
 ## Parameters
 
@@ -21,12 +21,12 @@ None — fixed to the PE configuration. `pe_array` exposes no external parameter
 | ----------------------------- | ----------------- | -------------------------------------------------------------- |
 | `NUM_DP8`                     | 16                | DP8 cores driving the tree.                                    |
 | `NUM_L0`/`NUM_L1`/`NUM_L2`    | 8 / 4 / 2         | node count at L0/L1/L2 (L3 is a single node).                  |
-| `DP8_WIDTH`                   | 17                | each DP8 carry-save row width.                                 |
+| `DP8_WIDTH`                   | 20                | each DP8 carry-save row width (sign-consistent).               |
 | `SH0`/`SH1`/`SH2`             | 8 / 4 / 8         | per-level left-shift amount (L0/L1/L2; L3 has no shift).       |
-| `L0_WIDTH`…`L3_WIDTH`         | 25 / 30 / 38 / 39 | internal node width at each level (what feeds the next level). |
-| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 17 / 29 / 37 / 39 | tap width exported to the accumulator at each level.           |
+| `L0_WIDTH`…`L3_WIDTH`         | 28 / 32 / 40 / 40 | internal node width at each level (what feeds the next level). |
+| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18 / 29 / 37 / 38 | tap width exported to the accumulator at each level.           |
 
-The compressor headroom `EXT` is not a localparam; it is passed inline to each `cpr_w_n` as `[0, 1, 0, 1]` over L0…L3 (see [Width growth and the taps](#width-growth-and-the-taps)). Everything runs signed: `IS_SIGNED = 1'b1` on every `shift_n`, `ext_n`, and `cpr_w_n`.
+Every `cpr_w_n` in the tree runs with `EXT = 0` — the DP8's 4 guard bits are headroom enough for all four levels (see [Width growth and the taps](#width-growth-and-the-taps)). Everything runs signed: `IS_SIGNED = 1'b1` on every `shift_n`, `ext_n`, and `cpr_w_n`.
 
 ## Interface
 
@@ -39,10 +39,10 @@ The compressor headroom `EXT` is not a localparam; it is passed inline to each `
 | `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 multiplicand signedness, from `pe_ctrl`.                        |
 | `is_signed_b_i[0:15]`        | in  | 1 each  | Per-DP8 multiplier signedness, from `pe_ctrl`.                          |
 | `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`. |
-| `l0_sum_o`/`l0_carry_o[0:7]` | out | 17 each | L0 taps (carry-save).                                                   |
+| `l0_sum_o`/`l0_carry_o[0:7]` | out | 18 each | L0 taps (carry-save).                                                   |
 | `l1_sum_o`/`l1_carry_o[0:3]` | out | 29 each | L1 taps.                                                                |
 | `l2_sum_o`/`l2_carry_o[0:1]` | out | 37 each | L2 taps.                                                                |
-| `l3_sum_o`/`l3_carry_o`      | out | 39      | L3 tap.                                                                 |
+| `l3_sum_o`/`l3_carry_o`      | out | 38      | L3 tap.                                                                 |
 
 Every tap is a carry-save pair (`sum + carry`); the tree never resolves — the accumulator does, splitting each tap into its lanes.
 
@@ -72,7 +72,7 @@ The datapath is: **16 DP8 cores → a 4-level carry-save reduction tree of 15 co
 
 ### The 16 DP8 cores
 
-Each 64-bit `a_dp8_i[i]` packs eight `int8` lanes and each 32-bit `b_dp8_i[i]` packs eight `int4` lanes. The `gen_dp8` block unpacks them and feeds one [dp_8](../modules/dp_8.md), which returns a 17-bit carry-save dot product:
+Each 64-bit `a_dp8_i[i]` packs eight `int8` lanes and each 32-bit `b_dp8_i[i]` packs eight `int4` lanes. The `gen_dp8` block unpacks them and feeds one [dp_8](../modules/dp_8.md), which returns a 20-bit carry-save dot product:
 
 ```systemverilog
 for (i = 0; i < NUM_DP8; i++) begin : gen_dp8
@@ -127,11 +127,11 @@ cpr_w_n #(.IN_WIDTH(L0_WIDTH), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i
 );
 ```
 
-- `shift_n` with `SHIFT = SH0 = 8`: when `sel_shift_i[0] = 1` it multiplies the higher-weight operand by `2^8`; when `0` it sign-extends it to the same `WIDTH + SHIFT` output width. Either way the output is `DP8_WIDTH + SH0 = 25` bits, so the compressor sees a fixed width regardless of the enable.
-- `ext_n` with `EXT = SH0 = 8`: sign-extends the lower-weight operand from 17 to 25 bits so it lines up with the shifted operand.
-- `cpr_w_n` with `IN_SIZE = 4`, `IN_WIDTH = L0_WIDTH = 25`, `EXT = 0`: reduces the four 25-bit rows to a 25-bit carry-save pair.
+- `shift_n` with `SHIFT = SH0 = 8`: when `sel_shift_i[0] = 1` it multiplies the higher-weight operand by `2^8`; when `0` it sign-extends it to the same `WIDTH + SHIFT` output width. Either way the output is `DP8_WIDTH + SH0 = 28` bits, so the compressor sees a fixed width regardless of the enable.
+- `ext_n` with `EXT = SH0 = 8`: sign-extends the lower-weight operand from 20 to 28 bits so it lines up with the shifted operand.
+- `cpr_w_n` with `IN_SIZE = 4`, `IN_WIDTH = L0_WIDTH = 28`, `EXT = 0`: reduces the four 28-bit rows to a 28-bit carry-save pair.
 
-`IN_SIZE = 4` is exactly "two operands × (sum + carry)". L1 and L2 are the same shape scaled up (`WIDTH` and `SHIFT` grow, and their compressor uses `EXT = 1`); L3 is the one exception — see [Width growth](#width-growth-and-the-taps).
+`IN_SIZE = 4` is exactly "two operands × (sum + carry)". L1 and L2 are the same shape scaled up (`WIDTH` and `SHIFT` grow; every compressor keeps `EXT = 0`); L3 is the one exception — see [Width growth](#width-growth-and-the-taps).
 
 ### The L0 crossover
 
@@ -180,24 +180,49 @@ For example the testbench drives `sel_shift = 3'b000` for the R8R4 modes (no wei
 
 ### Width growth and the taps
 
-Node widths are built up as `prev + shift`, plus the compressor's `EXT` headroom:
+**Value bits per level (pure arithmetic, no guard bit).** How many bits each mode's result actually occupies at each level it passes through — magnitude + sign (**bold** = the tap that mode reads, `–` = never reached). A tap's closed form is `Pa + Pb + log₂K` (real), `+ 1` for complex. The R16R16 modes (8, 9, 12) share their L0/L1 values with R16R8 (3, 7): B's high byte enters only at **L2** (`sel_shift[2]`), so through L0/L1 an R16R16 datapath is byte-for-byte identical to R16R8.
+
+| Mode | Prec   | Tap | L0     | L1     | L2     | L3     |
+| ---- | ------ | --- | ------ | ------ | ------ | ------ |
+| 1    | R8R4   | L0  | **16** | –      | –      | –      |
+| 2    | R8R8   | L1  | 16     | **20** | –      | –      |
+| 3    | R16R8  | L1  | 23     | **27** | –      | –      |
+| 5    | R8R4   | L2  | 16     | 16     | **17** | –      |
+| 6    | R8R8   | L3  | 16     | 20     | 21     | **21** |
+| 7    | R16R8  | L2  | 23     | 27     | **28** | –      |
+| 8    | R16R16 | L3  | 23     | 27     | 35     | **36** |
+| 9    | R16R16 | L2  | 23     | 27     | **35** | –      |
+| 10   | C8C8   | L1  | 16     | **20** | –      | –      |
+| 11   | C8C8   | L2  | 16     | 20     | **21** | –      |
+| 12   | C16C16 | L2  | 23     | 27     | **35** | –      |
+
+**Worst case per level.** Left: the worst over **every** mode that reaches the level — sizes the **node** that feeds the next level. Right: the worst over only the modes that **exit** (read their tap) at the level — sizes the exported **tap**.
+
+| Level | Worst — all modes through | Worst — modes exiting here |
+| ----- | ------------------------- | -------------------------- |
+| L0    | 23 (modes 3, 7, 8, 9, 12) | 16 (mode 1)                |
+| L1    | 27 (modes 3, 7, 8, 9, 12) | 27 (mode 3)                |
+| L2    | 35 (modes 8, 9, 12)       | 35 (modes 9, 12)           |
+| L3    | 36 (mode 8)               | 36 (mode 8)                |
+
+**Real architectural widths.** Node widths are just `prev + shift` — every compressor runs `EXT = 0`:
 
 ```systemverilog
-localparam int L0_WIDTH = DP8_WIDTH + SH0;      // 17 + 8      = 25
-localparam int L1_WIDTH = L0_WIDTH + SH1 + 1;   // 25 + 4 + 1  = 30
-localparam int L2_WIDTH = L1_WIDTH + SH2;       // 30 + 8      = 38
-localparam int L3_WIDTH = L2_WIDTH + 1;         // 38 + 1      = 39
+localparam int L0_WIDTH = DP8_WIDTH + SH0;      // 20 + 8  = 28
+localparam int L1_WIDTH = L0_WIDTH + SH1;       // 28 + 4  = 32
+localparam int L2_WIDTH = L1_WIDTH + SH2;       // 32 + 8  = 40
+localparam int L3_WIDTH = L2_WIDTH;             // 40 + 0  = 40
 ```
 
 | Level | operand width in (`prev + shift`) | CPR `EXT` | node width out |
 | ----- | --------------------------------- | --------- | -------------- |
-| DP8   | —                                 | —         | 17             |
-| L0    | 17 + **8** = 25                   | **0**     | **25**         |
-| L1    | 25 + **4** = 29                   | **1**     | **30**         |
-| L2    | 30 + **8** = 38                   | **0**     | **38**         |
-| L3    | 38 + **0** = 38                   | **1**     | **39**         |
+| DP8   | —                                 | —         | 20             |
+| L0    | 20 + **8** = 28                   | **0**     | **28**         |
+| L1    | 28 + **4** = 32                   | **0**     | **32**         |
+| L2    | 32 + **8** = 40                   | **0**     | **40**         |
+| L3    | 40 + **0** = 40                   | **0**     | **40**         |
 
-`EXT = 0` at L0/L2: the level already has a shift, so `prev + shift` gives the shifted operand room and the value + guard just fits (no extra bit). `EXT = 1` at L1/L3: driven by the complex modes, where `Re = ac − bd` sums two products and needs one more bit than the real path. L3 is special — it has **no** `shift_n` and **no** `ext_n`, because its two L2 operands are already the same `L2_WIDTH`; they feed the compressor directly:
+The DP8 already delivers a sign-consistent 20-bit pair (16-bit value + **4 guard bits**), and that headroom is enough for the whole tree: at every level `node − worst-through-value ≥ 3`, comfortably above the 2 guard bits a 4:2 needs. So no compressor takes extra `EXT` growth, and each node is simply the previous node plus that level's shift. L3 is special — it has **no** `shift_n` and **no** `ext_n`, because its two L2 operands are already the same `L2_WIDTH`; they feed the compressor directly:
 
 ```systemverilog
 logic [L2_WIDTH-1:0] l3_cpr_in [0:3];
@@ -206,32 +231,32 @@ assign l3_cpr_in[1] = l2_carry[0];
 assign l3_cpr_in[2] = l2_sum[1];
 assign l3_cpr_in[3] = l2_carry[1];
 
-cpr_w_n #(.IN_WIDTH(L2_WIDTH), .IN_SIZE(4), .EXT(1), .IS_SIGNED(1'b1)) cpr_w_n_l3_i (
+cpr_w_n #(.IN_WIDTH(L2_WIDTH), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_l3_i (
     .in_i(l3_cpr_in), .sum_o(l3_sum_w), .carry_o(l3_carry_w)
 );
 ```
 
-**Node vs tap.** The full node width above feeds the *next* level and is sized for the worst intermediate across all modes. The tap exported to the accumulator is narrower — it only holds the modes that actually *read* that level (their value + 1 guard bit) — and is taken as the **low slice** of the node:
+**Node vs tap.** The full node width above feeds the *next* level and is sized for the worst intermediate across all modes. The tap exported to the accumulator is narrower — it only holds the modes that actually *read* that level. Each tap is the output of a 4:2 compressor, so its minimum sign-consistent width is that mode's value + 2 compressor guard bits; the tap is the **low slice** of the node:
 
 ```systemverilog
-assign l0_sum_o[n]   = l0_sum_q[n][L0_TAP_WIDTH-1:0];   // low 17 of 25
-assign l1_sum_o[j]   = l1_sum[j][L1_TAP_WIDTH-1:0];     // low 29 of 30
-assign l2_sum_o[k]   = l2_sum[k][L2_TAP_WIDTH-1:0];     // low 37 of 38
-assign l3_sum_o      = l3_sum_w;                         // full 39
+assign l0_sum_o[n]   = l0_sum_q[n][L0_TAP_WIDTH-1:0];   // low 18 of 28
+assign l1_sum_o[j]   = l1_sum[j][L1_TAP_WIDTH-1:0];     // low 29 of 32
+assign l2_sum_o[k]   = l2_sum[k][L2_TAP_WIDTH-1:0];     // low 37 of 40
+assign l3_sum_o      = l3_sum_w[L3_TAP_WIDTH-1:0];      // low 38 of 40
 ```
 
-| Level | node | tap    | tap = widest reading-mode value + guard |
-| ----- | ---- | ------ | --------------------------------------- |
-| L0    | 25   | **17** | mode 1 (R8R4): 16 + 1                   |
-| L1    | 30   | **29** | mode 3 (R16R8): 28 + 1                  |
-| L2    | 38   | **37** | mode 9 (R16R16): 36 + 1                 |
-| L3    | 39   | **39** | full node — no slice                    |
+| Level | node | tap    | tap = widest reading-mode value + 2 |
+| ----- | ---- | ------ | ----------------------------------- |
+| L0    | 28   | **18** | mode 1 (R8R4): 16 + 2               |
+| L1    | 32   | **29** | mode 3 (R16R8): 27 + 2              |
+| L2    | 40   | **37** | modes 9/12 (R16R16): 35 + 2         |
+| L3    | 40   | **38** | mode 8 (R16R16): 36 + 2             |
 
-The high node bits above the tap only exist so the next level receives full precision; the accumulator sign-extends each tap into its lane.
+The high node bits above the tap only exist so the next level receives full precision; the accumulator sign-extends each tap into its lane. These tap widths are verified sign-consistent across all 11 modes under corner-biased operands (most-negative / max-positive lanes).
 
 ### Pipelining (the L0 register)
 
-L0 is the **only** registered stage — the single pipeline boundary inside `pe_array`. Two `reg_n` banks capture the L0 nodes at their full 25-bit width (not the narrow tap), one for sum and one for carry:
+L0 is the **only** registered stage — the single pipeline boundary inside `pe_array`. Two `reg_n` banks capture the L0 nodes at their full 28-bit width (not the narrow tap), one for sum and one for carry:
 
 ```systemverilog
 reg_n #(.WIDTH(L0_WIDTH), .SIZE(NUM_L0)) reg_n_l0_sum_i (
@@ -242,7 +267,7 @@ reg_n #(.WIDTH(L0_WIDTH), .SIZE(NUM_L0)) reg_n_l0_carry_i (
 );
 ```
 
-Registering at full 25-bit width matters: the R16 modes' `<<8` intermediate must reach L1 without truncation, so `l0_sum_q`/`l0_carry_q` feed L1 at full precision while only their low 17 bits leave as the L0 tap. L1, L2, and L3 are all combinational — one clock through the whole tree.
+Registering at full 28-bit width matters: the R16 modes' `<<8` intermediate must reach L1 without truncation, so `l0_sum_q`/`l0_carry_q` feed L1 at full precision while only their low 18 bits leave as the L0 tap. L1, L2, and L3 are all combinational — one clock through the whole tree.
 
 ### Reading a mode's result (which level / tap)
 

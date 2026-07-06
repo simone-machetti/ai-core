@@ -9,7 +9,7 @@ resource: tb/tb_dp_8.sv
 
 ## Purpose
 
-`tb_dp_8` verifies [dp_8](../modules/dp_8.md), the 8-lane carry-save dot product. It drives random and directed-corner `(a, b)` vector pairs — each under all four per-operand signedness combinations — and checks two properties of the two 17-bit carry-save rows: that they *resolve* to the true dot product, and that they stay *independently sign-extendable*.
+`tb_dp_8` verifies [dp_8](../modules/dp_8.md), the 8-lane carry-save dot product. It drives random and directed-corner `(a, b)` vector pairs — each under all four per-operand signedness combinations — and checks two properties of the two 20-bit carry-save rows: that they *resolve* to the true dot product, and that they stay *independently sign-extendable*. Lanes are biased toward the extreme values (most-negative / max-positive) because the sign-consistency corners are otherwise vanishingly rare — a lost-carry corner surfaces only about once in a few million uniform vectors.
 
 ## Parameters
 
@@ -17,7 +17,7 @@ resource: tb/tb_dp_8.sv
 | ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `NUM_RAND` | `2000`  | Number of random `(a, b)` vector pairs; each is exercised under all four signedness combinations, then six directed corners are added. |
 
-The DUT is instantiated with its defaults; the tb pins the shape with localparams `LANES=8`, `WIDTH_A=8`, `WIDTH_B=4`, `OUT_WIDTH=17` (the resolved width is 16 value bits + 1 guard bit) and does not override any DUT parameter.
+The DUT is instantiated with its defaults; the tb pins the shape with localparams `LANES=8`, `WIDTH_A=8`, `WIDTH_B=4`, `OUT_WIDTH=20` (16 value bits + 4 carry-save guard bits) and does not override any DUT parameter.
 
 ## Run
 
@@ -31,7 +31,7 @@ Increase the random budget with `PARAMS="NUM_RAND=10000"`.
 
 | Property        | Check                                                                                             |
 | --------------- | ------------------------------------------------------------------------------------------------- |
-| Resolve         | the low `OUT_WIDTH` (17) bits of `sum_o + carry_o` equal `Σ_i a_i · b_i` masked to the same width |
+| Resolve         | the low `OUT_WIDTH` (20) bits of `sum_o + carry_o` equal `Σ_i a_i · b_i` masked to the same width |
 | Sign-consistent | `signext(sum_o) + signext(carry_o) == Σ_i a_i · b_i` exactly (full precision)                     |
 
 The sign-consistency property is the stronger one: it guarantees the two carry-save rows can each be **sign-extended independently** by [pe_array](../architecture/pe_array.md) downstream (the reason each row carries a guard bit). A plain resolve check does not catch a lost sign; this one does. All four `is_signed_a_i × is_signed_b_i` combinations run on every vector, and any mismatch is **fatal**.
@@ -40,18 +40,21 @@ The sign-consistency property is the stronger one: it guarantees the two carry-s
 
 ### Stimulus generation
 
-`rand_vec` fills the eight `a`/`b` lanes with fresh raw random bits; the *interpretation* (signed vs unsigned) is applied later per check, so the same bit pattern is reused across all four signedness combinations.
+`rand_vec` fills the eight `a`/`b` lanes with random bits, but biases each lane toward the extremes — roughly 20% most-negative, 20% max-positive, 60% uniform — so mixed-extreme lane patterns (the ones that break sign-consistency) are hit within thousands of vectors instead of millions. The *interpretation* (signed vs unsigned) is applied later per check, so the same bit pattern is reused across all four signedness combinations.
 
 ```systemverilog
 task automatic rand_vec;
+    int pa, pb;
     for (int i = 0; i < LANES; i++) begin
-        a_v[i] = WIDTH_A'($urandom);
-        b_v[i] = WIDTH_B'($urandom);
+        pa = $urandom % 5;
+        pb = $urandom % 5;
+        a_v[i] = (pa == 0) ? A_MIN_NEG : (pa == 1) ? A_MAX_POS : WIDTH_A'($urandom);
+        b_v[i] = (pb == 0) ? B_MIN_NEG : (pb == 1) ? B_MAX_POS : WIDTH_B'($urandom);
     end
 endtask
 ```
 
-After the random loop, `set_vec` drives six directed corners that random draws almost never hit: all-zero, both max-positive, both min-negative, the two mixed max/min pairs, and all-ones. `A_MIN_NEG`/`B_MIN_NEG` are the most-negative values (`1000…0`) — the classic sign-extension trap.
+After the random loop, `set_vec` drives six directed corners with *all* lanes pinned: all-zero, both max-positive, both min-negative, the two mixed max/min pairs, and all-ones. `A_MIN_NEG`/`B_MIN_NEG` are the most-negative values (`1000…0`) — the classic sign-extension trap.
 
 ```systemverilog
 set_vec(A_ZERO,     B_ZERO);      check_all;

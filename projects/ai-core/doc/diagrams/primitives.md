@@ -16,7 +16,7 @@ parameters are listed per primitive.
 
 | Primitive                              | Params                                    | Appears in               | Count       | Function                                                                                                                                                                                                                                          |
 | -------------------------------------- | ----------------------------------------- | ------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **DP8** (`dp_8`)                       | — (fixed 8·8b×4b)                         | pe_array                 | 16          | Length-8 dot product `Σ aᵢ·bᵢ`; `booth_r4` + `cpr_w_n`; 17-bit carry-save output; per-operand runtime `is_signed_a_i`/`is_signed_b_i`. Fixed size, minimal widths.                                                                                |
+| **DP8** (`dp_8`)                       | — (fixed 8·8b×4b)                         | pe_array                 | 16          | Length-8 dot product `Σ aᵢ·bᵢ`; `booth_r4` + `cpr_w_n`; 20-bit sign-consistent carry-save output; per-operand runtime `is_signed_a_i`/`is_signed_b_i`. Fixed size, minimal widths.                                                              |
 | **Compressor** (`cpr_c_n` / `cpr_w_n`) | `IN_WIDTH`, `IN_SIZE`, `EXT`, `IS_SIGNED` | dp8, pe_array, acc_array | 16 + 15 + 8 | N:2 carry-save compressor, same interface, two builds: `cpr_c_n` serial cascade (min area, depth `IN_SIZE−2`), `cpr_w_n` Wallace tree (max throughput, ~log depth). 8:2 in DP, 4:2 tree, 3:2 lanes; compile-time `IS_SIGNED` for input extension. |
 | **ADD** (`add_n`)                      | `WIDTH`                                   | acc_array                | 8           | Two-input adder, `WIDTH + 1` output (overflow-safe); runtime `is_signed_i`.                                                                                                                                                                       |
 
@@ -63,13 +63,13 @@ Booth, from ai-core-legacy, with per-operand runtime `is_signed_a_i`/`is_signed_
 - **DP8** (`dp_8`) is composite and **fixed to 8 lanes of int8·int4** (not parameterized — specialized
   for minimal width): 8 radix-4 Booth multipliers (`booth_r4`) → three per-weight Wallace compressions
   (`cpr_w_n`, 8:2, weights `2^0`/`2^2`/`2^4`) → sign-extend + weight-align the carry-save rows → final
-  `cpr_w_n` (6:2) → 17-bit carry-save output. **Per-operand signedness** (`is_signed_a_i` /
+  `cpr_w_n` (6:2, `EXT = 2`) → 20-bit carry-save output. **Per-operand signedness** (`is_signed_a_i` /
   `is_signed_b_i`): each operand's high field is signed and low field unsigned, so all four sign combos
   occur; an unsigned `b` needs a **third** Booth partial product (weight `2^4`), `0` when `b` is signed.
-  Fully carry-save (no resolve adders): each pair carries **one guard bit** to stay sign-consistent.
-  The dot product spans 16 bits (`u×u` → `8·255·15 = 30600`, `u×s` → `−16320`); the final 6:2 takes no
-  width growth (`EXT = 0`) and produces 18-bit rows (set by the weight-`2^4` aligned rows), of which the
-  redundant top bit is dropped → a **17-bit** output (16-bit value + 1 guard, still sign-consistent).
+  Fully carry-save (no resolve adders): the pair carries guard bits to stay **sign-consistent**.
+  The dot product spans 16 bits (`u×u` → `8·255·15 = 30600`, `u×s` → `−16320`); the final 6:2 needs
+  `EXT = 2` guard bits (a sign-extended reduction loses its top carry with `EXT = 0`), giving a
+  **20-bit** output (16-bit value + 4 guard bits, sign-consistent — not truncated).
 - The **H/L split** in `disp_array` is bit-slicing / wiring, not a cell — so it is not a primitive.
 - **Status** — all primitives built: `reg_n`, `mux_n`, `shift_n`, `add_n`, `ext_n`, `gate_a_n`,
   `gate_b_n`, `cpr_c_n`, `cpr_w_n`, `dp_8` (+ helpers `fa`, `booth_r4`, `booth_r4_cell`). Next: the

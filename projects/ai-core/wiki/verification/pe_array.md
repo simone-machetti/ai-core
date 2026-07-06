@@ -17,7 +17,7 @@ resource: tb/tb_pe_array.sv
 | ---------- | ------- | --------------------------------------------------------------------- |
 | `NUM_RAND` | `2000`  | Number of random `A`,`B` matrix pairs generated and checked per mode. |
 
-The two DUTs are instantiated with their defaults; the tb pins the shape with localparams `NUM_BLK=4`, `BLK_WIDTH=64`, `NUM_PAIR=8`, `NUM_DP8=16`, the per-level tap widths (`L0=17`, `L1=29`, `L2=37`, `L3=39` bits), and the matmul bounds `MAXM=2`, `MAXK=32`, `MAXN=4`, `MAXO=8`, and does not override any DUT parameter.
+The two DUTs are instantiated with their defaults; the tb pins the shape with localparams `NUM_BLK=4`, `BLK_WIDTH=64`, `NUM_PAIR=8`, `NUM_DP8=16`, the per-level tap widths (`L0=18`, `L1=29`, `L2=37`, `L3=38` bits), and the matmul bounds `MAXM=2`, `MAXK=32`, `MAXN=4`, `MAXO=8`, and does not override any DUT parameter.
 
 ## Run
 
@@ -43,7 +43,7 @@ Each mode has an entry in `MM_DIMS = {M, K, N, PA, PB, cplx, NOUT}` giving the m
 
 ### Stimulus generation
 
-`rand_matrices` fills `A` and `B` with fresh signed values sized to the mode's precision. `rand_signed` draws a full-range signed value of `PA`/`PB` bits. The imaginary part of `B`, however, is drawn from a **symmetric** range by `rand_signed_sym`:
+`rand_matrices` fills `A` and `B` with fresh signed values sized to the mode's precision. `rand_signed` draws a signed value of `PA`/`PB` bits, biased toward the precision's extremes (most-negative / max-positive roughly 40% of the time) so the tree's sign-consistency corners are reached in thousands of vectors rather than millions. The imaginary part of `B`, however, is drawn from a **symmetric** range by `rand_signed_sym`:
 
 ```systemverilog
 function automatic logic signed [15:0] rand_signed_sym(input int width);

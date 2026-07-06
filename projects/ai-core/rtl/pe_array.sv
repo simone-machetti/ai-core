@@ -17,11 +17,14 @@
 //     - L3: 1 node,  no shift;               l3=l2[0]+l2[1].
 //   The even child (l0[2j], l1[2k]) is the higher-weight (shifted) operand.
 //
-//   Widths (17-bit DP8 + shift + compressor EXT, EXT=[0,1,0,1] over L0..L3):
-//     node = 25 / 30 / 38 / 39.  Taps are the low slice sized to the modes that
-//     read that level (value + 1 guard): 17 / 29 / 37 / 39. The wider node bits
-//     feed the next level; the acc splits/sign-extends the taps into its lanes.
-//     Everything is signed carry-save (IS_SIGNED = 1 on all shifts/exts/CPRs).
+//   Widths: the 20-bit DP8 output already carries 4 guard bits above its 16-bit
+//     value (sign-consistent), which is enough headroom for the whole tree, so
+//     every compressor runs EXT = 0 and each node is just prev + shift:
+//     node = 28 / 32 / 40 / 40 over L0..L3. Each tap is the output of a 4:2
+//     compressor, so it exports the reading mode's value + 2 guard bits (the
+//     compressor's own headroom): 18 / 29 / 37 / 38; the acc splits/sign-extends
+//     them into its lanes. Everything is signed carry-save (IS_SIGNED = 1 on all
+//     shifts/exts/CPRs).
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
@@ -33,7 +36,7 @@ module pe_array #(
     localparam int LANES        = 8,
     localparam int IN_WIDTH_A   = 8,
     localparam int IN_WIDTH_B   = 4,
-    localparam int DP8_WIDTH    = 17,
+    localparam int DP8_WIDTH    = 20,
     localparam int NUM_SHIFT    = 3,
     localparam int NUM_L0       = 8,
     localparam int NUM_L1       = 4,
@@ -42,13 +45,13 @@ module pe_array #(
     localparam int SH1          = 4,
     localparam int SH2          = 8,
     localparam int L0_WIDTH     = DP8_WIDTH + SH0,
-    localparam int L1_WIDTH     = L0_WIDTH + SH1 + 1,
+    localparam int L1_WIDTH     = L0_WIDTH + SH1,
     localparam int L2_WIDTH     = L1_WIDTH + SH2,
-    localparam int L3_WIDTH     = L2_WIDTH + 1,
-    localparam int L0_TAP_WIDTH = 17,
+    localparam int L3_WIDTH     = L2_WIDTH,
+    localparam int L0_TAP_WIDTH = 18,
     localparam int L1_TAP_WIDTH = 29,
     localparam int L2_TAP_WIDTH = 37,
-    localparam int L3_TAP_WIDTH = 39
+    localparam int L3_TAP_WIDTH = 38
 )(
     input  logic                     clk_i,
     input  logic                     rst_ni,
@@ -78,8 +81,12 @@ module pe_array #(
     logic [ L1_WIDTH-1:0] l1_carry   [0:NUM_L1-1];
     logic [ L2_WIDTH-1:0] l2_sum     [0:NUM_L2-1];
     logic [ L2_WIDTH-1:0] l2_carry   [0:NUM_L2-1];
+    // L3 is the final level: only the low L3_TAP_WIDTH bits are exported, so the
+    // compressor's top bits (L3_WIDTH-1 : L3_TAP_WIDTH) drive nothing.
+    /* verilator lint_off UNUSEDSIGNAL */
     logic [ L3_WIDTH-1:0] l3_sum_w;
     logic [ L3_WIDTH-1:0] l3_carry_w;
+    /* verilator lint_on UNUSEDSIGNAL */
 
     genvar i, ln, n, j, k;
 
@@ -106,11 +113,11 @@ module pe_array #(
         for (n = 0; n < NUM_L0; n++) begin : gen_l0
             localparam int CX0 = 4*(n/2) + (n%2);
             localparam int CX1 = CX0 + 2;
-            logic [DP8_WIDTH-1:0] hi_in  [0:1];
-            logic [DP8_WIDTH-1:0] lo_in  [0:1];
-            logic [ L0_WIDTH-1:0] hi_sh  [0:1];
-            logic [ L0_WIDTH-1:0] lo_ext [0:1];
-            logic [ L0_WIDTH-1:0] cpr_in [0:3];
+            logic [       DP8_WIDTH-1:0] hi_in  [0:1];
+            logic [       DP8_WIDTH-1:0] lo_in  [0:1];
+            logic [(DP8_WIDTH+SH0)-1:0]  hi_sh  [0:1];
+            logic [(DP8_WIDTH+SH0)-1:0]  lo_ext [0:1];
+            logic [(DP8_WIDTH+SH0)-1:0]  cpr_in [0:3];
 
             assign hi_in[0] = dp8_sum[CX0];
             assign hi_in[1] = dp8_carry[CX0];
@@ -129,7 +136,7 @@ module pe_array #(
             assign cpr_in[2] = lo_ext[0];
             assign cpr_in[3] = lo_ext[1];
 
-            cpr_w_n #(.IN_WIDTH(L0_WIDTH), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
+            cpr_w_n #(.IN_WIDTH(DP8_WIDTH+SH0), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
                 .in_i(cpr_in), .sum_o(l0_sum[n]), .carry_o(l0_carry[n])
             );
         end
@@ -167,7 +174,7 @@ module pe_array #(
             assign cpr_in[2] = lo_ext[0];
             assign cpr_in[3] = lo_ext[1];
 
-            cpr_w_n #(.IN_WIDTH(L0_WIDTH+SH1), .IN_SIZE(4), .EXT(1), .IS_SIGNED(1'b1)) cpr_w_n_i (
+            cpr_w_n #(.IN_WIDTH(L0_WIDTH+SH1), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
                 .in_i(cpr_in), .sum_o(l1_sum[j]), .carry_o(l1_carry[j])
             );
         end
@@ -210,7 +217,7 @@ module pe_array #(
     assign l3_cpr_in[2] = l2_sum[1];
     assign l3_cpr_in[3] = l2_carry[1];
 
-    cpr_w_n #(.IN_WIDTH(L2_WIDTH), .IN_SIZE(4), .EXT(1), .IS_SIGNED(1'b1)) cpr_w_n_l3_i (
+    cpr_w_n #(.IN_WIDTH(L2_WIDTH), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_l3_i (
         .in_i(l3_cpr_in), .sum_o(l3_sum_w), .carry_o(l3_carry_w)
     );
 
@@ -229,7 +236,7 @@ module pe_array #(
         end
     endgenerate
 
-    assign l3_sum_o   = l3_sum_w;
-    assign l3_carry_o = l3_carry_w;
+    assign l3_sum_o   = l3_sum_w[L3_TAP_WIDTH-1:0];
+    assign l3_carry_o = l3_carry_w[L3_TAP_WIDTH-1:0];
 
 endmodule
