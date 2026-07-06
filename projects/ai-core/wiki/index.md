@@ -6,10 +6,7 @@ okf_version: "0.1"
 
 LLM-authored design documentation for the **ai-core** project, written in the Open Knowledge Format (OKF v0.1). Each page summarizes and cross-references the project's own `rtl/`, `tb/`, and `doc/` sources and links back to them through its `resource:` field. See [log.md](log.md) for the change history.
 
-> The **built-and-verified** blocks are documented below (the primitive library, the DP8 core, and
-> the dispatch array). Higher-level blocks (`pe_array`, `acc_array`, `pe_ctrl`, `pe_top`) are not yet
-> defined and are intentionally not documented here. Pages are added under the matching folder
-> (`architecture/`, `modules/`, `concepts/`, `decisions/`, `experiments/`, `references/`).
+> The **built-and-verified** blocks are documented below (the primitive library, the DP8 core, the dispatch array, and the PE array), together with their testbenches under **Verification**. The remaining higher-level blocks (`acc_array`, `pe_ctrl`, `pe_top`) are not yet defined and are intentionally not documented here. Pages are added under the matching folder (`architecture/`, `modules/`, `verification/`, `concepts/`, `decisions/`, `experiments/`, `references/`).
 
 ## Architecture
 
@@ -31,6 +28,15 @@ LLM-authored design documentation for the **ai-core** project, written in the Op
 * [Gate A N](modules/gate_a_n.md) — `gate_a_n`: zero gate (pass / zero) over SIZE words.
 * [Gate B N](modules/gate_b_n.md) — `gate_b_n`: conditioning gate (pass / zero / negate) over SIZE words.
 * [Register N](modules/reg_n.md) — `reg_n`: register bank, SIZE WIDTH-bit registers, shared async reset.
+
+## Verification
+
+* [PE Array Testbench](verification/pe_array.md) — `tb_pe_array`: independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
+* [Dispatch Array Testbench](verification/disp_array.md) — `tb_disp_array`: every DP8 operand vs a golden router model, all 11 modes.
+* [Dot Product 8 Testbench](verification/dp_8.md) — `tb_dp_8`: resolve + sign-consistency of the carry-save dot product, all signedness combos.
+* [Booth Radix-4 Testbench](verification/booth_r4.md) — `tb_booth_r4`: weighted partial-product sum equals `a·b`, all signedness combos.
+* [Wallace Compressor N Testbench](verification/cpr_w_n.md) — `tb_cpr_w_n`: carry-save output resolves to the input sum.
+* [Cascade Compressor N Testbench](verification/cpr_c_n.md) — `tb_cpr_c_n`: carry-save output resolves to the input sum.
 
 ## Concepts
 

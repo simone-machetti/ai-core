@@ -2,6 +2,15 @@
 
 Change history for the AI-Core wiki — newest first. Entries follow OKF: grouped by ISO-8601 date, each line `**[Action]**: description`.
 
+## 2026-07-06
+
+- **[Update]**: Restructured the 6 verification pages to Purpose → Parameters → Run → What it checks → How it checks (the last expanded into testbench-quoted `###` subsections describing stimulus, golden model, timing, and compare). Aligned all table pipes across the wiki and joined the `index.md` scope note into a single line (no mid-sentence line breaks).
+- **[Update]**: Restructured all 13 module + 2 architecture pages to the fixed section order (Purpose → Parameters → Interface → Instantiation → Internal logic) and expanded every **Internal logic** section into RTL-quoted `###` subsections that walk the datapath for a first-time reader.
+- **[Fix]**: [pe_array](architecture/pe_array.md) — corrected the primitive counts (14 `shift_n` / 14 `ext_n`; L3 has neither — it merges two equal-width operands) and kept mode 12's tap at L2 (the `doc/diagrams/pe_array.md` "Bit widths" table still says L3 — stale).
+- **[Creation]**: Added the `verification/` folder documenting the six testbenches — [pe_array](verification/pe_array.md), [disp_array](verification/disp_array.md), [dp_8](verification/dp_8.md), [booth_r4](verification/booth_r4.md), [cpr_w_n](verification/cpr_w_n.md), [cpr_c_n](verification/cpr_c_n.md); each links to the DUT it exercises and its `tb/` source.
+- **[Update]**: `index.md` — added the Verification section (6 pages) and `verification/` to the folder list; refreshed the scope note (`pe_array` is documented).
+- **[Change]**: Removed the `tags` and `timestamp` frontmatter fields from all 15 concept pages (kept `type`/`title`/`description`/`resource`).
+
 ## 2026-07-02
 
 - **[Creation]**: Documented [pe_array](architecture/pe_array.md) — built-and-verified 16-DP8 carry-save reduction tree (15 `cpr_w_n` 4:2 + 14 `shift_n` + 15 `ext_n` + L0 `reg_n`; crossed L0 pairs, per-level `<<8`/`<<4`/`<<8`, node widths 25/30/38/39, taps 17/29/37/39). Verified with an integrated `disp_array→pe_array` testbench (11 modes × 2000 random + ramp; golden = `Σ dp8·2^weight` per tap subtree), which passes `-Wall`-clean.
