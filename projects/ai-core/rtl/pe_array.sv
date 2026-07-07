@@ -81,8 +81,6 @@ module pe_array #(
     logic [ L1_WIDTH-1:0] l1_carry   [0:NUM_L1-1];
     logic [ L2_WIDTH-1:0] l2_sum     [0:NUM_L2-1];
     logic [ L2_WIDTH-1:0] l2_carry   [0:NUM_L2-1];
-    // L3 is the final level: only the low L3_TAP_WIDTH bits are exported, so the
-    // compressor's top bits (L3_WIDTH-1 : L3_TAP_WIDTH) drive nothing.
     /* verilator lint_off UNUSEDSIGNAL */
     logic [ L3_WIDTH-1:0] l3_sum_w;
     logic [ L3_WIDTH-1:0] l3_carry_w;

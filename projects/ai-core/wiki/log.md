@@ -2,6 +2,12 @@
 
 Change history for the AI-Core wiki — newest first. Entries follow OKF: grouped by ISO-8601 date, each line `**[Action]**: description`.
 
+## 2026-07-07
+
+- **[Creation]**: Documented [acc_array](architecture/acc_array.md) — the built-and-verified 8-lane accumulator (per lane: window split → tap-level `mux_n` → `cpr_w_n` 3:2 + accumulate `mux_n` → `add_n` → `reg_n`, with a 2-bit fusion carry chained by `gate_n`). Verified end to end (`disp_array → pe_array → acc_array`) across all 11 modes, single-shot and accumulating, with [tb_acc_array](verification/acc_array.md). Added both pages and the `index.md` entries; refreshed the diagram companion `doc/diagrams/acc_array.md`.
+- **[Change]**: Renamed `gate_a_n` → [gate_n](modules/gate_n.md) (generic zero gate / carry enable); in `acc_array` it gates the 2-bit fusion carry at `WIDTH = 2`. Updated the module page, [primitives](../doc/diagrams/primitives.md), and `gate_b_n`'s cross-links.
+- **[Change]**: [add_n](modules/add_n.md) reworked — dropped the runtime `is_signed_i`, added a `CARRY`-bit carry-in/out (`{cout_o, out_o} = in_0 + in_1 + cin`), output stays `WIDTH`-bit. Signedness now comes entirely from `acc_array`'s 40-bit tap sign-extension, so the lane adds run unsigned.
+
 ## 2026-07-06
 
 - **[Fix]**: BUG-2 — [dp_8](modules/dp_8.md) carry-save output was not sign-consistent at extreme-operand corners. The final 6:2 `cpr_w_n` used `EXT = 0` (zero guard bits) and truncated to 17 bits, so a sign-extended reduction lost its top carry (resolve still held, sign-consistency did not). Fixed with `FINAL_EXT = 2` → **20-bit** output (16-bit value + 4 guard bits, no truncation). Verified over 5,000,000 corner-biased vectors. See `doc/known_issues.md` (BUG-2).
@@ -24,7 +30,7 @@ Change history for the AI-Core wiki — newest first. Entries follow OKF: groupe
 
 ## 2026-07-01
 
-- **[Creation]**: Documented the built-and-verified modules — moved each component's design doc from `rtl/<mod>.md` into `modules/` as OKF pages and deleted the originals: [dp_8](modules/dp_8.md), [booth_r4](modules/booth_r4.md), [booth_r4_cell](modules/booth_r4_cell.md), [cpr_w_n](modules/cpr_w_n.md), [cpr_c_n](modules/cpr_c_n.md), [fa](modules/fa.md), [add_n](modules/add_n.md), [ext_n](modules/ext_n.md), [shift_n](modules/shift_n.md), [mux_n](modules/mux_n.md), [gate_a_n](modules/gate_a_n.md), [gate_b_n](modules/gate_b_n.md), [reg_n](modules/reg_n.md).
+- **[Creation]**: Documented the built-and-verified modules — moved each component's design doc from `rtl/<mod>.md` into `modules/` as OKF pages and deleted the originals: [dp_8](modules/dp_8.md), [booth_r4](modules/booth_r4.md), [booth_r4_cell](modules/booth_r4_cell.md), [cpr_w_n](modules/cpr_w_n.md), [cpr_c_n](modules/cpr_c_n.md), [fa](modules/fa.md), [add_n](modules/add_n.md), [ext_n](modules/ext_n.md), [shift_n](modules/shift_n.md), [mux_n](modules/mux_n.md), [gate_n](modules/gate_n.md), [gate_b_n](modules/gate_b_n.md), [reg_n](modules/reg_n.md).
 - **[Update]**: `index.md` — populated the Modules section (13 pages). Higher-level blocks left undocumented (not yet defined).
 
 ## 2026-06-30

@@ -2,37 +2,37 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Parameterized two-input adder. Adds in_0_i and in_1_i, each WIDTH bits
-//   wide, and produces a (WIDTH + 1)-bit result so the sum never overflows.
-//   The is_signed_i select chooses how the operands are extended into the
-//   extra bit: signed (sign-extended, two's-complement sum) or unsigned
-//   (zero-extended). The low WIDTH bits are identical either way; only the
-//   most-significant (overflow) bit differs. is_signed_i is a runtime signal
-//   so the mode can switch it - e.g. the low word of a fused accumulator
-//   resolves unsigned while the high or standalone word resolves signed.
+//   Parameterized two-input adder that resolves a pair of carry-save rows and
+//   presents the result split into a sum word and a carry-out. It adds two
+//   (WIDTH + CARRY)-bit operands plus a CARRY-bit carry-in and returns the low
+//   WIDTH bits as out_o and the top CARRY bits as cout_o:
+//       {cout_o, out_o} = in_0_i + in_1_i + cin_i
+//   Keeping out_o at WIDTH means the sum going to a register stays WIDTH bits,
+//   while cout_o carries the overflow so adjacent lanes can be chained (low lane
+//   -> cout_o -> gate -> cin_i of the high lane) to build a wider result from
+//   narrow lanes. CARRY is the carry width: 1 for a plain adder, or wider where a
+//   single window folds more than two rows and its overflow needs more than one
+//   bit - e.g. acc_array folds three 20-bit rows per window (via a 22-bit CPR),
+//   whose carry into the next lane is 2 bits, so it uses WIDTH = 20, CARRY = 2.
 //
 // Parameters:
-//   WIDTH - bit width of each operand
+//   WIDTH - bit width of the sum output
+//   CARRY - bit width of the carry-in/out; the operands are WIDTH + CARRY wide
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
 
 module add_n #(
     parameter int WIDTH = 8,
-
-    localparam int OUT_WIDTH = WIDTH + 1
+    parameter int CARRY = 1
 )(
-    input  logic [    WIDTH-1:0] in_0_i,
-    input  logic [    WIDTH-1:0] in_1_i,
-    input  logic                 is_signed_i,
-    output logic [OUT_WIDTH-1:0] out_o
+    input  logic [WIDTH+CARRY-1:0] in_0_i,
+    input  logic [WIDTH+CARRY-1:0] in_1_i,
+    input  logic [      CARRY-1:0] cin_i,
+    output logic [      WIDTH-1:0] out_o,
+    output logic [      CARRY-1:0] cout_o
 );
 
-    logic [OUT_WIDTH-1:0] ext_0;
-    logic [OUT_WIDTH-1:0] ext_1;
-
-    assign ext_0 = {(is_signed_i ? in_0_i[WIDTH-1] : 1'b0), in_0_i};
-    assign ext_1 = {(is_signed_i ? in_1_i[WIDTH-1] : 1'b0), in_1_i};
-    assign out_o = ext_0 + ext_1;
+    assign {cout_o, out_o} = in_0_i + in_1_i + (WIDTH+CARRY)'(cin_i);
 
 endmodule

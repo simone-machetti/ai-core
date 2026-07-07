@@ -1,10 +1,10 @@
-# Gate A N
+# Gate N
 
-`gate_a_n` — Parameterized zero gate: passes or forces to zero a group of `SIZE` `WIDTH`-bit words under a shared 1-bit select.
+`gate_n` — Parameterized zero gate: passes or forces to zero a group of `SIZE` `WIDTH`-bit words under a shared 1-bit select.
 
 ## Purpose
 
-Conditionally masks a group of words to zero — the operand-A gating path, which only ever needs masking to zero, never negation (contrast [gate_b_n](gate_b_n.md)). At `WIDTH = 1` the same cell serves as a carry enable.
+Conditionally masks a group of words to zero — used for operand masking, which only ever needs zeroing, never negation (contrast [gate_b_n](gate_b_n.md)), and at small `WIDTH` as a carry enable. In [acc_array](../architecture/acc_array.md) it gates the inter-lane fusion carry (`WIDTH = 2`, `SIZE = 4`): drive `sel_i = ~prop_carry` so the carry passes only when a lane pair fuses.
 
 ## Parameters
 
@@ -24,7 +24,7 @@ Conditionally masks a group of words to zero — the operand-A gating path, whic
 ## Instantiation
 
 ```systemverilog
-gate_a_n #(.WIDTH(8), .SIZE(4)) gate_a_n_i (
+gate_n #(.WIDTH(8), .SIZE(4)) gate_n_i (
     .in_i  (in),
     .sel_i (sel),
     .out_o (out)
@@ -61,8 +61,8 @@ Because the assignment is combinational, `out_o` tracks `in_i` and `sel_i` with 
 
 None is needed. Zeroing is a bitwise mask and passing is a straight copy, so the operation is identical for signed and unsigned data — there is no arithmetic, no carry, and no sign extension. `WIDTH` only sets how many bits each word carries; `SIZE` only sets how many words the loop instantiates.
 
-### The `WIDTH = 1` carry-enable case
+### The carry-enable case
 
-When instantiated with `WIDTH = 1`, each word is a single bit and the same "pass or force to zero" behavior reads as a carry enable: `sel_i = 0` lets the bit propagate, `sel_i = 1` masks it to `0`. This is why the operand-A path never needs the richer negate/carry logic of [gate_b_n](gate_b_n.md) — masking to zero is the only conditioning operand A ever requires.
+At narrow `WIDTH` the same "pass or force to zero" behavior reads as a carry enable. In [acc_array](../architecture/acc_array.md) one `gate_n #(.WIDTH(2), .SIZE(4))` gates the four inter-lane fusion carries: with `sel_i = ~prop_carry`, `prop_carry = 1` lets each 2-bit carry propagate from the low lane to the high lane of a pair, `prop_carry = 0` forces it to `0` so the lanes stay independent. Masking to zero — never negation — is all this conditioning ever needs, which is why it uses `gate_n` and not the richer [gate_b_n](gate_b_n.md).
 
-Source: [gate_a_n.sv](../../rtl/gate_a_n.sv)
+Source: [gate_n.sv](../../rtl/gate_n.sv)

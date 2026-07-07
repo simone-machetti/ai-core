@@ -64,6 +64,6 @@ Each output word is a concatenation of two fields:
   - When `IS_SIGNED = 1`, the fill is the word's own MSB `in_i[i][WIDTH-1]` — a *sign extension*: replicating the sign bit widens the two's-complement value while preserving its numeric magnitude and sign.
   - When `IS_SIGNED = 0`, the fill is `1'b0` — a *zero extension*: the value is treated as non-negative and the new high bits are simply zeros.
 
-Unlike [add_n](./add_n.md), whose `is_signed_i` is a runtime port, `IS_SIGNED` here is a compile-time parameter: a datapath's position fixes whether its operands are signed, so the choice is baked in per instance (the same rationale [cpr_w_n](./cpr_w_n.md) uses when it instantiates this module with `.IS_SIGNED(IS_SIGNED)`). This makes the fill bit a constant `1'b0` for the whole unsigned instance, letting synthesis drop the sign-bit fanout entirely.
+Unlike the DP's [booth_r4](./booth_r4.md), whose `is_signed_a_i`/`is_signed_b_i` are runtime ports, `IS_SIGNED` here is a compile-time parameter: a datapath's position fixes whether its operands are signed, so the choice is baked in per instance (the same rationale [cpr_w_n](./cpr_w_n.md) uses when it instantiates this module with `.IS_SIGNED(IS_SIGNED)`). This makes the fill bit a constant `1'b0` for the whole unsigned instance, letting synthesis drop the sign-bit fanout entirely.
 
 Source: [ext_n.sv](../../rtl/ext_n.sv)
