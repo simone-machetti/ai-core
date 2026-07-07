@@ -39,14 +39,14 @@ module pe_top #(
     localparam int PE_WIDTH    = 20,
     localparam int MODE_WIDTH  = 4
 )(
-    input  logic                    clk_i,
-    input  logic                    rst_ni,
-    input  logic [PE_IN_WIDTH-1:0]  pe_in_a_i,
-    input  logic [PE_IN_WIDTH-1:0]  pe_in_b_i,
-    input  logic [ MODE_WIDTH-1:0]  mode_i,
-    input  logic                    sel_acc_i,
-    input  logic [   PE_WIDTH-1:0]  acc_i    [0:NUM_LANE-1],
-    output logic [   PE_WIDTH-1:0]  pe_out_o [0:NUM_LANE-1]
+    input  logic                   clk_i,
+    input  logic                   rst_ni,
+    input  logic [PE_IN_WIDTH-1:0] pe_in_a_i,
+    input  logic [PE_IN_WIDTH-1:0] pe_in_b_i,
+    input  logic [ MODE_WIDTH-1:0] mode_i,
+    input  logic                   sel_acc_i,
+    input  logic [   PE_WIDTH-1:0] acc_i    [0:NUM_LANE-1],
+    output logic [   PE_WIDTH-1:0] pe_out_o [0:NUM_LANE-1]
 );
 
     logic [MODE_WIDTH-1:0] mode_d    [0:0];
@@ -112,8 +112,8 @@ module pe_top #(
         .clk_i(clk_i), .rst_ni(rst_ni), .d_i(propc_d), .q_o(propc_q)
     );
 
-    logic                 selacc_q2 [0:0];
-    logic [  PE_WIDTH-1:0] acc_q2   [0:NUM_LANE-1];
+    logic                  selacc_q2 [0:0];
+    logic [  PE_WIDTH-1:0] acc_q2    [0:NUM_LANE-1];
 
     reg_n #(.WIDTH(1), .SIZE(1)) reg_selacc2_i (
         .clk_i(clk_i), .rst_ni(rst_ni), .d_i(selacc_q1), .q_o(selacc_q2)

@@ -41,18 +41,18 @@ module pe_datapath #(
     input  logic                         rst_ni,
     input  logic [NUM_BLK*BLK_WIDTH-1:0] pe_in_a_i,
     input  logic [NUM_BLK*BLK_WIDTH-1:0] pe_in_b_i,
-    input  logic [       SEL_WIDTH-1:0]  sel_a_i       [0:NUM_PAIR-1],
-    input  logic [       SEL_WIDTH-1:0]  sel_b_i       [0:NUM_PAIR-1],
-    input  logic [        OP_WIDTH-1:0]  ctr_l_i       [0:NUM_PAIR-1],
-    input  logic [        OP_WIDTH-1:0]  ctr_h_i       [0:NUM_PAIR-1],
+    input  logic [        SEL_WIDTH-1:0] sel_a_i       [0:NUM_PAIR-1],
+    input  logic [        SEL_WIDTH-1:0] sel_b_i       [0:NUM_PAIR-1],
+    input  logic [         OP_WIDTH-1:0] ctr_l_i       [0:NUM_PAIR-1],
+    input  logic [         OP_WIDTH-1:0] ctr_h_i       [0:NUM_PAIR-1],
     input  logic                         is_signed_a_i [0:NUM_DP8-1],
     input  logic                         is_signed_b_i [0:NUM_DP8-1],
-    input  logic [       NUM_SHIFT-1:0]  sel_shift_i,
-    input  logic [        PE_WIDTH-1:0]  acc_i         [0:NUM_LANE-1],
-    input  logic [       SEL_WIDTH-1:0]  sel_out_i,
+    input  logic [        NUM_SHIFT-1:0] sel_shift_i,
+    input  logic [         PE_WIDTH-1:0] acc_i         [0:NUM_LANE-1],
+    input  logic [        SEL_WIDTH-1:0] sel_out_i,
     input  logic                         sel_acc_i,
     input  logic                         prop_carry_i,
-    output logic [        PE_WIDTH-1:0]  pe_out_o      [0:NUM_LANE-1]
+    output logic [         PE_WIDTH-1:0] pe_out_o      [0:NUM_LANE-1]
 );
 
     logic [A_DP8_WIDTH-1:0]  a_dp8    [0:NUM_DP8-1];
