@@ -62,17 +62,17 @@ is genuinely unused in some parameterization).
   **derive** the output width in a `localparam` — do **not** take an absolute output width parameter:
   - `OUT_WIDTH = IN_WIDTH + EXT`  (`cpr_c_n` / `cpr_w_n`, `ext_n`)
   - `OUT_WIDTH = WIDTH + SHIFT`   (`shift_n`)
-  - `OUT_WIDTH = WIDTH + 1`       (`add_n`)
 - Give a growth parameter a sensible default where one exists (e.g. the compressors' `EXT = $clog2(IN_SIZE)`).
 - **Behavior that changes with the operating mode is a runtime input signal, not a parameter.** In
-  particular **signedness is runtime** where the *same instance* must switch with the mode: use an
+  particular **signedness is runtime** only where the *same instance* must switch with the mode: use an
   `is_signed_i` input (per-operand — `is_signed_a_i` / `is_signed_b_i` — where A and B differ) on
-  `shift_n`, `ext_n`, `add_n`, and the DP.
-  - **Exception — signedness fixed by structure is a compile-time `IS_SIGNED` parameter.** The
-    compressors (`cpr_c_n` / `cpr_w_n`) take `parameter bit IS_SIGNED`, not a runtime signal: a
-    compressor's input signedness is set by where it sits in the datapath and never switches with the
-    mode. Rule of thumb: runtime `is_signed_i` only when one instance genuinely sees both signed and
-    unsigned data across modes; otherwise a parameter.
+  `add_n` (a fused accumulator's low word resolves unsigned, its high/standalone word signed) and the
+  DP (`booth_r4` / `dp_8` — the mode reinterprets the operands every cycle).
+  - **Signedness fixed by structure is a compile-time `IS_SIGNED` parameter.** The datapath primitives
+    whose sign-ness is set by *where they sit* — the compressors (`cpr_c_n` / `cpr_w_n`), `shift_n`,
+    and `ext_n` — take `parameter bit IS_SIGNED`, not a runtime signal, since a given instance is
+    always signed or always unsigned. Rule of thumb: runtime `is_signed_i` only when one instance
+    genuinely sees both signed and unsigned data across modes; otherwise a parameter.
 - Declare derived values as `localparam` inside the parameter list, after the `parameter`s.
 
 ### Lint

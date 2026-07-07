@@ -2,13 +2,16 @@
 
 LLM-authored design documentation for the **ai-core** project. Each page summarizes and cross-references the project's own `rtl/`, `tb/`, and `doc/` sources and links back to them. See [log.md](log.md) for the change history.
 
-> The **built-and-verified** blocks are documented below (the primitive library, the DP8 core, the dispatch array, the PE array, and the accumulator array), together with their testbenches under **Verification**. The remaining higher-level blocks (`pe_ctrl`, `pe_top`) are not yet defined and are intentionally not documented here. Pages are added under the matching folder (`architecture/`, `modules/`, `verification/`, `concepts/`, `decisions/`, `experiments/`, `references/`).
+> The **built-and-verified** blocks are documented below — the primitive library, the DP8 core, the three datapath stages (dispatch, PE, and accumulator arrays), the mode decoder, the datapath wrapper, and the PE top level — together with their testbenches under **Verification**. The full PE (`pe_top`) is now complete. Pages are added under the matching folder (`architecture/`, `modules/`, `verification/`, `concepts/`, `decisions/`, `experiments/`, `references/`).
 
 ## Architecture
 
 * [Dispatch Array](architecture/disp_array.md) — `disp_array`: routes the two 256-bit operands to the 16 DP8s (per-pair 4→1 block select + B high/low split + B-gate).
 * [PE Array](architecture/pe_array.md) — `pe_array`: 16 DP8s + 4-level carry-save shift/compress tree, with a tap (L0–L3) at every level.
 * [Accumulator Array](architecture/acc_array.md) — `acc_array`: 8 lanes that resolve a tap, accumulate, and fuse lane pairs into 40-bit results.
+* [PE Datapath](architecture/pe_datapath.md) — `pe_datapath`: structural wrapper chaining `disp_array → pe_array → acc_array` (the 3-stage datapath).
+* [PE Control](architecture/pe_ctrl.md) — `pe_ctrl`: combinational mode decoder — a lookup table mapping `mode_i` to every datapath control.
+* [Processing Element](architecture/pe_top.md) — `pe_top`: the PE top level — `pe_ctrl` + `pe_datapath` plus the control-path pipeline registers.
 
 ## Modules
 
@@ -30,6 +33,7 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 
 * [PE Array Testbench](verification/pe_array.md) — `tb_pe_array`: independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [Accumulator Array Testbench](verification/acc_array.md) — `tb_acc_array`: `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
+* [PE Testbench](verification/pe_top.md) — `tb_pe_top`: whole-PE matmul at `pe_out` driven only by `mode_i`/operands/`sel_acc`/`acc_i`, all 11 modes, single-shot and accumulating.
 * [Dispatch Array Testbench](verification/disp_array.md) — `tb_disp_array`: every DP8 operand vs a golden router model, all 11 modes.
 * [Dot Product 8 Testbench](verification/dp_8.md) — `tb_dp_8`: resolve + sign-consistency of the carry-save dot product, all signedness combos.
 * [Booth Radix-4 Testbench](verification/booth_r4.md) — `tb_booth_r4`: weighted partial-product sum equals `a·b`, all signedness combos.

@@ -73,5 +73,6 @@ Booth, from ai-core-legacy, with per-operand runtime `is_signed_a_i`/`is_signed_
   **20-bit** output (16-bit value + 4 guard bits, sign-consistent — not truncated).
 - The **H/L split** in `disp_array` is bit-slicing / wiring, not a cell — so it is not a primitive.
 - **Status** — all primitives built: `reg_n`, `mux_n`, `shift_n`, `add_n`, `ext_n`, `gate_n`,
-  `gate_b_n`, `cpr_c_n`, `cpr_w_n`, `dp_8` (+ helpers `fa`, `booth_r4`, `booth_r4_cell`). Next: the
-  sub-blocks (`disp_array`, `pe_array`, `acc_array`, `pe_ctrl`) and `pe_top`.
+  `gate_b_n`, `cpr_c_n`, `cpr_w_n`, `dp_8` (+ helpers `fa`, `booth_r4`, `booth_r4_cell`). The
+  sub-blocks (`disp_array`, `pe_array`, `acc_array`, `pe_ctrl`), the `pe_datapath` wrapper, and the
+  `pe_top` top level are all built and verified — the PE is complete.
