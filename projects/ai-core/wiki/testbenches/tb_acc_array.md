@@ -67,4 +67,4 @@ end
 
 Errors accumulate in `err`. Each mode prints `PASS` / `FAIL` for both passes; the run ends with `acc_array verification: M/11 single-shot modes passed (E total mismatches)` — a clean run reports `11/11 ... 0 total mismatches` and every `acc mode N: PASS`.
 
-Source: [tb_acc_array.sv](../../tb/tb_acc_array.sv) — DUT: [acc_array](../architecture/acc_array.md)
+Source: [tb_acc_array.sv](../../tb/tb_acc_array.sv) — DUT: [acc_array](../modules/acc_array.md)

@@ -15,8 +15,9 @@
 //   (1-3, 5-12); the unused indices 0, 4, 13-15 default to zero.
 //
 //   Purely combinational - it holds no state. All pipeline alignment (delaying
-//   each control to meet its data) lives in pe_top. sel_acc is not decoded here:
-//   it is a runtime input pipelined alongside mode in pe_top.
+//   each control to meet its data) lives in the enclosing top level. sel_acc is
+//   not decoded here: it is a runtime input the top level pipelines alongside
+//   mode.
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps

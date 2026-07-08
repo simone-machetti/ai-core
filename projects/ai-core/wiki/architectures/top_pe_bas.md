@@ -1,10 +1,10 @@
-# Processing Element
+# Processing Element (baseline)
 
-`pe_top` — the top level of one Processing Element: a reconfigurable fixed-point MatMul engine built from 16 [dp_8](../modules/dp_8.md) cores that evaluates one of the 11 operating modes selected by `mode_i`. It wires the combinational mode decoder [pe_ctrl](./pe_ctrl.md) to the [pe_datapath](./pe_datapath.md) (`disp_array → pe_array → acc_array`) and adds the control-path pipeline registers that align each decoded control with the data it meets.
+`top_pe_bas` — the baseline top level of one Processing Element: a reconfigurable fixed-point MatMul engine built from 16 [dp_8](../modules/dp_8.md) cores that evaluates one of the 11 operating modes selected by `mode_i`. It is the reference architecture that later variants are compared against. It wires the combinational mode decoder [pe_ctrl](../modules/pe_ctrl.md) to the [pe_datapath](../modules/pe_datapath.md) (`disp_array → pe_array → acc_array`) and adds the control-path pipeline registers that align each decoded control with the data it meets.
 
 ## Purpose
 
-The caller drives the two 256-bit operands, `mode_i`, `sel_acc_i` and `acc_i`, and reads `pe_out_o` three clocks later. Everything the datapath needs internally — the dispatch block selects and B-gates, the per-DP8 signedness and tree shifts, the tap-level select and lane-fusion carry — is derived from `mode_i` by `pe_ctrl`; `pe_top` only decodes the mode once and delays each control by the right number of registers so it lands on the correct pipeline stage. `sel_acc_i` and `acc_i` are not mode-derived — they arrive at the top alongside `mode_i` and are pipelined the same way.
+The caller drives the two 256-bit operands, `mode_i`, `sel_acc_i` and `acc_i`, and reads `pe_out_o` three clocks later. Everything the datapath needs internally — the dispatch block selects and B-gates, the per-DP8 signedness and tree shifts, the tap-level select and lane-fusion carry — is derived from `mode_i` by `pe_ctrl`; `top_pe_bas` only decodes the mode once and delays each control by the right number of registers so it lands on the correct pipeline stage. `sel_acc_i` and `acc_i` are not mode-derived — they arrive at the top alongside `mode_i` and are pipelined the same way.
 
 ## Parameters
 
@@ -35,7 +35,7 @@ None — fixed to the PE configuration; the shape is baked in as `localparam`s. 
 ## Instantiation
 
 ```systemverilog
-pe_top pe_top_i (
+top_pe_bas top_pe_bas_i (
     .clk_i(clk_i), .rst_ni(rst_ni),
     .pe_in_a_i(pe_in_a), .pe_in_b_i(pe_in_b),
     .mode_i(mode), .sel_acc_i(sel_acc), .acc_i(acc_word),
@@ -45,9 +45,9 @@ pe_top pe_top_i (
 
 ## Internal logic
 
-The datapath is a 3-stage pipeline, with all three registers inside [pe_datapath](./pe_datapath.md): the `disp_array` input register, the `pe_array` L0 register, and the `acc_array` output register. `pe_ctrl` is purely combinational, so every control-path register lives here in `pe_top`. The controls are consumed at two different stages, so each is delayed to match:
+The datapath is a 3-stage pipeline, with all three registers inside [pe_datapath](../modules/pe_datapath.md): the `disp_array` input register, the `pe_array` L0 register, and the `acc_array` output register. `pe_ctrl` is purely combinational, so every control-path register lives here in `top_pe_bas`. The controls are consumed at two different stages, so each is delayed to match:
 
-| Control                                                          | Consumed | Registers from input | Source in `pe_top`             |
+| Control                                                          | Consumed | Registers from input | Source in `top_pe_bas`             |
 | ---------------------------------------------------------------- | -------- | -------------------- | ------------------------------ |
 | `sel_a`/`sel_b`/`ctr_l`/`ctr_h`, `is_signed_a/b`, `sel_shift[0]` | stage 1  | 1                    | input reg (`mode`) → `pe_ctrl` |
 | `sel_shift[2:1]`, `sel_out`, `prop_carry`                        | stage 2  | 2                    | `pe_ctrl` → group-2 reg        |
@@ -90,6 +90,6 @@ assign sel_shift_dp = {shifthi_q[0], sel_shift_ctrl[0]};
 
 `pe_out_o` is valid 3 clocks after the operands and mode are applied. Because `sel_acc`, `acc` and the operands all traverse 3 registers to `pe_out`, an operation issued in one cycle sees its own controls at the accumulator stage. `sel_acc = 0` folds `acc_i` (a fresh result, or an external bias/running sum), `sel_acc = 1` folds the lane's own register back in (accumulate over cycles).
 
-Verified end to end across all 11 modes, single-shot and accumulating, with [tb_pe_top](../verification/pe_top.md).
+Verified end to end across all 11 modes, single-shot and accumulating, with [tb_top_pe_bas](../testbenches/tb_top_pe_bas.md).
 
-Source: [pe_top.sv](../../rtl/pe_top.sv) — Diagram: [pe_top](../../doc/diagrams/pe_top.md)
+Source: [top_pe_bas.sv](../../rtl/top_pe_bas.sv) — Diagram: [top_pe_bas](../../doc/diagrams/top_pe_bas.excalidraw)

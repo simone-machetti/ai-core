@@ -4,10 +4,10 @@
 // Description:
 //   Parameterized zero gate. For each of SIZE input words, WIDTH bits wide,
 //   passes the input through when sel_i is 0 or forces it to zero when sel_i
-//   is 1. The select is shared by all words. Used for operand masking (e.g. the
-//   operand-A path, which only ever needs masking to zero, never negation) and,
-//   at WIDTH = 1, as a carry enable - it gates the inter-lane carry chain in
-//   acc_array (drive sel_i = ~prop_carry to pass the carry only when fusing).
+//   is 1. The select is shared by all words. Serves for operand masking (mask a
+//   word to zero, with no negation) and, at WIDTH = 1, as a carry enable that
+//   gates an inter-lane carry chain - passing the carry through only when the
+//   chain is active.
 //
 // Parameters:
 //   WIDTH - bit width of each word

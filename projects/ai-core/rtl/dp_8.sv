@@ -4,8 +4,8 @@
 // Description:
 //   DP8 (8x4) dot-product core with per-operand runtime signedness. Computes
 //   sum_{k=0..7}(a_k * b_k) of eight int8 x int4 products and returns it in
-//   carry-save form (sum_o, carry_o). Fixed to the PE configuration - 8 lanes,
-//   8-bit multiplicand a, 4-bit multiplier b.
+//   carry-save form (sum_o, carry_o). Fixed size - 8 lanes, 8-bit multiplicand
+//   a, 4-bit multiplier b.
 //
 //   is_signed_a_i / is_signed_b_i set each operand's signedness independently, so
 //   all four combinations occur across the operating modes (a high field is
@@ -25,8 +25,8 @@
 //   Worst-case output is the unsigned x unsigned corner: 8 * 255 * 15 = 30600
 //   (and -16320 for unsigned-a x signed-b) - a 16-bit signed range. The DP8 must
 //   deliver its result as a *sign-consistent* carry-save pair (signext(sum) +
-//   signext(carry) == value) so pe_array can sign-extend it downstream; that is
-//   a stronger property than a correct resolve (sum + carry mod 2^W).
+//   signext(carry) == value) so the downstream reduction can sign-extend it;
+//   that is a stronger property than a correct resolve (sum + carry mod 2^W).
 //
 //   The final CPR 6:2 reduces six sign-extended rows. cpr_w_n drops any carry
 //   out of its top bit (carry row is cout << 1), so to stay sign-consistent it

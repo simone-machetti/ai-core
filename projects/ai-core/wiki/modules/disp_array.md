@@ -1,6 +1,6 @@
 # Dispatch Array
 
-`disp_array` — operand-dispatch array: it registers the two 256-bit PE operands (`pe_in_a_i`, `pe_in_b_i`) and routes them to the 16 [dp_8](../modules/dp_8.md) cores using one 4→1 block select per operand per pair, a fixed B high/low split, and per-DP8 B gating. It is instantiated inside [pe_array](./pe_array.md).
+`disp_array` — operand-dispatch array: it registers the two 256-bit PE operands (`pe_in_a_i`, `pe_in_b_i`) and routes them to the 16 [dp_8](./dp_8.md) cores using one 4→1 block select per operand per pair, a fixed B high/low split, and per-DP8 B gating. It is instantiated inside [pe_array](./pe_array.md).
 
 ## Purpose
 
@@ -70,7 +70,7 @@ for (b = 0; b < NUM_BLK; b++) begin : gen_reshape
 end
 ```
 
-Both block arrays are then latched by a [reg_n](../modules/reg_n.md) bank each — `SIZE = NUM_BLK` registers of `WIDTH = BLK_WIDTH` bits, sharing `clk_i`/`rst_ni`:
+Both block arrays are then latched by a [reg_n](./reg_n.md) bank each — `SIZE = NUM_BLK` registers of `WIDTH = BLK_WIDTH` bits, sharing `clk_i`/`rst_ni`:
 
 ```systemverilog
 reg_n #(.WIDTH(BLK_WIDTH), .SIZE(NUM_BLK)) reg_n_a_i (
@@ -85,7 +85,7 @@ reg_n #(.WIDTH(BLK_WIDTH), .SIZE(NUM_BLK)) reg_n_b_i (
 
 ### Per-pair A mux (shared)
 
-Inside the `gen_pair` loop, one entry per pair `p` (0..7), a 4→1 [mux_n](../modules/mux_n.md) over the four registered A blocks picks the single A block this pair uses, indexed by `sel_a_i[p]`:
+Inside the `gen_pair` loop, one entry per pair `p` (0..7), a 4→1 [mux_n](./mux_n.md) over the four registered A blocks picks the single A block this pair uses, indexed by `sel_a_i[p]`:
 
 ```systemverilog
 mux_n #(.WIDTH(BLK_WIDTH), .SIZE(NUM_BLK)) mux_n_a_i (
@@ -122,7 +122,7 @@ So for element index `e`, `blo_nib[e]` is the low nibble and `bhi_nib[e]` the hi
 
 ### B gating (pass / zero / negate)
 
-Each 32-bit B half then passes through its own [gate_b_n](../modules/gate_b_n.md) — 8 nibbles, all sharing one op code. The **low** half is gated by `ctr_l_i[p]`, the **high** half by `ctr_h_i[p]`:
+Each 32-bit B half then passes through its own [gate_b_n](./gate_b_n.md) — 8 nibbles, all sharing one op code. The **low** half is gated by `ctr_l_i[p]`, the **high** half by `ctr_h_i[p]`:
 
 ```systemverilog
 gate_b_n #(.WIDTH(B_ELEM_WIDTH), .SIZE(NUM_B_ELEM)) gate_b_n_l_i (
@@ -164,4 +164,4 @@ end
 
 So the convention is fixed: **even DP8 `2p` carries the HIGH nibble** (gated by `ctr_h`), **odd DP8 `2p+1` carries the LOW nibble** (gated by `ctr_l`) — matching the `modes.xlsx` dispatch. Combined with the carry chain above, the two DP8s of a pair jointly hold the high and low halves of the same int8 B, with the negate carry flowing from the odd lane (low) into the even lane (high). The per-mode `sel_a`/`sel_b`/`ctr_l`/`ctr_h` vectors are exactly the `modes.xlsx` dispatch map and double as the reference for `pe_ctrl`; the testbench drives them straight from that table and checks every DP8 output against a golden block-select / high-low-split / per-int4-gate model.
 
-Source: [disp_array.sv](../../rtl/disp_array.sv) — Testbench: [tb_disp_array.sv](../../tb/tb_disp_array.sv) — Diagram: [disp_array](../../doc/diagrams/disp_array.md)
+Source: [disp_array.sv](../../rtl/disp_array.sv) — Testbench: [tb_disp_array.sv](../../tb/tb_disp_array.sv) — Diagram: [disp_array](../../doc/diagrams/disp_array.excalidraw)

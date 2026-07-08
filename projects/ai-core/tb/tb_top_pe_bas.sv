@@ -2,9 +2,9 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Self-checking testbench for the whole PE, pe_top. The DUT is driven only by
+//   Self-checking testbench for the whole PE, top_pe_bas. The DUT is driven only by
 //   its external interface - operands, mode_i, sel_acc_i and acc_i - so it also
-//   proves that pe_ctrl decodes mode into the right controls and that pe_top
+//   proves that pe_ctrl decodes mode into the right controls and that top_pe_bas
 //   delays each of them to the correct pipeline cycle. Each of the 11 modes is
 //   verified end to end at pe_out as a plain matrix multiply:
 //
@@ -32,7 +32,7 @@
 
 /* verilator lint_off UNUSEDSIGNAL */
 
-module tb_pe_top #(
+module tb_top_pe_bas #(
     parameter int NUM_RAND = 2000,
     parameter int NUM_ACC  = 8
 );
@@ -85,7 +85,7 @@ module tb_pe_top #(
     int err;
     int npass;
 
-    pe_top pe_top_i (
+    top_pe_bas top_pe_bas_i (
         .clk_i    (clk_i),
         .rst_ni   (rst_ni),
         .pe_in_a_i(pe_in_a),
@@ -263,10 +263,10 @@ module tb_pe_top #(
     initial begin
         int err0, NOUT, lvl, rn, in;
         longint r, gexp;
-        $display("\nStarting pe_top verification (%0d modes x %0d random)...\n",
+        $display("\nStarting top_pe_bas verification (%0d modes x %0d random)...\n",
                  NUM_MODE, NUM_RAND);
         $dumpfile("activity.vcd");
-        $dumpvars(0, tb_pe_top.pe_top_i);
+        $dumpvars(0, tb_top_pe_bas.top_pe_bas_i);
 
         rst_ni  = 1'b0;
         pe_in_a = '0;
@@ -352,7 +352,7 @@ module tb_pe_top #(
         end
 
         $dumpoff;
-        $display("\npe_top verification: %0d/%0d single-shot modes passed (%0d total mismatches)\n",
+        $display("\ntop_pe_bas verification: %0d/%0d single-shot modes passed (%0d total mismatches)\n",
                  npass, NUM_MODE, err);
         $finish;
     end

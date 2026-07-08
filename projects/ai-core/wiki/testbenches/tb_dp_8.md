@@ -27,7 +27,7 @@ Increase the random budget with `PARAMS="NUM_RAND=10000"`.
 | Resolve         | the low `OUT_WIDTH` (20) bits of `sum_o + carry_o` equal `Σ_i a_i · b_i` masked to the same width |
 | Sign-consistent | `signext(sum_o) + signext(carry_o) == Σ_i a_i · b_i` exactly (full precision)                     |
 
-The sign-consistency property is the stronger one: it guarantees the two carry-save rows can each be **sign-extended independently** by [pe_array](../architecture/pe_array.md) downstream (the reason each row carries a guard bit). A plain resolve check does not catch a lost sign; this one does. All four `is_signed_a_i × is_signed_b_i` combinations run on every vector, and any mismatch is **fatal**.
+The sign-consistency property is the stronger one: it guarantees the two carry-save rows can each be **sign-extended independently** by [pe_array](../modules/pe_array.md) downstream (the reason each row carries a guard bit). A plain resolve check does not catch a lost sign; this one does. All four `is_signed_a_i × is_signed_b_i` combinations run on every vector, and any mismatch is **fatal**.
 
 ## How it checks
 

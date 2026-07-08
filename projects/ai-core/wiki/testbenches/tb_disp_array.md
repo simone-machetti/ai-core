@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tb_disp_array` is the clocked self-checking testbench for [disp_array](../architecture/disp_array.md), the operand router. For each of the 11 operating modes it drives the mode's dispatch control vectors, pushes random 256-bit `A`/`B` operands plus a directed ramp through the input registers, and checks all 16 DP8 `a`/`b` operands against an independent golden router model.
+`tb_disp_array` is the clocked self-checking testbench for [disp_array](../modules/disp_array.md), the operand router. For each of the 11 operating modes it drives the mode's dispatch control vectors, pushes random 256-bit `A`/`B` operands plus a directed ramp through the input registers, and checks all 16 DP8 `a`/`b` operands against an independent golden router model.
 
 ## Parameters
 
@@ -103,4 +103,4 @@ The controls are combinational routing selects, so the golden reads the same `pe
 
 `check` compares all 16 `a_dp8` outputs against `a_exp` and all 16 `b_dp8` against `b_exp` with `!==` (so X/Z also fail). The first mismatch calls `$dumpoff`, prints the mode, DP8 index, and expected/got values, and `$fatal`s. A mode that survives its whole random batch plus the ramp prints `mode N: PASS`, and after all 11 modes the tb prints the final all-passed banner and `$finish`.
 
-Source: [tb_disp_array.sv](../../tb/tb_disp_array.sv) — DUT: [disp_array](../architecture/disp_array.md)
+Source: [tb_disp_array.sv](../../tb/tb_disp_array.sv) — DUT: [disp_array](../modules/disp_array.md)

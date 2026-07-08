@@ -12,8 +12,8 @@
 //   -> cout_o -> gate -> cin_i of the high lane) to build a wider result from
 //   narrow lanes. CARRY is the carry width: 1 for a plain adder, or wider where a
 //   single window folds more than two rows and its overflow needs more than one
-//   bit - e.g. acc_array folds three 20-bit rows per window (via a 22-bit CPR),
-//   whose carry into the next lane is 2 bits, so it uses WIDTH = 20, CARRY = 2.
+//   bit - e.g. folding three W-bit rows per window (via a wider CPR) leaves a
+//   2-bit carry into the next lane, so WIDTH = W, CARRY = 2.
 //
 // Parameters:
 //   WIDTH - bit width of the sum output

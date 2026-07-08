@@ -31,7 +31,7 @@ Random vectors + directed corners; **fatal** on any mismatch; dumps `activity.vc
 
 ## How it checks
 
-The internal logic is the same as [tb_cpr_w_n](cpr_w_n.md): only the instantiated DUT differs (`cpr_c_n` in place of `cpr_w_n`), since both compressors implement the same N-input arithmetic and differ only in their internal topology (serial cascade vs. Wallace tree).
+The internal logic is the same as [tb_cpr_w_n](./tb_cpr_w_n.md): only the instantiated DUT differs (`cpr_c_n` in place of `cpr_w_n`), since both compressors implement the same N-input arithmetic and differ only in their internal topology (serial cascade vs. Wallace tree).
 
 ### Stimulus generation
 

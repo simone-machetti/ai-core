@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tb_pe_array` verifies [pe_array](../architecture/pe_array.md) wired downstream of [disp_array](../architecture/disp_array.md). Every one of the 11 modes is checked as a plain matrix multiply `X = A · B`, using a golden model that knows nothing about the DUT's adder tree, crossover, per-level shifts, or `sel_shift` — so a bug in any of those surfaces as a mismatch a tree-shaped golden would hide.
+`tb_pe_array` verifies [pe_array](../modules/pe_array.md) wired downstream of [disp_array](../modules/disp_array.md). Every one of the 11 modes is checked as a plain matrix multiply `X = A · B`, using a golden model that knows nothing about the DUT's adder tree, crossover, per-level shifts, or `sel_shift` — so a bug in any of those surfaces as a mismatch a tree-shaped golden would hide.
 
 ## Parameters
 
@@ -134,4 +134,4 @@ end
 
 Errors accumulate in `err`. Each mode snapshots `err` before its batch and prints `mode N: PASS` if it did not grow, or `FAIL (k mismatches)` otherwise. At the end the tb prints `M/11 modes passed (E total mismatches)` and `$finish`es — a clean run reports `11/11 ... 0 total mismatches`.
 
-Source: [tb_pe_array.sv](../../tb/tb_pe_array.sv) — DUT: [pe_array](../architecture/pe_array.md)
+Source: [tb_pe_array.sv](../../tb/tb_pe_array.sv) — DUT: [pe_array](../modules/pe_array.md)

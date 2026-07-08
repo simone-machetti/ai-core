@@ -1,10 +1,10 @@
 # Dot Product 8
 
-`dp_8` is the core MAC primitive: it multiply-accumulates eight `int8 × int4` products into a single carry-save dot product, with each operand's signedness chosen at runtime. See the diagram companion at [doc/diagrams/dp_8.md](../../doc/diagrams/dp_8.md).
+`dp_8` is the core MAC primitive: it multiply-accumulates eight `int8 × int4` products into a single carry-save dot product, with each operand's signedness chosen at runtime. See the diagram companion at [doc/diagrams/dp_8.md](../../doc/diagrams/dp_8.excalidraw).
 
 ## Purpose
 
-`dp_8` computes the length-8 dot product `Σ_{k=0..7} a_k · b_k` of eight `int8 × int4` products and returns it in **carry-save form** — two rows `sum_o`, `carry_o` whose arithmetic sum is the dot product — leaving the final carry-propagate resolve to the downstream reduction tree in [pe_array](../architecture/pe_array.md). It is the most heavily replicated primitive in the design (`pe_array` instantiates 16 of them), so it is hand-sized to the minimum width for its fixed shape while the leaf primitives it builds on stay general. Both operands are independently signed or unsigned (`is_signed_a_i` / `is_signed_b_i`) because the operating modes split each field into a signed high half and an unsigned low half, so all four sign combinations occur across the array.
+`dp_8` computes the length-8 dot product `Σ_{k=0..7} a_k · b_k` of eight `int8 × int4` products and returns it in **carry-save form** — two rows `sum_o`, `carry_o` whose arithmetic sum is the dot product — leaving the final carry-propagate resolve to the downstream reduction tree in [pe_array](./pe_array.md). It is the most heavily replicated primitive in the design (`pe_array` instantiates 16 of them), so it is hand-sized to the minimum width for its fixed shape while the leaf primitives it builds on stay general. Both operands are independently signed or unsigned (`is_signed_a_i` / `is_signed_b_i`) because the operating modes split each field into a signed high half and an unsigned low half, so all four sign combinations occur across the array.
 
 ## Parameters
 
@@ -162,7 +162,7 @@ assign sum_o   = final_sum;    // logic [19:0]
 assign carry_o = final_carry;  // logic [19:0]
 ```
 
-`OUT_WIDTH = FINAL_IN + FINAL_EXT = 20` holds the 16-bit dot-product value plus **4 guard bits** of carry-save headroom. The crucial invariant is that the pair stays **sign-consistent**: `signext(sum_o) + signext(carry_o)` equals the true dot product (not just modulo `2^20`). This is a *stronger* property than a correct resolve, and it is what allows [pe_array](../architecture/pe_array.md) to sign-extend and re-align `dp_8`'s output when it accumulates the 16 DP8 results downstream — a carry-save pair whose sign bit is wrong would corrupt every downstream sign-extension. The testbench checks both facets on every vector, with lanes biased toward the extreme values so the corners are reached: `sum_o + carry_o == Σ a_k·b_k (mod 2^20)` (**resolve**) and `signext(sum_o) + signext(carry_o) == Σ a_k·b_k` (**sign-consistent**).
+`OUT_WIDTH = FINAL_IN + FINAL_EXT = 20` holds the 16-bit dot-product value plus **4 guard bits** of carry-save headroom. The crucial invariant is that the pair stays **sign-consistent**: `signext(sum_o) + signext(carry_o)` equals the true dot product (not just modulo `2^20`). This is a *stronger* property than a correct resolve, and it is what allows [pe_array](./pe_array.md) to sign-extend and re-align `dp_8`'s output when it accumulates the 16 DP8 results downstream — a carry-save pair whose sign bit is wrong would corrupt every downstream sign-extension. The testbench checks both facets on every vector, with lanes biased toward the extreme values so the corners are reached: `sum_o + carry_o == Σ a_k·b_k (mod 2^20)` (**resolve**) and `signext(sum_o) + signext(carry_o) == Σ a_k·b_k` (**sign-consistent**).
 
 ### Per-operand signedness & the four sign combinations
 

@@ -1,10 +1,10 @@
 # PE Control
 
-`pe_ctrl` — the combinational mode decoder of the PE. It maps the 4-bit `mode_i` to every internal control the datapath needs and holds no state; all pipeline alignment lives in [pe_top](./pe_top.md).
+`pe_ctrl` — the combinational mode decoder of the PE. It maps the 4-bit `mode_i` to every internal control the datapath needs and holds no state; all pipeline alignment lives in [top_pe_bas](../architectures/top_pe_bas.md).
 
 ## Purpose
 
-Each of the 11 operating modes reduces its large dot product to the `dp_8` primitive by a fixed recipe of block routing, operand signedness, tree shifts and tap level (see [modes](../../doc/diagrams/modes.md)). `pe_ctrl` turns `mode_i` into that recipe: the [disp_array](./disp_array.md) block selects `sel_a`/`sel_b` and B-gate controls `ctr_l`/`ctr_h`, the [pe_array](./pe_array.md) per-DP8 signedness `is_signed_a`/`is_signed_b` and shift enables `sel_shift`, and the [acc_array](./acc_array.md) tap-level select `sel_out` and lane-fusion carry enable `prop_carry`. It is a lookup table indexed by the mode bits — no sequencing, no handshake. `sel_acc` is not decoded here: it is a runtime input pipelined alongside `mode` in `pe_top`.
+Each of the 11 operating modes reduces its large dot product to the `dp_8` primitive by a fixed recipe of block routing, operand signedness, tree shifts and tap level (see [modes](../../doc/diagrams/modes.md)). `pe_ctrl` turns `mode_i` into that recipe: the [disp_array](./disp_array.md) block selects `sel_a`/`sel_b` and B-gate controls `ctr_l`/`ctr_h`, the [pe_array](./pe_array.md) per-DP8 signedness `is_signed_a`/`is_signed_b` and shift enables `sel_shift`, and the [acc_array](./acc_array.md) tap-level select `sel_out` and lane-fusion carry enable `prop_carry`. It is a lookup table indexed by the mode bits — no sequencing, no handshake. `sel_acc` is not decoded here: it is a runtime input pipelined alongside `mode` in `top_pe_bas`.
 
 ## Parameters
 

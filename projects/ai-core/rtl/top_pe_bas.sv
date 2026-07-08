@@ -2,7 +2,8 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Top level of one Processing Element (PE). Wires the combinational mode
+//   Baseline top level of one Processing Element (PE) - the reference the other
+//   architecture variants are measured against. Wires the combinational mode
 //   decoder pe_ctrl to pe_datapath (disp_array -> pe_array -> acc_array) and
 //   adds the control-path pipeline registers that align each control with the
 //   data it meets.
@@ -25,7 +26,7 @@
 
 `timescale 1 ns/1 ps
 
-module pe_top #(
+module top_pe_bas #(
     localparam int NUM_BLK     = 4,
     localparam int BLK_WIDTH   = 64,
     localparam int PE_IN_WIDTH = NUM_BLK * BLK_WIDTH,

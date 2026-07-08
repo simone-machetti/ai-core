@@ -4,7 +4,7 @@
 
 ## Purpose
 
-`pe_datapath` is the controlled datapath, factored out of [pe_top](./pe_top.md) so that the control decode and the control-path pipeline can sit around it. The carry-save taps between `pe_array` and `acc_array` are internal; everything else — the operands, all `disp`/`pe`/`acc` controls, the external accumulator word, and the outputs — is a port. Each stage keeps its own pipeline register (the `disp_array` operand input, the `pe_array` L0 node, the `acc_array` output), so the datapath is a 3-stage pipeline. The controls arrive already delayed to the right cycle by `pe_top`; this wrapper only wires them.
+`pe_datapath` is the controlled datapath, factored out of [top_pe_bas](../architectures/top_pe_bas.md) so that the control decode and the control-path pipeline can sit around it. The carry-save taps between `pe_array` and `acc_array` are internal; everything else — the operands, all `disp`/`pe`/`acc` controls, the external accumulator word, and the outputs — is a port. Each stage keeps its own pipeline register (the `disp_array` operand input, the `pe_array` L0 node, the `acc_array` output), so the datapath is a 3-stage pipeline. The controls arrive already delayed to the right cycle by `top_pe_bas`; this wrapper only wires them.
 
 ## Parameters
 
@@ -54,6 +54,6 @@ acc_array  acc_array_i  (.l0_sum_i(l0_sum), ..., .l3_carry_i(l3_carry),
                          .acc_i(acc_i), ..., .pe_out_o(pe_out_o));
 ```
 
-The three internal registers span two pipeline stages: the `disp_array` input register and the `pe_array` L0 register bracket the first stage (dispatch, DP8, L0 shift/compress), and the `acc_array` output register closes the second (L1/L2/L3 reduce, tap window, resolve, accumulate). This is why `pe_top` delivers the first-stage controls one register earlier than the second-stage ones.
+The three internal registers span two pipeline stages: the `disp_array` input register and the `pe_array` L0 register bracket the first stage (dispatch, DP8, L0 shift/compress), and the `acc_array` output register closes the second (L1/L2/L3 reduce, tap window, resolve, accumulate). This is why `top_pe_bas` delivers the first-stage controls one register earlier than the second-stage ones.
 
 Source: [pe_datapath.sv](../../rtl/pe_datapath.sv)

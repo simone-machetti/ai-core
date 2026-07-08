@@ -1,13 +1,13 @@
-# pe_matrix
+# top_8x8_bas
 
-Companion description for [`pe_matrix.excalidraw`](pe_matrix.excalidraw). Chip-level PE array.
+Companion description for [`top_8x8_bas.excalidraw`](./top_8x8_bas.excalidraw). Chip-level PE array.
 
-> **Out of current prototype scope** — this effort stops at [`pe_top`](pe_top.md). Documented here
+> **Out of current prototype scope** — this effort stops at [`top_pe_bas`](./top_pe_bas.excalidraw). Documented here
 > for completeness so the top-level intent is on record.
 
 ## Purpose
 
-The full AI-Core: an **8×8 grid of 64 Processing Elements**, each PE = one [`pe_top`](pe_top.md)
+The full AI-Core: an **8×8 grid of 64 Processing Elements**, each PE = one [`top_pe_bas`](./top_pe_bas.excalidraw)
 (128 8b×4b MACs). The figure shows the 64-cell grid, each cell labelled `PE (128 MAC)` — i.e. the
 chip is the reconfigurable PE replicated as a matrix engine.
 
@@ -27,7 +27,7 @@ chip level is taken on. Expected shape (placeholder, **TBD**):
 
 Each cell runs the same reconfigurable PE; the matrix arrangement performs a tiled MatMul, with
 dataflow (systolic vs broadcast, stationary operand, accumulation across tiles) **to be decided**
-at the chip stage. No per-PE behavior beyond [`pe_top`](pe_top.md) is implied by this figure.
+at the chip stage. No per-PE behavior beyond [`top_pe_bas`](./top_pe_bas.excalidraw) is implied by this figure.
 
 ## Open items
 

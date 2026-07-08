@@ -4,7 +4,7 @@
 
 ## Purpose
 
-A 4-way mux per word — the input, an all-zero word, the input's two's-complement negation, or a carry-chained negation — for the operand-B conditioning path that needs all of these across the PE modes: pass (most modes), zeroing idle DP8s (e.g. mode 6), and sign negation (imaginary B in the complex modes). The `carry_i`/`carry_o` ports let two instances chain a two's-complement carry across a nibble boundary so an operand split across gates negates exactly. The select is shared by all `SIZE` words. Contrast [gate_n](gate_n.md), which only zeros.
+A 4-way mux per word — the input, an all-zero word, the input's two's-complement negation, or a carry-chained negation — for the operand-B conditioning path that needs all of these across the PE modes: pass (most modes), zeroing idle DP8s (e.g. mode 6), and sign negation (imaginary B in the complex modes). The `carry_i`/`carry_o` ports let two instances chain a two's-complement carry across a nibble boundary so an operand split across gates negates exactly. The select is shared by all `SIZE` words. Contrast [gate_n](./gate_n.md), which only zeros.
 
 ## Parameters
 
@@ -109,6 +109,6 @@ The two negate modes solve this by making the `+1` explicit and routable:
 - The **low** (least-significant) gate uses `GATE_NEG`. It performs the real `~x + 1` and exposes the resulting carry on its `carry_o`.
 - The **high** (more-significant) gate uses `GATE_NEG_CARRY`. Instead of its own `+1`, it adds the low gate's carry via `carry_i`.
 
-Wiring the low gate's `carry_o` into the high gate's `carry_i` makes the `+1` ripple exactly once, from the bottom of the operand to the top, so the concatenation of the two gates' `out_o` is the exact two's-complement negation of the whole wide operand. The negation still keeps `WIDTH` bits per word, so the combined operand's most-negative value wraps, as it should. See [gate_n](gate_n.md) for the sibling operand-A path, which needs only zeroing and so has no carry ports.
+Wiring the low gate's `carry_o` into the high gate's `carry_i` makes the `+1` ripple exactly once, from the bottom of the operand to the top, so the concatenation of the two gates' `out_o` is the exact two's-complement negation of the whole wide operand. The negation still keeps `WIDTH` bits per word, so the combined operand's most-negative value wraps, as it should. See [gate_n](./gate_n.md) for the sibling operand-A path, which needs only zeroing and so has no carry ports.
 
 Source: [gate_b_n.sv](../../rtl/gate_b_n.sv)

@@ -7,12 +7,14 @@
 //   ports directly. The carry-save taps between pe_array and acc_array are
 //   internal. Each stage keeps its own pipeline register (disp_array input,
 //   pe_array L0, acc_array output), so the datapath is a 3-stage pipeline; the
-//   control-side pipeline alignment that feeds these ports lives in pe_top.
+//   control-side pipeline alignment that feeds these ports lives in the
+//   enclosing top level.
 //
 //   The controls are consumed at different pipeline stages: the disp selects /
 //   gates and the pe signedness / L0 shift act in the first stage, the pe L1/L2
-//   shifts and all acc controls in the second stage. pe_top delivers each of
-//   them already delayed to the right cycle; this wrapper only wires them.
+//   shifts and all acc controls in the second stage. The enclosing top level
+//   delivers each of them already delayed to the right cycle; this wrapper only
+//   wires them.
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps

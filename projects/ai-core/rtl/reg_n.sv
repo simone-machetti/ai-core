@@ -5,8 +5,8 @@
 //   Parameterized register bank. Holds SIZE independent registers, each WIDTH
 //   bits wide, with an active-low asynchronous reset. On every rising edge of
 //   clk_i each register captures its corresponding WIDTH-bit input word; while
-//   rst_ni is low all registers are cleared to zero. Used as the pipeline and
-//   accumulator registers throughout the PE datapath.
+//   rst_ni is low all registers are cleared to zero. Used wherever a bank of
+//   like-width registers is needed - pipeline stages, accumulators, and so on.
 //
 // Parameters:
 //   WIDTH - bit width of each register

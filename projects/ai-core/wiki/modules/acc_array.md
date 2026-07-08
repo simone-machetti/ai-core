@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Each of `pe_array`'s taps is a redundant carry-save pair `(sum, carry)`. `acc_array` turns the pair the mode reads into a real binary number, adds it to a running or external accumulator, and outputs it. A result up to 20 bits lives in one lane; a wider result (up to 40 bits) is split across a **lane pair** — the even lane holds the high half, the odd lane the low half — with a carry chained between them, so two 20-bit lanes fuse into one 40-bit result. The array is fixed to the PE; its four data-path primitives ([mux_n](../modules/mux_n.md), [cpr_w_n](../modules/cpr_w_n.md), [add_n](../modules/add_n.md), [gate_n](../modules/gate_n.md), plus [reg_n](../modules/reg_n.md)) are reused as-is.
+Each of `pe_array`'s taps is a redundant carry-save pair `(sum, carry)`. `acc_array` turns the pair the mode reads into a real binary number, adds it to a running or external accumulator, and outputs it. A result up to 20 bits lives in one lane; a wider result (up to 40 bits) is split across a **lane pair** — the even lane holds the high half, the odd lane the low half — with a carry chained between them, so two 20-bit lanes fuse into one 40-bit result. The array is fixed to the PE; its four data-path primitives ([mux_n](./mux_n.md), [cpr_w_n](./cpr_w_n.md), [add_n](./add_n.md), [gate_n](./gate_n.md), plus [reg_n](./reg_n.md)) are reused as-is.
 
 ## Parameters
 
@@ -153,4 +153,4 @@ Each lane instantiates its own `reg_n #(.WIDTH(PE_WIDTH), .SIZE(1))` holding tha
 
 Verified end to end (`disp_array → pe_array → acc_array`) across all 11 modes, both single-shot and accumulating.
 
-Source: [acc_array.sv](../../rtl/acc_array.sv) — Testbench: [tb_acc_array.sv](../../tb/tb_acc_array.sv) — Diagram: [acc_array](../../doc/diagrams/acc_array.md)
+Source: [acc_array.sv](../../rtl/acc_array.sv) — Testbench: [tb_acc_array.sv](../../tb/tb_acc_array.sv) — Diagram: [acc_array](../../doc/diagrams/acc_array.excalidraw)

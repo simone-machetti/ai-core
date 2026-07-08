@@ -1,6 +1,6 @@
 # PE Array
 
-`pe_array` — instantiates the 16 [dp_8](../modules/dp_8.md) cores and reduces their carry-save outputs through a 4-level tree with programmable per-level shifts, exposing a carry-save tap at every level so a mode reads its results at the depth matching its output count.
+`pe_array` — instantiates the 16 [dp_8](./dp_8.md) cores and reduces their carry-save outputs through a 4-level tree with programmable per-level shifts, exposing a carry-save tap at every level so a mode reads its results at the depth matching its output count.
 
 ## Purpose
 
@@ -65,7 +65,7 @@ The datapath is: **16 DP8 cores → a 4-level carry-save reduction tree of 15 co
 
 ### The 16 DP8 cores
 
-Each 64-bit `a_dp8_i[i]` packs eight `int8` lanes and each 32-bit `b_dp8_i[i]` packs eight `int4` lanes. The `gen_dp8` block unpacks them and feeds one [dp_8](../modules/dp_8.md), which returns a 20-bit carry-save dot product:
+Each 64-bit `a_dp8_i[i]` packs eight `int8` lanes and each 32-bit `b_dp8_i[i]` packs eight `int4` lanes. The `gen_dp8` block unpacks them and feeds one [dp_8](./dp_8.md), which returns a 20-bit carry-save dot product:
 
 ```systemverilog
 for (i = 0; i < NUM_DP8; i++) begin : gen_dp8
@@ -100,7 +100,7 @@ In every node the **even child** (`l0[2j]`, `l1[2k]`, `l2[0]`) is the higher-wei
 
 ### Anatomy of a tree node (shift_n + ext_n + cpr_w_n)
 
-Every node has the same three-primitive shape. Take L0 as the model. The higher-weight operand's `(sum, carry)` pair (`SIZE = 2`) goes through a [shift_n](../modules/shift_n.md); the lower-weight operand's pair goes through an [ext_n](../modules/ext_n.md) that widens it by the same amount so both align; the four resulting rows feed a [cpr_w_n](../modules/cpr_w_n.md) 4:2:
+Every node has the same three-primitive shape. Take L0 as the model. The higher-weight operand's `(sum, carry)` pair (`SIZE = 2`) goes through a [shift_n](./shift_n.md); the lower-weight operand's pair goes through an [ext_n](./ext_n.md) that widens it by the same amount so both align; the four resulting rows feed a [cpr_w_n](./cpr_w_n.md) 4:2:
 
 ```systemverilog
 shift_n #(.WIDTH(DP8_WIDTH), .SIZE(2), .SHIFT(SH0), .IS_SIGNED(1'b1)) shift_n_i (
@@ -282,4 +282,4 @@ A mode reads its outputs at the level whose node count equals its parallel-outpu
 
 A complex output occupies **two adjacent nodes** (`Re` then `Im`), so it reads one level *shallower* than a real result of the same count — mode 10 (2 complex results) at L1, modes 11/12 (1 complex result) at L2. Reading them a level deeper would sum `Re + Im` into one node instead of keeping the parts separate.
 
-Source: [pe_array.sv](../../rtl/pe_array.sv) — Testbench: [tb_pe_array.sv](../../tb/tb_pe_array.sv) — Diagram: [pe_array](../../doc/diagrams/pe_array.md)
+Source: [pe_array.sv](../../rtl/pe_array.sv) — Testbench: [tb_pe_array.sv](../../tb/tb_pe_array.sv) — Diagram: [pe_array](../../doc/diagrams/pe_array.excalidraw)
