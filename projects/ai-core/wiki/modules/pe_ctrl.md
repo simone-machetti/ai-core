@@ -52,7 +52,7 @@ assign is_signed_a_o[i] = IS_SIGNED_A_LUT[mode_i][i];
 The row values are the authoritative per-mode decode — the same Dispatch / Shifter vectors the `disp_array` and `pe_array` testbenches drive by hand, here owned once by the decoder. The scalar controls per mode:
 
 | Mode | `sel_out` (tap) | `prop_carry` | `sel_shift` |
-| ---: | --------------- | ------------ | ----------- |
+| ---- | --------------- | ------------ | ----------- |
 | 1    | 0 (L0)          | 0            | `000`       |
 | 2    | 1 (L1)          | 1            | `010`       |
 | 3    | 1 (L1)          | 1            | `011`       |

@@ -145,11 +145,11 @@ source sourceme.sh
 
 `sourceme.sh` sets `REPO_HOME` from its own location, sources `~/.bashrc`, then derives `ASAP7_HOME` from `PDK_HOME`. You therefore export only the install **roots** in your `~/.bashrc` — the shared flow itself is project- and machine-agnostic:
 
-| Variable | Purpose |
-| --- | --- |
-| `EDA_HOME` | Root holding the EDA tool installs. |
-| `VERILATOR_HOME`, `YOSYS_HOME`, `YOSYS_SLANG_HOME`, `OPENSTA_HOME` | Per-tool install dirs (conventionally `$EDA_HOME/<tool>`); each tool's `bin/` must be on `PATH`. |
-| `PDK_HOME` | Root holding the PDK trees — the ASAP7 standard-cell liberty (`.lib`) and verilog (`.v`) consumed by synthesis, STA, DPA and post-synthesis simulation. |
+| Variable                                                           | Purpose                                                                                                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EDA_HOME`                                                         | Root holding the EDA tool installs.                                                                                                                     |
+| `VERILATOR_HOME`, `YOSYS_HOME`, `YOSYS_SLANG_HOME`, `OPENSTA_HOME` | Per-tool install dirs (conventionally `$EDA_HOME/<tool>`); each tool's `bin/` must be on `PATH`.                                                        |
+| `PDK_HOME`                                                         | Root holding the PDK trees — the ASAP7 standard-cell liberty (`.lib`) and verilog (`.v`) consumed by synthesis, STA, DPA and post-synthesis simulation. |
 
 A minimal `~/.bashrc` block — add this and adjust the two roots (`EDA_HOME` and `PDK_HOME`) to your machine:
 
@@ -175,7 +175,7 @@ Notes:
 
 The make targets form a pipeline where earlier steps produce artifacts consumed by later ones:
 
-1. `make sim` — functional verification; produces `activity.vcd`.
+1. `make sim` — functional verification (pass `VCD=1` to also dump `activity.vcd`).
 2. `make syn` — logic synthesis; produces the netlist consumed by all post-synthesis flows.
 3. `make post-syn-sim` — gate-level functional verification; produces `activity.vcd` consumed by `make post-syn-dpa`.
 4. `make post-syn-sta` — static timing analysis from the synthesized netlist.
@@ -185,10 +185,10 @@ The make targets form a pipeline where earlier steps produce artifacts consumed 
 
 This repository ships [Claude Code](https://claude.com/claude-code) skills under [.claude/skills/](.claude/skills/). They automate the repetitive parts of working in this sandbox — scaffolding a new project, and maintaining a project's OKF design-doc wiki. Invoke a skill by name (e.g. `/add-project my-accel`) in a Claude Code session.
 
-| Skill                                                | Purpose                                                                                                                                                                                                                               |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`add-project`](.claude/skills/add-project/SKILL.md) | Scaffold a new empty project under `projects/<name>/`: creates the `rtl/`, `tb/`, `scripts/flow/`, and `doc/` skeleton, runs `make init`, writes a stub project README, and registers the project in this README's `Projects:` list.  |
-| [`update-wiki`](.claude/skills/update-wiki/SKILL.md) | Update a project's OKF design-doc wiki under `projects/<project>/wiki/` after design progress: ingest new/changed `rtl/`, `tb/`, `doc/` into concept pages, refresh `index.md`/`log.md`, and lint for OKF conformance.  |
+| Skill                                                | Purpose                                                                                                                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`add-project`](.claude/skills/add-project/SKILL.md) | Scaffold a new empty project under `projects/<name>/`: creates the `rtl/`, `tb/`, `scripts/flow/`, and `doc/` skeleton, runs `make init`, writes a stub project README, and registers the project in this README's `Projects:` list. |
+| [`update-wiki`](.claude/skills/update-wiki/SKILL.md) | Update a project's OKF design-doc wiki under `projects/<project>/wiki/` after design progress: ingest new/changed `rtl/`, `tb/`, `doc/` into concept pages, refresh `index.md`/`log.md`, and lint for OKF conformance.               |
 
 A typical greenfield flow is `/add-project` to create the skeleton, then populate `rtl/` and `tb/` to verify, characterize, and document the design.
 
@@ -199,17 +199,18 @@ The `TOP_LEVEL` values and `PARAMS` keys are project-specific; the syntax below 
 ### Pre-synthesis simulation (Verilator)
 
 ```bash
-make sim TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> [PARAMS="KEY=VAL ..."]
+make sim TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> [PARAMS="KEY=VAL ..."] [VCD=1]
 ```
 
-| Parameter       | Required | Description                                 |
-| --------------- | -------- | ------------------------------------------- |
-| `TOP_LEVEL`     | yes      | RTL module to simulate                      |
-| `CLK_PERIOD_NS` | yes      | Clock period in nanoseconds                 |
-| `OUT_DIR`       | yes      | Output subdirectory under `sim/`            |
-| `PARAMS`        | no       | Project-specific RTL elaboration parameters |
+| Parameter       | Required | Description                                                                                                    |
+| --------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `TOP_LEVEL`     | yes      | RTL module to simulate                                                                                         |
+| `CLK_PERIOD_NS` | yes      | Clock period in nanoseconds                                                                                    |
+| `OUT_DIR`       | yes      | Output subdirectory under `sim/`                                                                               |
+| `PARAMS`        | no       | Project-specific RTL elaboration parameters                                                                    |
+| `VCD`           | no       | `1` enables Verilator tracing and dumps `activity.vcd`; default `0` (off — tracing is costly on large designs) |
 
-Outputs go to `projects/<PROJECT>/sim/<OUT_DIR>/`, including an `activity.vcd` waveform.
+Outputs go to `projects/<PROJECT>/sim/<OUT_DIR>/`. Pass `VCD=1` to also dump an `activity.vcd` waveform (off by default).
 
 ### Logic synthesis (Yosys + ABC, ASAP7 target)
 
@@ -278,11 +279,11 @@ Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`.
 
 Each project keeps its end-to-end automation under `projects/<PROJECT>/scripts/flow/`, with **one subfolder per experiment**. By convention every experiment folder provides the same trio of scripts, which the generic `flow-*` targets drive:
 
-| Script   | Target           | Purpose                                          |
-| -------- | ---------------- | ------------------------------------------------ |
-| `run.py` | `make flow-run`  | Run the experiment (drives the `make` flow)      |
-| `ext.py` | `make flow-ext`  | Extract results from the run outputs             |
-| `gen.py` | `make flow-gen`  | Generate charts/tables from the extracted data   |
+| Script   | Target          | Purpose                                        |
+| -------- | --------------- | ---------------------------------------------- |
+| `run.py` | `make flow-run` | Run the experiment (drives the `make` flow)    |
+| `ext.py` | `make flow-ext` | Extract results from the run outputs           |
+| `gen.py` | `make flow-gen` | Generate charts/tables from the extracted data |
 
 Select the experiment with `EXP=<experiment>` (required — there is no default):
 
@@ -303,14 +304,15 @@ make clean-all                # remove all sim/ and imp/ directories
 
 ### Make-level parameters reference
 
-| Parameter        | Make targets                                       | Values                          | Description                                                       |
-| ---------------- | -------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
-| `PROJECT`        | all                                                | project name                    | Required. Project under `projects/` to operate on (no default)    |
-| `TOP_LEVEL`      | sim, syn, post-syn-sta, post-syn-sim, post-syn-dpa | module name                     | RTL module to build/simulate; can be any module in the hierarchy  |
-| `CLK_PERIOD_NS`  | sim, post-syn-sta, post-syn-sim, post-syn-dpa      | e.g. `1.0`                      | Clock period in nanoseconds                                       |
-| `OUT_DIR`        | all except clean-all                               | directory name                  | Output subdirectory under `sim/` or `imp/`                        |
-| `NETLIST_DIR`    | post-syn-sta, post-syn-sim, post-syn-dpa           | e.g. `top_bas_4x8_syn`          | Directory containing the synthesized netlist from `make syn`      |
-| `VCD_DIR`        | post-syn-dpa                                       | e.g. `top_bas_4x8_post-syn-sim` | Directory containing `activity.vcd` from `make post-syn-sim`      |
-| `PARAMS`         | sim, syn, post-syn-sim                             | `"KEY=VAL ..."`                 | Project-specific RTL elaboration parameters                       |
-| `KEEP_HIERARCHY` | syn, post-syn-dpa                                  | `0` (default), `1`              | Preserve module boundaries in the netlist                         |
-| `EXP`            | flow-run, flow-ext, flow-gen                       | experiment name                 | Required. Experiment subfolder under `scripts/flow/` (no default) |
+| Parameter        | Make targets                                       | Values                          | Description                                                                                |
+| ---------------- | -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
+| `PROJECT`        | all                                                | project name                    | Required. Project under `projects/` to operate on (no default)                             |
+| `TOP_LEVEL`      | sim, syn, post-syn-sta, post-syn-sim, post-syn-dpa | module name                     | RTL module to build/simulate; can be any module in the hierarchy                           |
+| `CLK_PERIOD_NS`  | sim, post-syn-sta, post-syn-sim, post-syn-dpa      | e.g. `1.0`                      | Clock period in nanoseconds                                                                |
+| `OUT_DIR`        | all except clean-all                               | directory name                  | Output subdirectory under `sim/` or `imp/`                                                 |
+| `NETLIST_DIR`    | post-syn-sta, post-syn-sim, post-syn-dpa           | e.g. `top_bas_4x8_syn`          | Directory containing the synthesized netlist from `make syn`                               |
+| `VCD_DIR`        | post-syn-dpa                                       | e.g. `top_bas_4x8_post-syn-sim` | Directory containing `activity.vcd` from `make post-syn-sim`                               |
+| `PARAMS`         | sim, syn, post-syn-sim                             | `"KEY=VAL ..."`                 | Project-specific RTL elaboration parameters                                                |
+| `VCD`            | sim                                                | `0` (default), `1`              | Enable Verilator tracing and dump `activity.vcd` (off by default; costly on large designs) |
+| `KEEP_HIERARCHY` | syn, post-syn-dpa                                  | `0` (default), `1`              | Preserve module boundaries in the netlist                                                  |
+| `EXP`            | flow-run, flow-ext, flow-gen                       | experiment name                 | Required. Experiment subfolder under `scripts/flow/` (no default)                          |

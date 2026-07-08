@@ -73,13 +73,17 @@ module tb_dp_8 #(
         end
         res = sum + carry;
         if (res !== OUT_WIDTH'(exp & mask)) begin
+`ifdef VCD
             $dumpoff;
+`endif
             $error("RESOLVE MISMATCH sa=%0d sb=%0d exp=%0d got=%0d (sum=%0d carry=%0d)",
                    sgn_a, sgn_b, exp, res, sum, carry);
             $fatal;
         end
         if ((longint'($signed(sum)) + longint'($signed(carry))) !== exp) begin
+`ifdef VCD
             $dumpoff;
+`endif
             $error("SIGN-EXTEND MISMATCH sa=%0d sb=%0d exp=%0d (sum=%0d carry=%0d): not sign-consistent",
                    sgn_a, sgn_b, exp, $signed(sum), $signed(carry));
             $fatal;
@@ -113,8 +117,10 @@ module tb_dp_8 #(
     initial begin
         $display("\nStarting dp_8 verification (LANES=%0d WIDTH_A=%0d WIDTH_B=%0d OUT_WIDTH=%0d)...\n",
                  LANES, WIDTH_A, WIDTH_B, OUT_WIDTH);
+`ifdef VCD
         $dumpfile("activity.vcd");
         $dumpvars(0, tb_dp_8.dp_8_i);
+`endif
 
         for (int t = 0; t < NUM_RAND; t++) begin
             rand_vec;
@@ -134,7 +140,9 @@ module tb_dp_8 #(
         set_vec(A_ALL_ONES, B_ALL_ONES);
         check_all;
 
+`ifdef VCD
         $dumpoff;
+`endif
         $display("dp_8: all %0d random + corner tests PASSED!\n", NUM_RAND);
         $finish;
     end

@@ -2,11 +2,12 @@
 
 LLM-authored design documentation for the **ai-core** project. Each page summarizes and cross-references the project's own `rtl/`, `tb/`, and `doc/` sources and links back to them. See [log.md](log.md) for the change history.
 
-> Organized as: **architectures/** — the top-level assemblies, one per variant (currently the baseline `top_pe_bas`); **modules/** — the reusable building blocks (the datapath sub-blocks and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. The baseline PE (`top_pe_bas`) is built and verified end to end.
+> Organized as: **architectures/** — the top-level assemblies, one per variant (currently the baseline `top_pe_bas`); **modules/** — the reusable building blocks (the datapath sub-blocks and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. The baseline PE (`top_pe_bas`) and the `N × N` PE grid (`top_NxN_bas`) are built and verified end to end.
 
 ## Architectures
 
 * [Processing Element (baseline)](architectures/top_pe_bas.md) — `top_pe_bas`: the baseline PE top level — `pe_ctrl` + `pe_datapath` plus the control-path pipeline registers.
+* [PE Grid (baseline)](architectures/top_NxN_bas.md) — `top_NxN_bas`: baseline `N × N` grid of `top_pe_bas` PEs (A shared per row, B per column) with per-PE clock gating; default 2×2, chip uses 8×8.
 
 ## Modules
 
@@ -28,10 +29,12 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [Gate N](modules/gate_n.md) — `gate_n`: zero gate (pass / zero) over SIZE words.
 * [Gate B N](modules/gate_b_n.md) — `gate_b_n`: conditioning gate (pass / zero / negate) over SIZE words.
 * [Register N](modules/reg_n.md) — `reg_n`: register bank, SIZE WIDTH-bit registers, shared async reset.
+* [Integrated Clock Gate](modules/icg.md) — `icg`: latch-based clock gate — passes or holds the clock, for per-block gating.
 
 ## Testbenches
 
 * [tb_top_pe_bas](testbenches/tb_top_pe_bas.md) — whole-PE matmul at `pe_out` driven only by `mode_i`/operands/`sel_acc`/`acc_i`, all 11 modes, single-shot and accumulating.
+* [tb_top_NxN_bas](testbenches/tb_top_NxN_bas.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col), all 11 modes, one-shot + accumulate + clock-gating; default 2×2.
 * [tb_pe_array](testbenches/tb_pe_array.md) — independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [tb_acc_array](testbenches/tb_acc_array.md) — `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
 * [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand vs a golden router model, all 11 modes.

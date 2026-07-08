@@ -10,6 +10,7 @@ VCD_DIR        ?= no_name
 CLK_PERIOD_NS  ?= 1
 PARAMS         ?= none
 KEEP_HIERARCHY ?= 0
+VCD            ?= 0
 EXP            ?=
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
@@ -22,6 +23,7 @@ export SEL_VCD_DIR        := $(VCD_DIR)
 export SEL_CLK_PERIOD_NS  := $(CLK_PERIOD_NS)
 export SEL_PARAMS         := $(PARAMS)
 export SEL_KEEP_HIERARCHY := $(KEEP_HIERARCHY)
+export SEL_VCD            := $(VCD)
 
 .PHONY: init flow-list flow-run flow-ext flow-gen
 

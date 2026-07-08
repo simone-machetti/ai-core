@@ -156,12 +156,16 @@ module tb_disp_array #(
         end
         for (int i = 0; i < NUM_DP8; i++) begin
             if (a_dp8[i] !== a_exp[i]) begin
+`ifdef VCD
                 $dumpoff;
+`endif
                 $error("A MISMATCH mode=%0d dp8=%0d exp=%h got=%h", MODE_NUM[mi], i, a_exp[i], a_dp8[i]);
                 $fatal;
             end
             if (b_dp8[i] !== b_exp[i]) begin
+`ifdef VCD
                 $dumpoff;
+`endif
                 $error("B MISMATCH mode=%0d dp8=%0d exp=%h got=%h", MODE_NUM[mi], i, b_exp[i], b_dp8[i]);
                 $fatal;
             end
@@ -182,8 +186,10 @@ module tb_disp_array #(
 
     initial begin
         $display("\nStarting disp_array verification (%0d modes x (%0d random + ramp))...\n", NUM_MODE, NUM_RAND);
+`ifdef VCD
         $dumpfile("activity.vcd");
         $dumpvars(0, tb_disp_array.disp_array_i);
+`endif
 
         rst_ni  = 1'b0;
         pe_in_a = '0;
@@ -209,7 +215,9 @@ module tb_disp_array #(
             $display("  mode %0d: PASS", MODE_NUM[mi]);
         end
 
+`ifdef VCD
         $dumpoff;
+`endif
         $display("\ndisp_array: all %0d modes x (%0d random + ramp) tests PASSED!\n", NUM_MODE, NUM_RAND);
         $finish;
     end

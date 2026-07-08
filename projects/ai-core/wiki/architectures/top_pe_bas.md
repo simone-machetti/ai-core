@@ -47,7 +47,7 @@ top_pe_bas top_pe_bas_i (
 
 The datapath is a 3-stage pipeline, with all three registers inside [pe_datapath](../modules/pe_datapath.md): the `disp_array` input register, the `pe_array` L0 register, and the `acc_array` output register. `pe_ctrl` is purely combinational, so every control-path register lives here in `top_pe_bas`. The controls are consumed at two different stages, so each is delayed to match:
 
-| Control                                                          | Consumed | Registers from input | Source in `top_pe_bas`             |
+| Control                                                          | Consumed | Registers from input | Source in `top_pe_bas`         |
 | ---------------------------------------------------------------- | -------- | -------------------- | ------------------------------ |
 | `sel_a`/`sel_b`/`ctr_l`/`ctr_h`, `is_signed_a/b`, `sel_shift[0]` | stage 1  | 1                    | input reg (`mode`) → `pe_ctrl` |
 | `sel_shift[2:1]`, `sel_out`, `prop_carry`                        | stage 2  | 2                    | `pe_ctrl` → group-2 reg        |

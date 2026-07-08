@@ -25,7 +25,7 @@ make sim PROJECT=ai-core TOP_LEVEL=top_pe_bas PARAMS="NUM_RAND=2000"
 | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | Modes        | all 11 (8 real + 3 complex: 10, 11, 12), selected only through `mode_i`                                                    |
 | Decode       | every internal control is produced by `pe_ctrl` from `mode_i` — a wrong row surfaces as a mismatch                         |
-| Alignment    | a wrong per-stage control delay in `top_pe_bas` misaligns a control with its data — also a mismatch                            |
+| Alignment    | a wrong per-stage control delay in `top_pe_bas` misaligns a control with its data — also a mismatch                        |
 | Single-shot  | with `acc_i = 0`, `pe_out` equals the golden `A·B` reconstructed from the result's lane(s)                                 |
 | Accumulation | seed `acc_i`, fold once (`sel_acc = 0`), accumulate `NUM_ACC-1` times (`sel_acc = 1`); `pe_out == seed + NUM_ACC · result` |
 | Fusion       | wide results are read as `{pe_out[even], pe_out[odd]}` (40-bit H:L), exercising the carry chain                            |

@@ -61,7 +61,9 @@ module tb_cpr_c_n #(
         end
         res = sum + carry;
         if (res !== OUT_WIDTH'(exp & mask)) begin
+`ifdef VCD
             $dumpoff;
+`endif
             $error("MISMATCH is_signed=%0d exp=%0d got=%0d (sum=%0d carry=%0d)",
                    IS_SIGNED, exp, res, sum, carry);
             $fatal;
@@ -79,8 +81,10 @@ module tb_cpr_c_n #(
     initial begin
         $display("\nStarting cpr_c_n verification (IN_WIDTH=%0d IN_SIZE=%0d IS_SIGNED=%0d OUT_WIDTH=%0d)...\n",
                  IN_WIDTH, IN_SIZE, IS_SIGNED, OUT_WIDTH);
+`ifdef VCD
         $dumpfile("activity.vcd");
         $dumpvars(0, tb_cpr_c_n.cpr_c_n_i);
+`endif
 
         for (int t = 0; t < NUM_RAND; t++) begin
             rand_vec;
@@ -96,7 +100,9 @@ module tb_cpr_c_n #(
         set_vec(MIN_NEG);
         check();
 
+`ifdef VCD
         $dumpoff;
+`endif
         $display("cpr_c_n: all %0d random + corner tests PASSED!\n", NUM_RAND);
         $finish;
     end

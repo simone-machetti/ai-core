@@ -26,16 +26,18 @@ while IFS= read -r f; do
     vlt_files+=("$f")
 done < <(find "${PROJ}/rtl" -name "*.vlt" | sort)
 
+trace_flags=()
+if [ "${SEL_VCD:-0}" = "1" ]; then
+    trace_flags=(--trace --trace-max-array 0 --trace-max-width 0 --output-split 20000 -DVCD)
+fi
+
 verilator \
     -sv \
     --binary \
     --timing \
-    --trace \
-    --trace-max-array 0 \
-    --trace-max-width 0 \
+    "${trace_flags[@]}" \
     -Wall \
     -Wno-fatal \
-    -DVCD \
     -DCLK_PERIOD_NS="${SEL_CLK_PERIOD_NS}" \
     "${g_flags[@]}" \
     "${inc_flags[@]}" \

@@ -434,8 +434,10 @@ module tb_acc_array #(
         longint r, gexp;
         $display("\nStarting acc_array (disp + pe_array + acc_array) verification (%0d modes x %0d random)...\n",
                  NUM_MODE, NUM_RAND);
+`ifdef VCD
         $dumpfile("activity.vcd");
         $dumpvars(0, tb_acc_array.acc_array_i);
+`endif
 
         rst_ni  = 1'b0;
         pe_in_a = '0;
@@ -524,7 +526,9 @@ module tb_acc_array #(
                 $display("  acc mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
         end
 
+`ifdef VCD
         $dumpoff;
+`endif
         $display("\nacc_array verification: %0d/%0d single-shot modes passed (%0d total mismatches)\n",
                  npass, NUM_MODE, err);
         $finish;

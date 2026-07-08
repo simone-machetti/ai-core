@@ -265,8 +265,10 @@ module tb_top_pe_bas #(
         longint r, gexp;
         $display("\nStarting top_pe_bas verification (%0d modes x %0d random)...\n",
                  NUM_MODE, NUM_RAND);
+`ifdef VCD
         $dumpfile("activity.vcd");
         $dumpvars(0, tb_top_pe_bas.top_pe_bas_i);
+`endif
 
         rst_ni  = 1'b0;
         pe_in_a = '0;
@@ -351,7 +353,9 @@ module tb_top_pe_bas #(
                 $display("  acc mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
         end
 
+`ifdef VCD
         $dumpoff;
+`endif
         $display("\ntop_pe_bas verification: %0d/%0d single-shot modes passed (%0d total mismatches)\n",
                  npass, NUM_MODE, err);
         $finish;

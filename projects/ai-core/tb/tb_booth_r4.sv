@@ -70,7 +70,9 @@ module tb_booth_r4 #(
             pp_sum += longint'($signed(pp[i])) * (longint'(1) << (2 * i));
         end
         if (pp_sum !== prod) begin
+`ifdef VCD
             $dumpoff;
+`endif
             $error("MISMATCH sgn_a=%0d sgn_b=%0d a=%0d b=%0d prod=%0d pp_sum=%0d",
                    sgn_a, sgn_b, a_val, b_val, prod, pp_sum);
             $fatal;
@@ -97,8 +99,10 @@ module tb_booth_r4 #(
     initial begin
         $display("\nStarting booth_r4 verification (IN_WIDTH_A=%0d IN_WIDTH_B=%0d PP_SIZE=%0d)...\n",
                  IN_WIDTH_A, IN_WIDTH_B, PP_SIZE);
+`ifdef VCD
         $dumpfile("activity.vcd");
         $dumpvars(0, tb_booth_r4.booth_r4_i);
+`endif
 
         for (int t = 0; t < NUM_RAND; t++) begin
             rand_vec;
@@ -118,7 +122,9 @@ module tb_booth_r4 #(
         set_vec(A_ALL_ONES, B_ALL_ONES);
         check_all;
 
+`ifdef VCD
         $dumpoff;
+`endif
         $display("booth_r4: all %0d random + corner tests PASSED!\n", NUM_RAND);
         $finish;
     end
