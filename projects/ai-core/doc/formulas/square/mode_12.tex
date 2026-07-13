@@ -1,0 +1,271 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1.4cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\allowdisplaybreaks
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 12 --- Square}}\\[4pt]
+{\large C-DP4 (C16$\times$C16) $\rightarrow$ DP8 (16$\times$16) $\rightarrow$ DP8 (16$\times$8) $\rightarrow$ DP8 (16$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ DP8 (4$\times$4) $\rightarrow$ add-and-square}
+\end{center}
+
+\vspace{0.1em}
+
+\textbf{Step 1 --- C-DP4 (C16$\times$C16)}
+\[
+\text{C-DP4}\,(\mathrm{C16}\!\times\!\mathrm{C16}) = D = \sum_{i=0}^{3} a_i \, b_i, \qquad
+a_i = a_i^{re} + \mathrm{j}\,a_i^{im}, \quad
+b_i = b_i^{re} + \mathrm{j}\,b_i^{im}
+\]
+
+\textbf{Step 2 --- DP8 (16$\times$16)}
+\[
+\mathrm{Re}(D) = \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{re}
+  - \sum_{i=0}^{3} a_i^{im} b_i^{im}}_{\DPop{8}{16}{16}}
+\]
+\[
+\mathrm{Im}(D) = \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{im}
+  + \sum_{i=0}^{3} a_i^{im} b_i^{re}}_{\DPop{8}{16}{16}}
+\]
+
+\textbf{Step 3 --- DP8 (16$\times$8)}
+\[
+\mathrm{Re}(D) = \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{re,hi}
+  - 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{im,hi}}_{\DPop{8}{16}{8}}
+  + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{re,lo}
+  - \sum_{i=0}^{3} a_i^{im} b_i^{im,lo}}_{\DPop{8}{16}{8}}
+\]
+\[
+\mathrm{Im}(D) = \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{im,hi}
+  + 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{re,hi}}_{\DPop{8}{16}{8}}
+  + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{im,lo}
+  + \sum_{i=0}^{3} a_i^{im} b_i^{re,lo}}_{\DPop{8}{16}{8}}
+\]
+
+\textbf{Step 4 --- DP8 (16$\times$4)}
+\begin{align*}
+\mathrm{Re}(D) = {}
+  & \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re} b_i^{re,hh} - 2^{12}\sum_{i=0}^{3} a_i^{im} b_i^{im,hh}}_{\DPop{8}{16}{4}} \\[0.5em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{re,hl} - 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{im,hl}}_{\DPop{8}{16}{4}} \\[0.5em]
+  & + \underbrace{2^{4}\sum_{i=0}^{3} a_i^{re} b_i^{re,lh} - 2^{4}\sum_{i=0}^{3} a_i^{im} b_i^{im,lh}}_{\DPop{8}{16}{4}} \\[0.5em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{re,ll} - \sum_{i=0}^{3} a_i^{im} b_i^{im,ll}}_{\DPop{8}{16}{4}}
+\end{align*}
+\begin{align*}
+\mathrm{Im}(D) = {}
+  & \underbrace{2^{12}\sum_{i=0}^{3} a_i^{re} b_i^{im,hh} + 2^{12}\sum_{i=0}^{3} a_i^{im} b_i^{re,hh}}_{\DPop{8}{16}{4}} \\[0.5em]
+  & + \underbrace{2^{8}\sum_{i=0}^{3} a_i^{re} b_i^{im,hl} + 2^{8}\sum_{i=0}^{3} a_i^{im} b_i^{re,hl}}_{\DPop{8}{16}{4}} \\[0.5em]
+  & + \underbrace{2^{4}\sum_{i=0}^{3} a_i^{re} b_i^{im,lh} + 2^{4}\sum_{i=0}^{3} a_i^{im} b_i^{re,lh}}_{\DPop{8}{16}{4}} \\[0.5em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re} b_i^{im,ll} + \sum_{i=0}^{3} a_i^{im} b_i^{re,ll}}_{\DPop{8}{16}{4}}
+\end{align*}
+
+\textbf{Step 5 --- DP8 (8$\times$4)}
+\begin{align*}
+\mathrm{Re}(D) = {}
+  & 2^{20}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,hh}}_{\DPop{8}{8}{4}} - 2^{20}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,hh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,hh}}_{\DPop{8}{8}{4}} - 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{im,hh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,hl}}_{\DPop{8}{8}{4}} - 2^{16}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,hl}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,hl}}_{\DPop{8}{8}{4}} - 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{im,hl}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,lh}}_{\DPop{8}{8}{4}} - 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,lh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,lh}}_{\DPop{8}{8}{4}} - 2^{4}\underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{im,lh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{re,ll}}_{\DPop{8}{8}{4}} - 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{im,ll}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{re,ll}}_{\DPop{8}{8}{4}} - \underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{im,ll}}_{\DPop{8}{8}{4}}
+\end{align*}
+\begin{align*}
+\mathrm{Im}(D) = {}
+  & 2^{20}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,hh}}_{\DPop{8}{8}{4}} + 2^{20}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,hh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,hh}}_{\DPop{8}{8}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{re,hh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,hl}}_{\DPop{8}{8}{4}} + 2^{16}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,hl}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,hl}}_{\DPop{8}{8}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{re,hl}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,lh}}_{\DPop{8}{8}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,lh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,lh}}_{\DPop{8}{8}{4}} + 2^{4}\underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{re,lh}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{re,hi} b_i^{im,ll}}_{\DPop{8}{8}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_i^{im,hi} b_i^{re,ll}}_{\DPop{8}{8}{4}} \\[0.5em]
+  & + \underbrace{\sum_{i=0}^{3} a_i^{re,lo} b_i^{im,ll}}_{\DPop{8}{8}{4}} + \underbrace{\sum_{i=0}^{3} a_i^{im,lo} b_i^{re,ll}}_{\DPop{8}{8}{4}}
+\end{align*}
+
+\textbf{Step 6 --- DP8 (4$\times$4)}
+\begin{align*}
+\mathrm{Re}(D) = {}
+  & 2^{24}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{re,hh}}_{\DPop{8}{4}{4}} + 2^{20}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{re,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{24}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{im,hh}}_{\DPop{8}{4}{4}} - 2^{20}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{im,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{re,hh}}_{\DPop{8}{4}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{re,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{im,hh}}_{\DPop{8}{4}{4}} - 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{im,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{20}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{re,hl}}_{\DPop{8}{4}{4}} + 2^{16}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{re,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{20}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{im,hl}}_{\DPop{8}{4}{4}} - 2^{16}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{im,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{re,hl}}_{\DPop{8}{4}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{re,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{im,hl}}_{\DPop{8}{4}{4}} - 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{im,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{re,lh}}_{\DPop{8}{4}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{re,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{im,lh}}_{\DPop{8}{4}{4}} - 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{im,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{8}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{re,lh}}_{\DPop{8}{4}{4}} + 2^{4}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{re,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{8}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{im,lh}}_{\DPop{8}{4}{4}} - 2^{4}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{im,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{re,ll}}_{\DPop{8}{4}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{re,ll}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{im,ll}}_{\DPop{8}{4}{4}} - 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{im,ll}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{4}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{re,ll}}_{\DPop{8}{4}{4}} + \underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{re,ll}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & - 2^{4}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{im,ll}}_{\DPop{8}{4}{4}} - \underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{im,ll}}_{\DPop{8}{4}{4}}
+\end{align*}
+\begin{align*}
+\mathrm{Im}(D) = {}
+  & 2^{24}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{im,hh}}_{\DPop{8}{4}{4}} + 2^{20}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{im,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{24}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{re,hh}}_{\DPop{8}{4}{4}} + 2^{20}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{re,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{im,hh}}_{\DPop{8}{4}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{im,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{re,hh}}_{\DPop{8}{4}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{re,hh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{20}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{im,hl}}_{\DPop{8}{4}{4}} + 2^{16}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{im,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{20}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{re,hl}}_{\DPop{8}{4}{4}} + 2^{16}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{re,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{im,hl}}_{\DPop{8}{4}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{im,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{re,hl}}_{\DPop{8}{4}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{re,hl}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{im,lh}}_{\DPop{8}{4}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{im,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{16}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{re,lh}}_{\DPop{8}{4}{4}} + 2^{12}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{re,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{8}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{im,lh}}_{\DPop{8}{4}{4}} + 2^{4}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{im,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{8}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{re,lh}}_{\DPop{8}{4}{4}} + 2^{4}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{re,lh}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,hi} b_i^{im,ll}}_{\DPop{8}{4}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{re,hi} b_i^{im,ll}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{12}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,hi} b_i^{re,ll}}_{\DPop{8}{4}{4}} + 2^{8}\underbrace{\sum_{i=0}^{3} a_{L,i}^{im,hi} b_i^{re,ll}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{4}\underbrace{\sum_{i=0}^{3} a_{H,i}^{re,lo} b_i^{im,ll}}_{\DPop{8}{4}{4}} + \underbrace{\sum_{i=0}^{3} a_{L,i}^{re,lo} b_i^{im,ll}}_{\DPop{8}{4}{4}} \\[0.4em]
+  & + 2^{4}\underbrace{\sum_{i=0}^{3} a_{H,i}^{im,lo} b_i^{re,ll}}_{\DPop{8}{4}{4}} + \underbrace{\sum_{i=0}^{3} a_{L,i}^{im,lo} b_i^{re,ll}}_{\DPop{8}{4}{4}}
+\end{align*}
+
+\textbf{Step 7 --- Add-and-square}\quad
+{\small(substitute each DP8 (4$\times$4) $= \tfrac{1}{2}\big[\sum(x_i{+}b_i)^2 - \sum x_i^2 - \sum b_i^2\big]$)}
+\begin{align*}
+\mathrm{Re}(D) = {}
+  & 2^{24}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{24}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}}
+\end{align*}
+\begin{align*}
+\mathrm{Im}(D) = {}
+  & 2^{24}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{24}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,hh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{20}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,hl})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,hl})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{16}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,lh})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,lh})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{12}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{8}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 - \sum_{i=0}^{3}(b_i^{im,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,ll})^2 - \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 - \sum_{i=0}^{3}(b_i^{re,ll})^2\Big)}_{\DPop{8}{4}{4}}
+\end{align*}
+
+\textbf{Step 8 --- All components}
+
+\medskip
+$\mathrm{Re}(D)$:
+{\small
+\[
+\boxed{\;
+\begin{aligned}
+\mathrm{PE} ={}& 2^{24}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,hh})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,hh})^2 + 2^{24}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,hh})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,hh})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,hh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,hh})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,hh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,hh})^2 \\
+  & + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,hl})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,hl})^2 + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,hl})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,hl})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,hl})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,hl})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,hl})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,hl})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,lh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,lh})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,lh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,lh})^2 \\
+  & + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,lh})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,lh})^2 + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,lh})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,lh})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{re,ll})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{re,ll})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{-}b_i^{im,ll})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{-}b_i^{im,ll})^2 \\
+  & + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{re,ll})^2 + \sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{re,ll})^2 + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{-}b_i^{im,ll})^2 + \sum_{i=0}^{3}(a_{L,i}^{im,lo}{-}b_i^{im,ll})^2 \\[0.5em]
+\alpha ={}& 2^{24}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 + 2^{24}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 \\
+  & + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 \\[0.5em]
+\beta ={}& 2^{24}\sum_{i=0}^{3}(b_i^{re,hh})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{re,hh})^2 + 2^{24}\sum_{i=0}^{3}(b_i^{im,hh})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{im,hh})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{re,hh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{re,hh})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(b_i^{im,hh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{im,hh})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{re,hl})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{re,hl})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{im,hl})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{im,hl})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(b_i^{re,hl})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{re,hl})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{im,hl})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{im,hl})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{re,lh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{re,lh})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(b_i^{im,lh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{im,lh})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{re,lh})^2 + 2^{4}\sum_{i=0}^{3}(b_i^{re,lh})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{im,lh})^2 + 2^{4}\sum_{i=0}^{3}(b_i^{im,lh})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(b_i^{re,ll})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{re,ll})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{im,ll})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{im,ll})^2 + 2^{4}\sum_{i=0}^{3}(b_i^{re,ll})^2 + \sum_{i=0}^{3}(b_i^{re,ll})^2 \\
+  & + 2^{4}\sum_{i=0}^{3}(b_i^{im,ll})^2 + \sum_{i=0}^{3}(b_i^{im,ll})^2
+\end{aligned}
+\;}
+\]
+}
+
+\medskip
+$\mathrm{Im}(D)$:
+{\small
+\[
+\boxed{\;
+\begin{aligned}
+\mathrm{PE} ={}& 2^{24}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,hh})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,hh})^2 + 2^{24}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,hh})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,hh})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,hh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,hh})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,hh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,hh})^2 \\
+  & + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,hl})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,hl})^2 + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,hl})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,hl})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,hl})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,hl})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,hl})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,hl})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,lh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,lh})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,lh})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,lh})^2 \\
+  & + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,lh})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,lh})^2 + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,lh})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,lh})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,hi}{+}b_i^{im,ll})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,hi}{+}b_i^{im,ll})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,hi}{+}b_i^{re,ll})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,hi}{+}b_i^{re,ll})^2 \\
+  & + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{re,lo}{+}b_i^{im,ll})^2 + \sum_{i=0}^{3}(a_{L,i}^{re,lo}{+}b_i^{im,ll})^2 + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{im,lo}{+}b_i^{re,ll})^2 + \sum_{i=0}^{3}(a_{L,i}^{im,lo}{+}b_i^{re,ll})^2 \\[0.5em]
+\alpha ={}& 2^{24}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 + 2^{24}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{20}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 + 2^{20}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{16}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{12}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 + 2^{8}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + 2^{4}\sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{re,hi})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{re,hi})^2 + 2^{12}\sum_{i=0}^{3}(a_{H,i}^{im,hi})^2 + 2^{8}\sum_{i=0}^{3}(a_{L,i}^{im,hi})^2 + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{re,lo})^2 + \sum_{i=0}^{3}(a_{L,i}^{re,lo})^2 \\
+  & + 2^{4}\sum_{i=0}^{3}(a_{H,i}^{im,lo})^2 + \sum_{i=0}^{3}(a_{L,i}^{im,lo})^2 \\[0.5em]
+\beta ={}& 2^{24}\sum_{i=0}^{3}(b_i^{im,hh})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{im,hh})^2 + 2^{24}\sum_{i=0}^{3}(b_i^{re,hh})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{re,hh})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{im,hh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{im,hh})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(b_i^{re,hh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{re,hh})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{im,hl})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{im,hl})^2 + 2^{20}\sum_{i=0}^{3}(b_i^{re,hl})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{re,hl})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(b_i^{im,hl})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{im,hl})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{re,hl})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{re,hl})^2 + 2^{16}\sum_{i=0}^{3}(b_i^{im,lh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{im,lh})^2 \\
+  & + 2^{16}\sum_{i=0}^{3}(b_i^{re,lh})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{re,lh})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{im,lh})^2 + 2^{4}\sum_{i=0}^{3}(b_i^{im,lh})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{re,lh})^2 + 2^{4}\sum_{i=0}^{3}(b_i^{re,lh})^2 \\
+  & + 2^{12}\sum_{i=0}^{3}(b_i^{im,ll})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{im,ll})^2 + 2^{12}\sum_{i=0}^{3}(b_i^{re,ll})^2 + 2^{8}\sum_{i=0}^{3}(b_i^{re,ll})^2 + 2^{4}\sum_{i=0}^{3}(b_i^{im,ll})^2 + \sum_{i=0}^{3}(b_i^{im,ll})^2 \\
+  & + 2^{4}\sum_{i=0}^{3}(b_i^{re,ll})^2 + \sum_{i=0}^{3}(b_i^{re,ll})^2
+\end{aligned}
+\;}
+\]
+}
+
+\end{document}

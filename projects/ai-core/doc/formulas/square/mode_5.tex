@@ -1,0 +1,85 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1.4cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\allowdisplaybreaks
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 5 --- Square}}\\[4pt]
+{\large DP32 (8$\times$4) $\rightarrow$ DP16 (8$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ DP8 (4$\times$4) $\rightarrow$ add-and-square}
+\end{center}
+
+\vspace{0.1em}
+
+\textbf{Step 1 --- DP32 (8$\times$4)}
+\[
+\DPop{32}{8}{4} = \sum_{i=0}^{31} a_i \, b_i
+\]
+
+\textbf{Step 2 --- DP16 (8$\times$4)}
+\[
+\DPop{32}{8}{4}
+  = \underbrace{\sum_{i=0}^{15} a_i \, b_i}_{\DPop{16}{8}{4}}
+  \; + \; \underbrace{\sum_{i=16}^{31} a_i \, b_i}_{\DPop{16}{8}{4}}
+\]
+
+\textbf{Step 3 --- DP8 (8$\times$4)}
+\begin{align*}
+\DPop{32}{8}{4} = {}
+  & \underbrace{\sum_{i=0}^{7} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_i \, b_i}_{\DPop{8}{8}{4}}
+\end{align*}
+
+\textbf{Step 4 --- DP8 (4$\times$4)}
+\begin{align*}
+\DPop{32}{8}{4} = {}
+  & 2^{4}\underbrace{\sum_{i=0}^{7} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_{L,i}\, b_i}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=8}^{15} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_{L,i}\, b_i}_{\DPop{8}{4}{4}} \\[0.6em]
+  & + 2^{4}\underbrace{\sum_{i=16}^{23} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_{L,i}\, b_i}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=24}^{31} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_{L,i}\, b_i}_{\DPop{8}{4}{4}}
+\end{align*}
+
+\textbf{Step 5 --- Add-and-square}\quad
+{\small(substitute each DP8 (4$\times$4) $= \tfrac{1}{2}\big[\sum(x_i{+}b_i)^2 - \sum x_i^2 - \sum b_i^2\big]$)}
+\begin{align*}
+\DPop{32}{8}{4} = {}
+  & 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 - \sum_{i=0}^{7}a_{H,i}^2 - \sum_{i=0}^{7}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.7em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=0}^{7}(a_{L,i}{+}b_i)^2 - \sum_{i=0}^{7}a_{L,i}^2 - \sum_{i=0}^{7}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.7em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 - \sum_{i=8}^{15}a_{H,i}^2 - \sum_{i=8}^{15}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.7em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=8}^{15}(a_{L,i}{+}b_i)^2 - \sum_{i=8}^{15}a_{L,i}^2 - \sum_{i=8}^{15}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.7em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=16}^{23}(a_{H,i}{+}b_i)^2 - \sum_{i=16}^{23}a_{H,i}^2 - \sum_{i=16}^{23}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.7em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=16}^{23}(a_{L,i}{+}b_i)^2 - \sum_{i=16}^{23}a_{L,i}^2 - \sum_{i=16}^{23}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.7em]
+  & + 2^{4}\underbrace{\tfrac{1}{2}\Big(\sum_{i=24}^{31}(a_{H,i}{+}b_i)^2 - \sum_{i=24}^{31}a_{H,i}^2 - \sum_{i=24}^{31}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.7em]
+  & + \underbrace{\tfrac{1}{2}\Big(\sum_{i=24}^{31}(a_{L,i}{+}b_i)^2 - \sum_{i=24}^{31}a_{L,i}^2 - \sum_{i=24}^{31}b_i^2\Big)}_{\DPop{8}{4}{4}}
+\end{align*}
+
+\textbf{Step 6 --- All components}
+\[
+\boxed{\;
+\begin{aligned}
+\mathrm{PE} ={}& 2^{4}\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 + \sum_{i=0}^{7}(a_{L,i}{+}b_i)^2 + 2^{4}\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 + \sum_{i=8}^{15}(a_{L,i}{+}b_i)^2 \\
+  & + 2^{4}\sum_{i=16}^{23}(a_{H,i}{+}b_i)^2 + \sum_{i=16}^{23}(a_{L,i}{+}b_i)^2 + 2^{4}\sum_{i=24}^{31}(a_{H,i}{+}b_i)^2 + \sum_{i=24}^{31}(a_{L,i}{+}b_i)^2 \\[0.6em]
+\alpha ={}& 2^{4}\sum_{i=0}^{7}a_{H,i}^2 + \sum_{i=0}^{7}a_{L,i}^2 + 2^{4}\sum_{i=8}^{15}a_{H,i}^2 + \sum_{i=8}^{15}a_{L,i}^2 \\
+  & + 2^{4}\sum_{i=16}^{23}a_{H,i}^2 + \sum_{i=16}^{23}a_{L,i}^2 + 2^{4}\sum_{i=24}^{31}a_{H,i}^2 + \sum_{i=24}^{31}a_{L,i}^2 \\[0.6em]
+\beta ={}& 2^{4}\sum_{i=0}^{7}b_i^2 + \sum_{i=0}^{7}b_i^2 + 2^{4}\sum_{i=8}^{15}b_i^2 + \sum_{i=8}^{15}b_i^2 \\
+  & + 2^{4}\sum_{i=16}^{23}b_i^2 + \sum_{i=16}^{23}b_i^2 + 2^{4}\sum_{i=24}^{31}b_i^2 + \sum_{i=24}^{31}b_i^2
+\end{aligned}
+\;}
+\]
+
+\end{document}

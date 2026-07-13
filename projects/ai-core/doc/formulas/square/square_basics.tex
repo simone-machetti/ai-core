@@ -1,0 +1,96 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1.8cm]{geometry}
+\setlength{\parindent}{0pt}
+\setlength{\abovedisplayskip}{4pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{4pt plus 1pt minus 1pt}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Square --- generic $A\cdot B$ (4-bit nibbles)}}\\[4pt]
+{\large the three cases by number of unsigned operands --- no specific mode}
+\end{center}
+
+\vspace{0.5em}
+
+\textbf{Setup}\quad 4-bit nibble: signed $\in[-8,7]$, unsigned $\in[0,15]$. Bias an \emph{unsigned} nibble by $-8$ (flip its MSB) $\Rightarrow[-8,7]$.
+\[
+(A{+}B)^2 = A^2 + B^2 + 2AB
+\qquad\Longrightarrow\qquad
+2AB = (A{+}B)^2 - A^2 - B^2 .
+\]
+
+\vspace{0.3em}
+
+\textbf{Case 0 --- both signed}\quad(no bias)
+\[
+\boxed{\;(1)\quad AB = \tfrac12\big[(A{+}B)^2 - A^2 - B^2\big]\;}\qquad C=0
+\]
+
+\vspace{0.3em}
+
+\textbf{Case 1 --- one unsigned}\quad($A$ unsigned $\to A{-}8$; \ $B$ signed)
+\[
+\big((A{-}8){+}B\big)^2 = A^2 + B^2 + 2AB - 16A - 16B + 64
+\]
+\[
+(2)\quad 2AB = \big((A{-}8){+}B\big)^2 - A^2 - B^2 + 16A + 16B - 64
+\]
+substitute $-A^2 = -(A{-}8)^2 + 64 - 16A$, \ $-B^2 = -(B{-}8)^2 + 64 - 16B$ (linear terms cancel):
+\[
+\boxed{\;(3)\quad AB = \tfrac12\Big[\underbrace{\big((A{-}8){+}B\big)^2}_{\text{5-bit sq}} - \underbrace{(A{-}8)^2}_{\text{4-bit sq}} - \underbrace{(B{-}8)^2}_{\text{5-bit sq}} + 64\Big]\;}\qquad C=64
+\]
+
+\vspace{0.3em}
+
+\textbf{Case 2 --- both unsigned}\quad($A\to A{-}8$, \ $B\to B{-}8$)
+\[
+\big((A{-}8){+}(B{-}8)\big)^2 = A^2 + B^2 + 2AB - 32A - 32B + 256
+\]
+\[
+(4)\quad 2AB = \big((A{-}8){+}(B{-}8)\big)^2 - A^2 - B^2 + 32A + 32B - 256
+\]
+substitute $-A^2 = -(A{-}16)^2 + 256 - 32A$, \ $-B^2 = -(B{-}16)^2 + 256 - 32B$ (linear terms cancel):
+\[
+\boxed{\;(5)\quad AB = \tfrac12\Big[\underbrace{\big((A{-}8){+}(B{-}8)\big)^2}_{\text{5-bit sq}} - \underbrace{(A{-}16)^2}_{\text{5-bit sq}} - \underbrace{(B{-}16)^2}_{\text{5-bit sq}} + 256\Big]\;}\qquad C=256
+\]
+
+\vspace{0.6em}
+
+\textbf{Complete table (all four combos)}\quad $au,bu=$ A/B unsigned flags, \ $S=8(au{+}bu)$, \ $C=S^2$. \ Result $=\tfrac12(\mathrm{PE}-\alpha-\beta+C)$.
+\[
+\renewcommand{\arraystretch}{1.3}
+\begin{array}{cc|c|c|c|c|c|c}
+au & bu & (A,B) & S & \text{f} & \mathrm{PE} & \alpha=(A{-}S)^2 & \beta=(B{-}S)^2 \\ \hline
+0&0 & (s,s) & 0 & (1) & (A{+}B)^2\ \text{5b} & A^2\ \text{4b} & B^2\ \text{4b} \\
+1&0 & (u,s) & 8 & (3) & \big((A{-}8){+}B\big)^2\ \text{5b} & (A{-}8)^2\ \text{4b} & (B{-}8)^2\ \text{5b} \\
+0&1 & (s,u) & 8 & (3) & \big(A{+}(B{-}8)\big)^2\ \text{5b} & (A{-}8)^2\ \text{5b} & (B{-}8)^2\ \text{4b} \\
+1&1 & (u,u) & 16 & (5) & \big((A{-}8){+}(B{-}8)\big)^2\ \text{5b} & (A{-}16)^2\ \text{5b} & (B{-}16)^2\ \text{5b} \\
+\end{array}
+\]
+$C=0,64,64,256$ respectively. $\mathrm{PE}\text{-arg}\in[-16,14]$, $\alpha,\beta\text{-arg}\in[-16,7]$ --- all fit one \textbf{5-bit-in / 9-bit-out} square (rows $10$/$01$: $\alpha,\beta$ are both $A{-}8$/$B{-}8$ but the widths swap).
+
+\vspace{0.5em}
+
+\textbf{Hardware}\quad Dispatcher centers each nibble ($A_c=$ flip $A_3$ if $au$; \ $B_c=$ flip $B_3$ if $bu$) --- shared by PE and $\alpha/\beta$. Each generator adds the \emph{removed} operand's $-8$ on its own input.
+\[
+\renewcommand{\arraystretch}{1.3}
+\begin{array}{cc|c|c|c|c}
+au & bu & A_c\ (\text{disp}) & \alpha\text{-arg} & B_c\ (\text{disp}) & \beta\text{-arg} \\ \hline
+0&0 & A & \{A_3\,A_3\,A_{2:0}\}{=}A & B & \{B_3\,B_3\,B_{2:0}\}{=}B \\
+1&0 & A{-}8 & \{\overline{A_3}\,\overline{A_3}\,A_{2:0}\}{=}A{-}8 & B & \{1\,\overline{B_3}\,B_{2:0}\}{=}B{-}8 \\
+0&1 & A & \{1\,\overline{A_3}\,A_{2:0}\}{=}A{-}8 & B{-}8 & \{\overline{B_3}\,\overline{B_3}\,B_{2:0}\}{=}B{-}8 \\
+1&1 & A{-}8 & \{1\,A_3\,A_{2:0}\}{=}A{-}16 & B{-}8 & \{1\,B_3\,B_{2:0}\}{=}B{-}16 \\
+\end{array}
+\]
+Generator remap (bits $[2{:}0]$ pass through): $\alpha_4{=}bu\vee(A_3{\oplus}au),\ \alpha_3{=}A_3{\oplus}au{\oplus}bu$;\ \ $\beta_4{=}au\vee(B_3{\oplus}bu),\ \beta_3{=}B_3{\oplus}au{\oplus}bu$.
+
+\vspace{0.4em}
+
+\textbf{Checks}\quad
+$(3)\ A{=}15,B{=}7:\ \tfrac12[14^2-7^2-(-1)^2+64]=\tfrac12\cdot210=105=15\cdot7$;\quad
+$(5)\ A{=}15,B{=}15:\ \tfrac12[14^2-(-1)^2-(-1)^2+256]=\tfrac12\cdot450=225=15\cdot15$.
+
+\end{document}

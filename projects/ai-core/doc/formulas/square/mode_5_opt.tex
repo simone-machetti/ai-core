@@ -1,0 +1,85 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1.1cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+\allowdisplaybreaks
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 5 --- Square (centered / opt)}}\\[4pt]
+{\large DP32 (8$\times$4) $\rightarrow$ DP16 (8$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ DP8 (4$\times$4) $\rightarrow$ centered add-and-square}
+\end{center}
+
+\vspace{0.1em}
+
+\textbf{Step 1 --- DP32 (8$\times$4)}
+\[
+\DPop{32}{8}{4} = \sum_{i=0}^{31} a_i \, b_i
+\]
+
+\textbf{Step 2 --- DP16 (8$\times$4)}
+\[
+\DPop{32}{8}{4}
+  = \underbrace{\sum_{i=0}^{15} a_i \, b_i}_{\DPop{16}{8}{4}}
+  \; + \; \underbrace{\sum_{i=16}^{31} a_i \, b_i}_{\DPop{16}{8}{4}}
+\]
+
+\textbf{Step 3 --- DP8 (8$\times$4)}
+\begin{align*}
+\DPop{32}{8}{4} = {}
+  & \underbrace{\sum_{i=0}^{7} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_i \, b_i}_{\DPop{8}{8}{4}}
+\end{align*}
+
+\textbf{Step 4 --- DP8 (4$\times$4)}
+\begin{align*}
+\DPop{32}{8}{4} = {}
+  & 2^{4}\underbrace{\sum_{i=0}^{7} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_{L,i}\, b_i}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=8}^{15} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_{L,i}\, b_i}_{\DPop{8}{4}{4}} \\[0.6em]
+  & + 2^{4}\underbrace{\sum_{i=16}^{23} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_{L,i}\, b_i}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=24}^{31} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_{L,i}\, b_i}_{\DPop{8}{4}{4}}
+\end{align*}
+
+\textbf{Step 5 --- Centered add-and-square}\quad
+{\small(subtract $8$ from unsigned nibbles; per DP8 (4$\times$4) add $c=0/512/2048$ for 0/1/2 unsigned nibbles)}
+\begin{align*}
+\DPop{32}{8}{4} = {}
+  & 2^{4}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 - \sum_{i=0}^{7}a_{H,i}^2 - \sum_{i=0}^{7}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=0}^{7}(a_{L,i}{-}8)^2 - \sum_{i=0}^{7}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 - \sum_{i=8}^{15}a_{H,i}^2 - \sum_{i=8}^{15}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=8}^{15}(a_{L,i}{-}8)^2 - \sum_{i=8}^{15}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac12\Big(\sum_{i=16}^{23}(a_{H,i}{+}b_i)^2 - \sum_{i=16}^{23}a_{H,i}^2 - \sum_{i=16}^{23}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac12\Big(\sum_{i=16}^{23}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=16}^{23}(a_{L,i}{-}8)^2 - \sum_{i=16}^{23}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + 2^{4}\underbrace{\tfrac12\Big(\sum_{i=24}^{31}(a_{H,i}{+}b_i)^2 - \sum_{i=24}^{31}a_{H,i}^2 - \sum_{i=24}^{31}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.5em]
+  & + \underbrace{\tfrac12\Big(\sum_{i=24}^{31}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=24}^{31}(a_{L,i}{-}8)^2 - \sum_{i=24}^{31}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}}
+\end{align*}
+
+\textbf{Step 6 --- All components}
+\[
+\boxed{\;
+\begin{aligned}
+\mathrm{PE} ={}& 2^{4}\!\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 + \sum_{i=0}^{7}\!\big((a_{L,i}{-}8){+}b_i\big)^2 + 2^{4}\!\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 + \sum_{i=8}^{15}\!\big((a_{L,i}{-}8){+}b_i\big)^2 \\
+  & + 2^{4}\!\sum_{i=16}^{23}(a_{H,i}{+}b_i)^2 + \sum_{i=16}^{23}\!\big((a_{L,i}{-}8){+}b_i\big)^2 + 2^{4}\!\sum_{i=24}^{31}(a_{H,i}{+}b_i)^2 + \sum_{i=24}^{31}\!\big((a_{L,i}{-}8){+}b_i\big)^2 \\[0.4em]
+\alpha ={}& 2^{4}\!\sum_{i=0}^{7} a_{H,i}^2 + \sum_{i=0}^{7}(a_{L,i}{-}8)^2 + 2^{4}\!\sum_{i=8}^{15} a_{H,i}^2 + \sum_{i=8}^{15}(a_{L,i}{-}8)^2 \\
+  & + 2^{4}\!\sum_{i=16}^{23} a_{H,i}^2 + \sum_{i=16}^{23}(a_{L,i}{-}8)^2 + 2^{4}\!\sum_{i=24}^{31} a_{H,i}^2 + \sum_{i=24}^{31}(a_{L,i}{-}8)^2 \\[0.4em]
+\beta ={}& 2^{4}\!\sum_{i=0}^{7} b_i^2 + \sum_{i=0}^{7}(b_i{-}8)^2 + 2^{4}\!\sum_{i=8}^{15} b_i^2 + \sum_{i=8}^{15}(b_i{-}8)^2 \\
+  & + 2^{4}\!\sum_{i=16}^{23} b_i^2 + \sum_{i=16}^{23}(b_i{-}8)^2 + 2^{4}\!\sum_{i=24}^{31} b_i^2 + \sum_{i=24}^{31}(b_i{-}8)^2 \\[0.4em]
+C ={}& 0 + 512 + 0 + 512 + 0 + 512 + 0 + 512 = 2048
+\end{aligned}
+\;}
+\]
+
+\end{document}
