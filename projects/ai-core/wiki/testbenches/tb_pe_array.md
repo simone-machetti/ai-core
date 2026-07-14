@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tb_pe_array` verifies [pe_array](../modules/pe_array.md) wired downstream of [disp_array](../modules/disp_array.md). Every one of the 11 modes is checked as a plain matrix multiply `X = A · B`, using a golden model that knows nothing about the DUT's adder tree, crossover, per-level shifts, or `sel_shift` — so a bug in any of those surfaces as a mismatch a tree-shaped golden would hide.
+`tb_pe_array` verifies [pe_array](../modules/pe_array.md) wired downstream of [disp_array_a](../modules/disp_array_a.md) + [disp_array_b](../modules/disp_array_b.md). Every one of the 11 modes is checked as a plain matrix multiply `X = A · B`, using a golden model that knows nothing about the DUT's adder tree, crossover, per-level shifts, or `sel_shift` — so a bug in any of those surfaces as a mismatch a tree-shaped golden would hide.
 
 ## Parameters
 
@@ -10,7 +10,7 @@
 | ---------- | ------- | --------------------------------------------------------------------- |
 | `NUM_RAND` | `2000`  | Number of random `A`,`B` matrix pairs generated and checked per mode. |
 
-The two DUTs are instantiated with their defaults; the tb pins the shape with localparams `NUM_BLK=4`, `BLK_WIDTH=64`, `NUM_PAIR=8`, `NUM_DP8=16`, the per-level tap widths (`L0=18`, `L1=29`, `L2=37`, `L3=38` bits), and the matmul bounds `MAXM=2`, `MAXK=32`, `MAXN=4`, `MAXO=8`, and does not override any DUT parameter.
+The three DUTs (`disp_array_a`, `disp_array_b`, `pe_array`) are instantiated with their defaults; the tb pins the shape with localparams `NUM_BLK=4`, `BLK_WIDTH=64`, `NUM_PAIR=8`, `NUM_DP8=16`, the per-level tap widths (`L0=18`, `L1=29`, `L2=37`, `L3=38` bits), and the matmul bounds `MAXM=2`, `MAXK=32`, `MAXN=4`, `MAXO=8`, and does not override any DUT parameter.
 
 ## Run
 
@@ -97,7 +97,7 @@ For the int8 complex modes 10 and 11 the tb packs `B_im` un-negated and lets the
 
 ### Drive/sample timing
 
-The path is a **two-cycle pipeline**: `disp_array` registers its inputs and `pe_array` registers its tap outputs. So after packing, the loop advances two clock edges before sampling, then waits `#1` for the combinational taps to settle:
+The path is a **two-cycle pipeline**: `disp_array_a`/`disp_array_b` register their inputs and `pe_array` registers its tap outputs. So after packing, the loop advances two clock edges before sampling, then waits `#1` for the combinational taps to settle:
 
 ```systemverilog
 rand_matrices(mi);

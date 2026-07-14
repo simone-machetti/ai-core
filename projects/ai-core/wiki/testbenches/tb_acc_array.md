@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tb_acc_array` verifies the full PE datapath `disp_array → pe_array → acc_array` end to end. Each of the 11 modes is checked at `pe_out` as a plain matrix multiply `X = A · B`, using the independent golden model from `tb_pe_array` (which knows nothing about the tree, crossover, shifts, windowing, or fusion), so a bug anywhere in the chain — including `acc_array`'s tap select, window split, resolve, or carry chain — surfaces as a mismatch. Lanes are corner-biased so the sign-consistency corners are reached.
+`tb_acc_array` verifies the full PE datapath `disp_array_a`/`disp_array_b` → `pe_array` → `acc_array` end to end. Each of the 11 modes is checked at `pe_out` as a plain matrix multiply `X = A · B`, using the independent golden model from `tb_pe_array` (which knows nothing about the tree, crossover, shifts, windowing, or fusion), so a bug anywhere in the chain — including `acc_array`'s tap select, window split, resolve, or carry chain — surfaces as a mismatch. Lanes are corner-biased so the sign-consistency corners are reached.
 
 ## Parameters
 
@@ -11,7 +11,7 @@
 | `NUM_RAND` | `2000`  | Number of random `A`,`B` matrix pairs per mode (single-shot). |
 | `NUM_ACC`  | `8`     | Iterations in the accumulation pass.                          |
 
-The three DUTs are instantiated with their defaults; the tb pins the shapes (`NUM_DP8 = 16`, tap widths `18/29/37/38`, lane width `ACC_W = 20`, matmul bounds) and does not override any DUT parameter.
+The four DUTs (`disp_array_a`, `disp_array_b`, `pe_array`, `acc_array`) are instantiated with their defaults; the tb pins the shapes (`NUM_DP8 = 16`, tap widths `18/29/37/38`, lane width `ACC_W = 20`, matmul bounds) and does not override any DUT parameter.
 
 ## Run
 

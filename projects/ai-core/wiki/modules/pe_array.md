@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Each DP8 produces one length-8 dot product in 20-bit carry-save form; the tree sums those 16 partial results with the per-mode radix weights and leaves the result in carry-save for the accumulator to resolve. A mode's outputs appear at the tree level whose node count matches the number of parallel results: 8 results at L0, 4 at L1, 2 at L2, 1 at L3. The 16 DP8s live here, so their per-lane signedness (`is_signed_a`/`is_signed_b`) arrives from `pe_ctrl` and is wired straight to them; the routed operands arrive from the [disp_array](./disp_array.md).
+Each DP8 produces one length-8 dot product in 20-bit carry-save form; the tree sums those 16 partial results with the per-mode radix weights and leaves the result in carry-save for the accumulator to resolve. A mode's outputs appear at the tree level whose node count matches the number of parallel results: 8 results at L0, 4 at L1, 2 at L2, 1 at L3. The 16 DP8s live here, so their per-lane signedness (`is_signed_a`/`is_signed_b`) arrives from `ctrl` and is wired straight to them; the routed operands arrive from [disp_array_a](./disp_array_a.md) (A) and [disp_array_b](./disp_array_b.md) (B).
 
 ## Parameters
 
@@ -29,8 +29,8 @@ Every `cpr_w_n` in the tree runs with `EXT = 0` — the DP8's 4 guard bits are h
 | `rst_ni`                     | in  | 1       | Asynchronous active-low reset.                                          |
 | `a_dp8_i[0:15]`              | in  | 64 each | A operand per DP8 (8 × int8), from `disp_array`.                        |
 | `b_dp8_i[0:15]`              | in  | 32 each | B operand per DP8 (8 × int4), from `disp_array`.                        |
-| `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 multiplicand signedness, from `pe_ctrl`.                        |
-| `is_signed_b_i[0:15]`        | in  | 1 each  | Per-DP8 multiplier signedness, from `pe_ctrl`.                          |
+| `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 multiplicand signedness, from `ctrl`.                          |
+| `is_signed_b_i[0:15]`        | in  | 1 each  | Per-DP8 multiplier signedness, from `ctrl`.                            |
 | `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`. |
 | `l0_sum_o`/`l0_carry_o[0:7]` | out | 18 each | L0 taps (carry-save).                                                   |
 | `l1_sum_o`/`l1_carry_o[0:3]` | out | 29 each | L1 taps.                                                                |
@@ -140,7 +140,7 @@ assign lo_in[0] = dp8_sum[CX1];   // lower weight → extended
 assign lo_in[1] = dp8_carry[CX1];
 ```
 
-`CX0`/`CX1` step by 2, so a node mixes DP8s from two different `disp_array` 2×DP8 pairs (equivalently `l0[2g] = dp8[4g] + dp8[4g+2]`, `l0[2g+1] = dp8[4g+1] + dp8[4g+3]`):
+`CX0`/`CX1` step by 2, so a node mixes DP8s from two different dispatch 2×DP8 pairs (equivalently `l0[2g] = dp8[4g] + dp8[4g+2]`, `l0[2g+1] = dp8[4g+1] + dp8[4g+3]`):
 
 | L0 node | DP8s combined |     | L0 node | DP8s combined   |
 | ------- | ------------- | --- | ------- | --------------- |
@@ -149,7 +149,7 @@ assign lo_in[1] = dp8_carry[CX1];
 | `l0[2]` | dp8 4 + dp8 6 |     | `l0[6]` | dp8 12 + dp8 14 |
 | `l0[3]` | dp8 5 + dp8 7 |     | `l0[7]` | dp8 13 + dp8 15 |
 
-The lower DP8 index (`CX0`) is the higher-weight field, so it is the shifted operand. Wire this crossed, not adjacent — it is the cross-boundary connection between `disp_array` pairs.
+The lower DP8 index (`CX0`) is the higher-weight field, so it is the shifted operand. Wire this crossed, not adjacent — it is the cross-boundary connection between dispatch pairs.
 
 ### Per-level shifts and the field weights
 

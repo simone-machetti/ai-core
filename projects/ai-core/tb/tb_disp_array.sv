@@ -102,16 +102,21 @@ module tb_disp_array #(
     logic [     A_DP8_WIDTH-1:0]  a_dp8 [0:NUM_DP8-1];
     logic [     B_DP8_WIDTH-1:0]  b_dp8 [0:NUM_DP8-1];
 
-    disp_array disp_array_i (
+    disp_array_a disp_array_a_i (
         .clk_i    (clk_i),
         .rst_ni   (rst_ni),
         .pe_in_a_i(pe_in_a),
-        .pe_in_b_i(pe_in_b),
         .sel_a_i  (sel_a),
+        .a_dp8_o  (a_dp8)
+    );
+
+    disp_array_b disp_array_b_i (
+        .clk_i    (clk_i),
+        .rst_ni   (rst_ni),
+        .pe_in_b_i(pe_in_b),
         .sel_b_i  (sel_b),
         .ctr_l_i  (ctr_l),
         .ctr_h_i  (ctr_h),
-        .a_dp8_o  (a_dp8),
         .b_dp8_o  (b_dp8)
     );
 
@@ -188,7 +193,7 @@ module tb_disp_array #(
         $display("\nStarting disp_array verification (%0d modes x (%0d random + ramp))...\n", NUM_MODE, NUM_RAND);
 `ifdef VCD
         $dumpfile("activity.vcd");
-        $dumpvars(0, tb_disp_array.disp_array_i);
+        $dumpvars(0, tb_disp_array);
 `endif
 
         rst_ni  = 1'b0;

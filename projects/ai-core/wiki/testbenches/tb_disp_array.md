@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tb_disp_array` is the clocked self-checking testbench for [disp_array](../modules/disp_array.md), the operand router. For each of the 11 operating modes it drives the mode's dispatch control vectors, pushes random 256-bit `A`/`B` operands plus a directed ramp through the input registers, and checks all 16 DP8 `a`/`b` operands against an independent golden router model.
+`tb_disp_array` is the clocked self-checking testbench for the split operand dispatch — [disp_array_a](../modules/disp_array_a.md) (A-path) and [disp_array_b](../modules/disp_array_b.md) (B-path), instantiated side by side and driven from the same control vectors. For each of the 11 operating modes it drives the mode's dispatch controls, pushes random 256-bit `A`/`B` operands plus a directed ramp through the two input registers, and checks all 16 DP8 `a` operands (from `disp_array_a`) and 16 `b` operands (from `disp_array_b`) against an independent golden router model.
 
 ## Parameters
 
@@ -10,7 +10,7 @@
 | ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `NUM_RAND` | `500`   | Number of random 256-bit operand vectors driven per mode (a directed ramp vector is added after each mode's random batch). |
 
-The DUT is instantiated with its defaults; the tb pins the shape with localparams `NUM_BLK=4`, `BLK_WIDTH=64`, `NUM_PAIR=8`, `NUM_DP8=16`, `A_DP8_WIDTH=64`, `B_DP8_WIDTH=32`, `B_ELEM_WIDTH=4` and does not override any DUT parameter.
+Both DUTs are instantiated with their defaults; the tb pins the shape with localparams `NUM_BLK=4`, `BLK_WIDTH=64`, `NUM_PAIR=8`, `NUM_DP8=16`, `A_DP8_WIDTH=64`, `B_DP8_WIDTH=32`, `B_ELEM_WIDTH=4` and does not override any DUT parameter. (`disp_array_a` takes `sel_a`; `disp_array_b` takes `sel_b`/`ctr_l`/`ctr_h`.)
 
 ## Run
 
@@ -29,7 +29,7 @@ Increase the random budget with `PARAMS="NUM_RAND=5000"`.
 | Golden   | an independent router model: 4→1 block select, high/low B split, per-int4 gate (pass / zero / negate) |
 | Coverage | every one of the 16 DP8 `a` outputs and 16 `b` outputs compared each cycle                            |
 
-Any mismatch is **fatal** and dumps `activity.vcd`. The per-mode control vectors this testbench exercises are the reference for the eventual `pe_ctrl` decoder.
+Any mismatch is **fatal** and dumps `activity.vcd`. The per-mode control vectors this testbench exercises are the reference for the `ctrl` decoder.
 
 ## How it checks
 
@@ -86,7 +86,7 @@ endcase
 
 ### Drive/sample timing
 
-`disp_array` registers its 256-bit inputs, so this is a clocked test. The loop drives fresh operands combinationally, advances one clock edge to latch them into the input registers, then waits `#1` before calling `check` so the combinational routing settles on the newly registered values:
+`disp_array_a` and `disp_array_b` each register their 256-bit input, so this is a clocked test. The loop drives fresh operands combinationally, advances one clock edge to latch them into the input registers, then waits `#1` before calling `check` so the combinational routing settles on the newly registered values:
 
 ```systemverilog
 for (int t = 0; t < NUM_RAND; t++) begin
@@ -103,4 +103,4 @@ The controls are combinational routing selects, so the golden reads the same `pe
 
 `check` compares all 16 `a_dp8` outputs against `a_exp` and all 16 `b_dp8` against `b_exp` with `!==` (so X/Z also fail). The first mismatch calls `$dumpoff`, prints the mode, DP8 index, and expected/got values, and `$fatal`s. A mode that survives its whole random batch plus the ramp prints `mode N: PASS`, and after all 11 modes the tb prints the final all-passed banner and `$finish`.
 
-Source: [tb_disp_array.sv](../../tb/tb_disp_array.sv) — DUT: [disp_array](../modules/disp_array.md)
+Source: [tb_disp_array.sv](../../tb/tb_disp_array.sv) — DUT: [disp_array_a](../modules/disp_array_a.md) + [disp_array_b](../modules/disp_array_b.md)

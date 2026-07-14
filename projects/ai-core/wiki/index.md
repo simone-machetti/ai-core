@@ -2,20 +2,20 @@
 
 LLM-authored design documentation for the **ai-core** project. Each page summarizes and cross-references the project's own `rtl/`, `tb/`, and `doc/` sources and links back to them. See [log.md](log.md) for the change history.
 
-> Organized as: **architectures/** — the top-level assemblies, one per variant (currently the baseline `top_pe_bas`); **modules/** — the reusable building blocks (the datapath sub-blocks and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. The baseline PE (`top_pe_bas`) and the `N × N` PE grid (`top_NxN_bas`) are built and verified end to end.
+> Organized as: **architectures/** — the top-level assemblies, one per variant (currently the baseline PE grid `top_NxN_bas`); **modules/** — the reusable building blocks (the shared control/dispatch, the PE core and datapath sub-blocks, and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. The `N × N` PE grid `top_NxN_bas` — whose single-PE case is simply `N = 1` — is built and verified end to end.
 
 ## Architectures
 
-* [Processing Element (baseline)](architectures/top_pe_bas.md) — `top_pe_bas`: the baseline PE top level — `pe_ctrl` + `pe_datapath` plus the control-path pipeline registers.
-* [PE Grid (baseline)](architectures/top_NxN_bas.md) — `top_NxN_bas`: baseline `N × N` grid of `top_pe_bas` PEs (A shared per row, B per column) with per-PE clock gating; default 2×2, chip uses 8×8.
+* [PE Grid (baseline)](architectures/top_NxN_bas.md) — `top_NxN_bas`: baseline `N × N` grid of `pe` cores with one shared `ctrl` and per-row/per-column dispatch (`disp_array_a`/`disp_array_b`); row/column enables (`en_row`/`en_col`) scale the active region to any `rows × cols` rectangle; default 2×2, chip 8×8, single PE = N=1.
 
 ## Modules
 
-* [Dispatch Array](modules/disp_array.md) — `disp_array`: routes the two 256-bit operands to the 16 DP8s (per-pair 4→1 block select + B high/low split + B-gate).
+* [Processing Element](modules/pe.md) — `pe`: the self-contained per-PE core — `en_i` operand mask + `pe_array` + `acc_array` + the two acc pipeline registers.
+* [Control](modules/ctrl.md) — `ctrl`: shared grid-wide mode decoder + control pipeline — one instance for the whole grid, a lookup table mapping `mode_i` to every datapath control.
+* [Dispatch Array A](modules/disp_array_a.md) — `disp_array_a`: A-path dispatch, one per grid row (per-pair 4→1 A-block select, broadcast to the row).
+* [Dispatch Array B](modules/disp_array_b.md) — `disp_array_b`: B-path dispatch, one per grid column (4→1 B-block select + high/low split + B-gate, broadcast to the column).
 * [PE Array](modules/pe_array.md) — `pe_array`: 16 DP8s + 4-level carry-save shift/compress tree, with a tap (L0–L3) at every level.
 * [Accumulator Array](modules/acc_array.md) — `acc_array`: 8 lanes that resolve a tap, accumulate, and fuse lane pairs into 40-bit results.
-* [PE Control](modules/pe_ctrl.md) — `pe_ctrl`: combinational mode decoder — a lookup table mapping `mode_i` to every datapath control.
-* [PE Datapath](modules/pe_datapath.md) — `pe_datapath`: structural wrapper chaining `disp_array → pe_array → acc_array` (the 3-stage datapath).
 * [Dot Product 8](modules/dp_8.md) — `dp_8`: eight int8×int4 MACs, per-operand signedness, 20-bit sign-consistent carry-save output.
 * [Booth Radix-4](modules/booth_r4.md) — `booth_r4`: radix-4 Booth partial-product generator with per-operand signedness.
 * [Booth Radix-4 Cell](modules/booth_r4_cell.md) — `booth_r4_cell`: one selector → one partial product.
@@ -33,11 +33,10 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 
 ## Testbenches
 
-* [tb_top_pe_bas](testbenches/tb_top_pe_bas.md) — whole-PE matmul at `pe_out` driven only by `mode_i`/operands/`sel_acc`/`acc_i`, all 11 modes, single-shot and accumulating.
-* [tb_top_NxN_bas](testbenches/tb_top_NxN_bas.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col), all 11 modes, one-shot + accumulate + clock-gating; default 2×2.
+* [tb_top_NxN_bas](testbenches/tb_top_NxN_bas.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col), all 11 modes, one-shot + accumulate + rectangle scaling via `en_row`/`en_col`; default 2×2.
 * [tb_pe_array](testbenches/tb_pe_array.md) — independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [tb_acc_array](testbenches/tb_acc_array.md) — `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
-* [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand vs a golden router model, all 11 modes.
+* [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand from `disp_array_a`/`disp_array_b` vs a golden router model, all 11 modes.
 * [tb_dp_8](testbenches/tb_dp_8.md) — resolve + sign-consistency of the carry-save dot product, all signedness combos.
 * [tb_booth_r4](testbenches/tb_booth_r4.md) — weighted partial-product sum equals `a·b`, all signedness combos.
 * [tb_cpr_w_n](testbenches/tb_cpr_w_n.md) — carry-save output resolves to the input sum.

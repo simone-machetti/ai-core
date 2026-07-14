@@ -4,7 +4,7 @@
 // Description:
 //   Self-checking testbench for the N x N PE grid, top_NxN_bas. The N*N PEs are
 //   driven only through the grid interface - per-row A, per-col B, shared mode
-//   and sel_acc, per-PE acc and clock gate - and each is checked at its own
+//   and sel_acc, per-PE acc and row/column enables - and each is checked at its own
 //   out_q. Operands are distinct per PE: N independent corner-biased A matrices
 //   (one per row) and N independent B matrices (one per column), so PE[r][c]
 //   evaluates the plain matmul A[r] . B[c] and any wrong row/col fan-out shows
@@ -15,10 +15,10 @@
 //     1. One-shot   - sel_acc = 0, acc = 0; each PE out_q == golden(A[r].B[c]).
 //     2. Accumulate - per-PE seed via acc, the shared sel_acc runs NUM_ACC
 //                     iterations; out_q == seed + NUM_ACC * golden.
-//     3. Clock gate - after a reset baseline of 0, gate a quarter / half /
-//                     three-quarters / all of the PEs (by flat index), present
-//                     operands, and check the gated PEs stayed 0 (clock stopped)
-//                     while the ungated ones computed golden.
+//     3. Scaling    - after a reset baseline of 0, enable an nr x nc top-left
+//                     rectangle (en_row[r] & en_col[c]) for every 1<=nr,nc<=N,
+//                     present operands, and check the enabled PEs computed golden
+//                     while the disabled ones stayed 0 (clock gated, held).
 //
 // Parameters:
 //   N        - grid side; the array is N x N PEs (default 2 for a fast build)
@@ -75,7 +75,8 @@ module tb_top_NxN_bas #(
     logic [   PE_WIDTH-1:0]  in_a     [0:NUM_ROW-1];
     logic [   PE_WIDTH-1:0]  in_b     [0:NUM_COL-1];
     logic [      ACC_W-1:0]  acc_word [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
-    logic                    clk_gate [0:NUM_ROW-1][0:NUM_COL-1];
+    logic                    en_row   [0:NUM_ROW-1];
+    logic                    en_col   [0:NUM_COL-1];
     logic [      ACC_W-1:0]  out_q    [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
 
     logic [   PE_WIDTH-1:0]  pe_in_a;
@@ -107,7 +108,8 @@ module tb_top_NxN_bas #(
         .mode_i    (mode),
         .sel_acc_i (sel_acc),
         .acc_i     (acc_word),
-        .clk_gate_i(clk_gate),
+        .en_row_i  (en_row),
+        .en_col_i  (en_col),
         .out_q_o   (out_q)
     );
 
@@ -298,9 +300,9 @@ module tb_top_NxN_bas #(
                 for (int l = 0; l < NUM_LANE; l++) acc_word[rr][cc][l] = '0;
     endtask
 
-    task automatic clear_gate;
-        for (int rr = 0; rr < NUM_ROW; rr++)
-            for (int cc = 0; cc < NUM_COL; cc++) clk_gate[rr][cc] = 1'b0;
+    task automatic enable_all;
+        for (int rr = 0; rr < NUM_ROW; rr++) en_row[rr] = 1'b1;
+        for (int cc = 0; cc < NUM_COL; cc++) en_col[cc] = 1'b1;
     endtask
 
     task automatic set_acc_pe(input int row, input int col, input int lvl,
@@ -320,7 +322,7 @@ module tb_top_NxN_bas #(
     endtask
 
     task automatic reset_dut;
-        clear_gate();
+        enable_all();
         sel_acc = 1'b0;
         rst_ni  = 1'b0;
         repeat (3) @(posedge clk_i);
@@ -329,22 +331,21 @@ module tb_top_NxN_bas #(
     endtask
 
     initial begin
-        int err0, NOUT, lvl, rn, in, gd;
+        int err0, NOUT, lvl, rn, in;
         longint r, gexp;
         $display("\nStarting top_NxN_bas verification (%0dx%0d PEs, %0d modes, NUM_RAND=%0d NUM_ACC=%0d)...\n",
                  NUM_ROW, NUM_COL, NUM_MODE, NUM_RAND, NUM_ACC);
 `ifdef VCD
         $dumpfile("activity.vcd");
-        $dumpvars(0, tb_top_NxN_bas.dut.gen_row[0].gen_col[0].top_pe_bas_i);
+        $dumpvars(0, tb_top_NxN_bas.dut.gen_pe_row[0].gen_pe_col[0].pe_i);
 `endif
 
         for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
         for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
         mode = '0; sel_acc = 1'b0;
-        clear_acc(); clear_gate();
+        clear_acc(); enable_all();
         err = 0; npass = 0;
 
-        // ---- Pass 1: one-shot ----
         $display("One-shot pass...");
         reset_dut();
         for (int mi = 0; mi < NUM_MODE; mi++) begin
@@ -354,7 +355,7 @@ module tb_top_NxN_bas #(
                 gen_operands(mi);
                 sel_acc = 1'b0;
                 clear_acc();
-                clear_gate();
+                enable_all();
                 @(posedge clk_i);
                 @(posedge clk_i);
                 @(posedge clk_i);
@@ -370,7 +371,6 @@ module tb_top_NxN_bas #(
                 $display("  mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
         end
 
-        // ---- Pass 2: accumulation ----
         $display("\nAccumulation pass (%0d iterations)...", NUM_ACC);
         reset_dut();
         for (int mi = 0; mi < NUM_MODE; mi++) begin
@@ -380,7 +380,7 @@ module tb_top_NxN_bas #(
             err0 = err;
             for (int t = 0; t < NUM_RAND; t++) begin
                 gen_operands(mi);
-                clear_gate();
+                enable_all();
                 clear_acc();
                 for (int rr = 0; rr < NUM_ROW; rr++)
                     for (int cc = 0; cc < NUM_COL; cc++)
@@ -432,43 +432,40 @@ module tb_top_NxN_bas #(
                 $display("  acc mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
         end
 
-        // ---- Pass 3: clock gating ----
-        $display("\nClock-gating pass (gate 16 / 32 / 48 / 64 PEs)...");
+        $display("\nScaling pass (enabled rows x cols; disabled PEs held)...");
         for (int mi = 0; mi < NUM_MODE; mi++) begin
             mode = MODE_WIDTH'(MODE_NUM[mi]);
             err0 = err;
-            for (int g = 0; g < 4; g++) begin
-                gd = (g + 1) * (NUM_ROW * NUM_COL) / 4;
-                for (int t = 0; t < NUM_RAND; t++) begin
-                    reset_dut();
-                    gen_operands(mi);
-                    sel_acc = 1'b0;
-                    clear_acc();
-                    for (int rr = 0; rr < NUM_ROW; rr++)
-                        for (int cc = 0; cc < NUM_COL; cc++)
-                            clk_gate[rr][cc] = ((rr*NUM_COL + cc) < gd) ? 1'b1 : 1'b0;
-                    @(posedge clk_i);
-                    @(posedge clk_i);
-                    @(posedge clk_i);
-                    #1;
-                    for (int rr = 0; rr < NUM_ROW; rr++)
-                        for (int cc = 0; cc < NUM_COL; cc++) begin
-                            if ((rr*NUM_COL + cc) < gd) begin
-                                for (int l = 0; l < NUM_LANE; l++)
-                                    if (out_q[rr][cc][l] !== '0) begin
-                                        err = err + 1;
-                                        $display("  gate %0d mode %0d PE[%0d][%0d] lane %0d not held (=%0d)",
-                                                 gd, MODE_NUM[mi], rr, cc, l, $signed(out_q[rr][cc][l]));
-                                    end
-                            end else
-                                check_pe(mi, rr, cc);
-                        end
-                end
-            end
+            for (int nr = 1; nr <= NUM_ROW; nr++)
+                for (int nc = 1; nc <= NUM_COL; nc++)
+                    for (int t = 0; t < NUM_RAND; t++) begin
+                        reset_dut();
+                        gen_operands(mi);
+                        sel_acc = 1'b0;
+                        clear_acc();
+                        for (int rr = 0; rr < NUM_ROW; rr++) en_row[rr] = (rr < nr) ? 1'b1 : 1'b0;
+                        for (int cc = 0; cc < NUM_COL; cc++) en_col[cc] = (cc < nc) ? 1'b1 : 1'b0;
+                        @(posedge clk_i);
+                        @(posedge clk_i);
+                        @(posedge clk_i);
+                        #1;
+                        for (int rr = 0; rr < NUM_ROW; rr++)
+                            for (int cc = 0; cc < NUM_COL; cc++) begin
+                                if (rr < nr && cc < nc)
+                                    check_pe(mi, rr, cc);
+                                else
+                                    for (int l = 0; l < NUM_LANE; l++)
+                                        if (out_q[rr][cc][l] !== '0) begin
+                                            err = err + 1;
+                                            $display("  scale %0dx%0d mode %0d PE[%0d][%0d] lane %0d not held (=%0d)",
+                                                     nr, nc, MODE_NUM[mi], rr, cc, l, $signed(out_q[rr][cc][l]));
+                                        end
+                            end
+                    end
             if (err == err0)
-                $display("  gate mode %0d: PASS", MODE_NUM[mi]);
+                $display("  scale mode %0d: PASS", MODE_NUM[mi]);
             else
-                $display("  gate mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
+                $display("  scale mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
         end
 
 `ifdef VCD

@@ -151,6 +151,6 @@ Each lane instantiates its own `reg_n #(.WIDTH(PE_WIDTH), .SIZE(1))` holding tha
 - **External accumulate:** `sel_acc = 0` with a non-zero `acc_i[k]` adds an externally-provided value (bias, or a running sum held in memory) to the new partial.
 - **Feedback accumulate:** `sel_acc = 1` folds the register back in, so `pe_out` grows by the new partial each cycle.
 
-Verified end to end (`disp_array → pe_array → acc_array`) across all 11 modes, both single-shot and accumulating.
+Verified end to end (`disp_array_a`/`disp_array_b` → `pe_array` → `acc_array`) across all 11 modes, both single-shot and accumulating.
 
 Source: [acc_array.sv](../../rtl/acc_array.sv) — Testbench: [tb_acc_array.sv](../../tb/tb_acc_array.sv) — Diagram: [acc_array](../../doc/diagrams/acc_array.excalidraw)
