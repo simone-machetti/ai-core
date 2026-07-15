@@ -2,6 +2,13 @@
 
 Change history for the AI-Core wiki — newest first. Entries follow OKF: grouped by ISO-8601 date, each line `**[Action]**: description`.
 
+## 2026-07-15
+
+- **[Creation]**: Started the **square** PE variant (bottom-up, Gate 1). Added [dp_8_sqr](modules/dp_8_sqr.md) — the add-then-square replacement for [dp_8](modules/dp_8.md): each int8×int4 lane splits into two centered signed nibbles, `(AH+b)`/`(AL+b)` (5-bit signed) are squared by 16× [s_5_bit_sqr](modules/s_5_bit_sqr.md), the AH/AL blocks reduced by two unsigned [cpr_w_n](modules/cpr_w_n.md) 8:2, the AH block weighted `<< 4`, and combined by an unsigned `cpr_w_n` 4:2 into an **18-bit unsigned** carry-save square-sum `S_DP8` (no α/β/C/½ — those are downstream). No sign-consistency contract (a sum of squares is non-negative). Operands arrive pre-centered from the dispatcher, so there is no `is_signed` inside.
+- **[Creation]**: Added [s_5_bit_sqr](modules/s_5_bit_sqr.md) — an optimized flat signed 5-bit squarer (`[−16,15]` → unsigned `[0,256]`; each of the 9 output bits a K-map-minimized Boolean function of the 5 input bits, only `−16` sets the 9th bit → 256). 16 instances per `dp_8_sqr`.
+- **[Creation]**: Added the testbench page [tb_dp_8_sqr](testbenches/tb_dp_8_sqr.md) — drives pre-centered signed nibbles (`[−8,7]`) and checks `sum_o + carry_o == Σ 16·(AH+b)²+(AL+b)²`; 2000 corner-biased random + all 8 extreme combos + zero, 0 mismatches, `-Wall` clean.
+- **[Update]**: `index.md` — added `dp_8_sqr` and `s_5_bit_sqr` to Modules and `tb_dp_8_sqr` to Testbenches.
+
 ## 2026-07-13
 
 - **[Update]**: Refactored the baseline grid [top_NxN](architectures/top_NxN.md) to shared control/dispatch with row/column clock gating. The per-PE control decode and operand dispatch were hoisted out and shared across the grid: one [ctrl](modules/ctrl.md) decodes the grid-wide mode for every PE, one [disp_array_a](modules/disp_array_a.md) per row registers/dispatches A, one [disp_array_b](modules/disp_array_b.md) per column registers/dispatches B (with the B-gate), and `sel_acc` is pipelined once (shared) at the top. The grid now instantiates one `ctrl`, N `disp_array_a`, N `disp_array_b`, the shared `sel_acc` pipeline, and N² [pe](modules/pe.md) cores. Clock gating became row/column-based: active-high `en_row_i[N]` / `en_col_i[N]` replace the per-PE `clk_gate_i`, a PE runs when `en_row[r] & en_col[c]`, so the active region is any `enabled_rows × enabled_cols` rectangle (matrix scaling). ICG count = N² (per PE) + N (per `disp_array_a`) + N (per `disp_array_b`); `ctrl` and the `sel_acc` pipeline run ungated. Latency stays 3 cycles.

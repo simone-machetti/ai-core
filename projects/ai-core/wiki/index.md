@@ -17,6 +17,8 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [PE Array](modules/pe_array.md) — `pe_array`: 16 DP8s + 4-level carry-save shift/compress tree, with a tap (L0–L3) at every level.
 * [Accumulator Array](modules/acc_array.md) — `acc_array`: 8 lanes that resolve a tap, accumulate, and fuse lane pairs into 40-bit results.
 * [Dot Product 8](modules/dp_8.md) — `dp_8`: eight int8×int4 MACs, per-operand signedness, 20-bit sign-consistent carry-save output.
+* [Dot Product 8 (Square)](modules/dp_8_sqr.md) — `dp_8_sqr`: square-variant DP8 — add-then-square (16× `s_5_bit_sqr`) over pre-centered nibbles, 18-bit unsigned carry-save square-sum; drop-in for `dp_8`.
+* [Signed 5-bit Squarer](modules/s_5_bit_sqr.md) — `s_5_bit_sqr`: flat K-map-minimized signed 5-bit squarer (`[−16,15]` → unsigned square `[0,256]`); the per-lane square in `dp_8_sqr`.
 * [Booth Radix-4](modules/booth_r4.md) — `booth_r4`: radix-4 Booth partial-product generator with per-operand signedness.
 * [Booth Radix-4 Cell](modules/booth_r4_cell.md) — `booth_r4_cell`: one selector → one partial product.
 * [Wallace Compressor N](modules/cpr_w_n.md) — `cpr_w_n`: N:2 carry-save compressor, Wallace-tree build (max throughput).
@@ -38,6 +40,7 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [tb_acc_array](testbenches/tb_acc_array.md) — `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
 * [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand from `disp_array_a`/`disp_array_b` vs a golden router model, all 11 modes.
 * [tb_dp_8](testbenches/tb_dp_8.md) — resolve + sign-consistency of the carry-save dot product, all signedness combos.
+* [tb_dp_8_sqr](testbenches/tb_dp_8_sqr.md) — carry-save square-sum vs a golden `Σ 16·(AH+b)²+(AL+b)²`, pre-centered signed nibbles, corner-biased.
 * [tb_booth_r4](testbenches/tb_booth_r4.md) — weighted partial-product sum equals `a·b`, all signedness combos.
 * [tb_cpr_w_n](testbenches/tb_cpr_w_n.md) — carry-save output resolves to the input sum.
 * [tb_cpr_c_n](testbenches/tb_cpr_c_n.md) — carry-save output resolves to the input sum.
