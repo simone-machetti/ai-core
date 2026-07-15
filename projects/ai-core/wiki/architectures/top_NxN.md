@@ -1,6 +1,6 @@
 # PE Grid (baseline)
 
-`top_NxN_bas` — the baseline **N × N grid** of Processing Elements: it tiles N² [pe](../modules/pe.md) cores into a square array, sharing operand A along each row and operand B along each column, so PE[r][c] evaluates `A[r] · B[c]`. `N` is a parameter — **default 2** for a fast build; the full chip uses `N = 8`. This is the only baseline top level: the single-PE case is simply `top_NxN_bas` at **N = 1** (the old `top_pe_bas` is dissolved into this grid).
+`top_NxN` — the baseline **N × N grid** of Processing Elements: it tiles N² [pe](../modules/pe.md) cores into a square array, sharing operand A along each row and operand B along each column, so PE[r][c] evaluates `A[r] · B[c]`. `N` is a parameter — **default 2** for a fast build; the full chip uses `N = 8`. This is the only baseline top level: the single-PE case is simply `top_NxN` at **N = 1** (the old `top_pe_bas` is dissolved into this grid).
 
 ## Purpose
 
@@ -33,7 +33,7 @@ Derived `localparam`s: `NUM_ROW = NUM_COL = N`, `PE_IN_WIDTH = 256`, `MODE_WIDTH
 ## Instantiation
 
 ```systemverilog
-top_NxN_bas #(.N(8)) grid_i (
+top_NxN #(.N(8)) grid_i (
     .clk_i(clk_i), .rst_ni(rst_ni),
     .in_a_i(in_a), .in_b_i(in_b),
     .mode_i(mode), .sel_acc_i(sel_acc),
@@ -69,6 +69,6 @@ pe  pe_i     (.clk_i(clk_pe), .rst_ni(rst_ni),
 - **ICG count:** N² (one per PE) + N (one per `disp_array_a`) + N (one per `disp_array_b`). `ctrl` and the `sel_acc` pipeline are ungated.
 - **Latency:** each `out_q_o[r][c]` is valid 3 clocks after its operands (the PE pipeline depth).
 
-Verified with [tb_top_NxN_bas](../testbenches/tb_top_NxN_bas.md) at the default 2×2: all 11 modes, one-shot, accumulation, and rectangle scaling (every `enabled_rows × enabled_cols`, disabled PEs held at 0).
+Verified with [tb_top_NxN](../testbenches/tb_top_NxN.md) at the default 2×2: all 11 modes, one-shot, accumulation, and rectangle scaling (every `enabled_rows × enabled_cols`, disabled PEs held at 0).
 
-Source: [top_NxN_bas.sv](../../rtl/top_NxN_bas.sv) — Diagram: [top_NxN_bas](../../doc/diagrams/top_NxN_bas.excalidraw)
+Source: [top_NxN.sv](../../rtl/top_NxN.sv) — Diagram: [top_NxN](../../doc/diagrams/top_NxN.excalidraw)

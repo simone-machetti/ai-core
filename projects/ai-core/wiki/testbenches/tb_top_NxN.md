@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`tb_top_NxN_bas` verifies the N × N PE grid [top_NxN_bas](../architectures/top_NxN_bas.md) through its grid interface only — per-row A, per-col B, shared `mode`/`sel_acc`, per-PE `acc`, and the active-high row/column enables `en_row`/`en_col` — checking each PE at its own `out_q`. Operands are **distinct per PE**: it draws `N` independent corner-biased A matrices (one per row) and `N` independent B matrices (one per column), so PE[r][c] evaluates `A[r] · B[c]` and any wrong row/column fan-out surfaces as a mismatch. The per-PE golden reuses the mode tables, packing, and result reconstruction of the single-PE testbench (now `top_NxN_bas` at `N = 1`).
+`tb_top_NxN` verifies the N × N PE grid [top_NxN](../architectures/top_NxN.md) through its grid interface only — per-row A, per-col B, shared `mode`/`sel_acc`, per-PE `acc`, and the active-high row/column enables `en_row`/`en_col` — checking each PE at its own `out_q`. Operands are **distinct per PE**: it draws `N` independent corner-biased A matrices (one per row) and `N` independent B matrices (one per column), so PE[r][c] evaluates `A[r] · B[c]` and any wrong row/column fan-out surfaces as a mismatch. The per-PE golden reuses the mode tables, packing, and result reconstruction of the single-PE testbench (now `top_NxN` at `N = 1`).
 
 ## Parameters
 
@@ -15,7 +15,7 @@
 ## Run
 
 ```
-make sim PROJECT=ai-core TOP_LEVEL=top_NxN_bas PARAMS="N=2 NUM_RAND=1 NUM_ACC=3"
+make sim PROJECT=ai-core TOP_LEVEL=top_NxN PARAMS="N=2 NUM_RAND=1 NUM_ACC=3"
 ```
 
 Larger arrays cost far more to build, so bump `N` deliberately (e.g. `PARAMS="N=8"` for the full chip). Tracing is off by default; add `VCD=1` for a waveform.
@@ -45,6 +45,6 @@ for (int rr = 0; rr < NUM_ROW; rr++) en_row[rr] = (rr < nr) ? 1'b1 : 1'b0;
 for (int cc = 0; cc < NUM_COL; cc++) en_col[cc] = (cc < nc) ? 1'b1 : 1'b0;
 ```
 
-Each mode prints `PASS` / `FAIL` per pass; a clean run reports `top_NxN_bas verification: 11/11 one-shot modes passed (0 total mismatches)` with every `acc mode` and `scale mode` also `PASS`.
+Each mode prints `PASS` / `FAIL` per pass; a clean run reports `top_NxN verification: 11/11 one-shot modes passed (0 total mismatches)` with every `acc mode` and `scale mode` also `PASS`.
 
-Source: [tb_top_NxN_bas.sv](../../tb/tb_top_NxN_bas.sv) — DUT: [top_NxN_bas](../architectures/top_NxN_bas.md)
+Source: [tb_top_NxN.sv](../../tb/tb_top_NxN.sv) — DUT: [top_NxN](../architectures/top_NxN.md)

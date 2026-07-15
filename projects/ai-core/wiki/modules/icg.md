@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Per-block clock gating. Driving `en_i` low stops `clk_o`, so the registers downstream hold their state and burn no dynamic power, while the source clock keeps running for the rest of the design. The enable is captured on the clock's low phase so `clk_o` never glitches when `en_i` changes mid-cycle. In the N×N PE grid (`top_NxN_bas`) each PE has its own `icg`, driven by that PE's `clk_gate` bit, so an idle PE can be stopped independently.
+Per-block clock gating. Driving `en_i` low stops `clk_o`, so the registers downstream hold their state and burn no dynamic power, while the source clock keeps running for the rest of the design. The enable is captured on the clock's low phase so `clk_o` never glitches when `en_i` changes mid-cycle. In the N×N PE grid (`top_NxN`) each PE has its own `icg`, driven by that PE's `clk_gate` bit, so an idle PE can be stopped independently.
 
 ## Parameters
 

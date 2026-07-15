@@ -29,7 +29,7 @@
 
 `timescale 1 ns/1 ps
 
-module top_NxN_bas #(
+module top_NxN #(
     parameter  int N           = 2,
     localparam int NUM_ROW     = N,
     localparam int NUM_COL     = N,

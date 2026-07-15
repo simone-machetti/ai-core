@@ -2,11 +2,11 @@
 
 LLM-authored design documentation for the **ai-core** project. Each page summarizes and cross-references the project's own `rtl/`, `tb/`, and `doc/` sources and links back to them. See [log.md](log.md) for the change history.
 
-> Organized as: **architectures/** — the top-level assemblies, one per variant (currently the baseline PE grid `top_NxN_bas`); **modules/** — the reusable building blocks (the shared control/dispatch, the PE core and datapath sub-blocks, and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. The `N × N` PE grid `top_NxN_bas` — whose single-PE case is simply `N = 1` — is built and verified end to end.
+> Organized as: **architectures/** — the top-level assemblies, one per variant (currently the baseline PE grid `top_NxN`); **modules/** — the reusable building blocks (the shared control/dispatch, the PE core and datapath sub-blocks, and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. The `N × N` PE grid `top_NxN` — whose single-PE case is simply `N = 1` — is built and verified end to end.
 
 ## Architectures
 
-* [PE Grid (baseline)](architectures/top_NxN_bas.md) — `top_NxN_bas`: baseline `N × N` grid of `pe` cores with one shared `ctrl` and per-row/per-column dispatch (`disp_array_a`/`disp_array_b`); row/column enables (`en_row`/`en_col`) scale the active region to any `rows × cols` rectangle; default 2×2, chip 8×8, single PE = N=1.
+* [PE Grid (baseline)](architectures/top_NxN.md) — `top_NxN`: baseline `N × N` grid of `pe` cores with one shared `ctrl` and per-row/per-column dispatch (`disp_array_a`/`disp_array_b`); row/column enables (`en_row`/`en_col`) scale the active region to any `rows × cols` rectangle; default 2×2, chip 8×8, single PE = N=1.
 
 ## Modules
 
@@ -33,7 +33,7 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 
 ## Testbenches
 
-* [tb_top_NxN_bas](testbenches/tb_top_NxN_bas.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col), all 11 modes, one-shot + accumulate + rectangle scaling via `en_row`/`en_col`; default 2×2.
+* [tb_top_NxN](testbenches/tb_top_NxN.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col), all 11 modes, one-shot + accumulate + rectangle scaling via `en_row`/`en_col`; default 2×2.
 * [tb_pe_array](testbenches/tb_pe_array.md) — independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [tb_acc_array](testbenches/tb_acc_array.md) — `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
 * [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand from `disp_array_a`/`disp_array_b` vs a golden router model, all 11 modes.

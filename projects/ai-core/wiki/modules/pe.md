@@ -4,7 +4,7 @@
 
 ## Purpose
 
-`pe` is what remains of a Processing Element once the grid-wide control decode and the per-row/per-column operand dispatch are hoisted out: the multiplier array, the accumulator, the `en_i` operand mask, and the `acc` pipeline that meets the tap at the accumulate stage. The old `top_pe_bas` top level and `pe_datapath` wrapper are dissolved into this module and the [top_NxN_bas](../architectures/top_NxN_bas.md) grid; the single-PE test is now `top_NxN_bas` at `N = 1`.
+`pe` is what remains of a Processing Element once the grid-wide control decode and the per-row/per-column operand dispatch are hoisted out: the multiplier array, the accumulator, the `en_i` operand mask, and the `acc` pipeline that meets the tap at the accumulate stage. The old `top_pe_bas` top level and `pe_datapath` wrapper are dissolved into this module and the [top_NxN](../architectures/top_NxN.md) grid; the single-PE test is now `top_NxN` at `N = 1`.
 
 The PE is fed by the shared dispatch (broadcast to the whole row/column) and computes one of the 11 modes selected grid-wide. `en_i` is the PE's active-high enable: it AND-masks both dispatched operands so a clock-gated PE stays glitch-free (see below). `sel_out`, `sel_acc` and `prop_carry` arrive **already pipelined** — `sel_acc` once (shared, in the grid), `sel_out`/`prop_carry` in `ctrl` — so this module adds no control-alignment logic of its own; only `acc_i` is pipelined here.
 
@@ -93,4 +93,4 @@ acc_array acc_array_i (.l0_sum_i(l0_sum), ..., .l3_carry_i(l3_carry),
 
 `out_o` is valid 3 clocks after the operands and mode are applied. `sel_acc = 0` folds `acc_i` (a fresh result, or an external bias/running sum), `sel_acc = 1` folds the lane's own register back in (accumulate over cycles).
 
-Source: [pe.sv](../../rtl/pe.sv) — Testbench: [tb_top_NxN_bas.sv](../../tb/tb_top_NxN_bas.sv) (via the grid) — Diagram: [pe](../../doc/diagrams/pe.excalidraw)
+Source: [pe.sv](../../rtl/pe.sv) — Testbench: [tb_top_NxN.sv](../../tb/tb_top_NxN.sv) (via the grid) — Diagram: [pe](../../doc/diagrams/pe.excalidraw)
