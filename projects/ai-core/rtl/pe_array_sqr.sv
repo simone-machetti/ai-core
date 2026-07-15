@@ -1,0 +1,250 @@
+// -----------------------------------------------------------------------------
+// Author: Simone Machetti
+//
+// Description:
+//   PE array, square variant. Same 4-level crossed CPR-4:2 tree as pe_array,
+//   but the 16 DP8 cores are dp_8_sqr (18-bit unsigned square-sum) instead of
+//   dp_8, and the complex-mode block negate has relocated here from the B
+//   dispatcher. Fixed to the PE. Exposes a carry-save tap at every level.
+//
+//   Negate (modes 10/11 only): the negated blocks are always the LO (CX1)
+//   operand of L0 nodes 0..5 (DP8 2,3,6,7,10,11). A comp_n one's-complements
+//   each such lo pair when its neg_i bit is set, *before* ext_n; the tree then
+//   sign-extends ~S_DP8 to -S_DP8-1. The +2 per negated block (one +1 per row,
+//   weighted) is data-independent and is added back downstream as part of
+//   acc_array_sqr's C. neg_i[k] drives the comp_n on L0 node k (k = 0..5).
+//
+//   Signedness: everything is signed carry-save (the negated lo legs carry
+//   -S_DP8-1, and the post-negate sums mix sign) EXCEPT the L0 hi shift_n
+//   (<<8): the hi (CX0) DP8s are never negated, so S_DP8 >= 0 there and
+//   sign-extend equals zero-extend - it runs IS_SIGNED = 0.
+//
+//   Widths: dp_8_sqr is 18-bit (16-bit value + 2 guard, unsigned). The value is
+//   a sum of squares (no cancellation), so it grows one bit faster than the
+//   baseline; the 2 guard bits ride through L0..L2 with EXT = 0, but L3 merges
+//   the two halves with no shift so its value doubles - it takes EXT = 1 to keep
+//   the 2-guard margin. Node = 18 / 26 / 30 / 38 / 39 over DP8..L3. Taps carry
+//   the reading mode's value + 2 guard: 19 / 30 / 38 / 39 (L1..L3 taps equal
+//   their node; L0 truncates the mode-8 pass-through it never reads).
+// -----------------------------------------------------------------------------
+
+`timescale 1 ns/1 ps
+
+module pe_array_sqr #(
+    localparam int NUM_DP8      = 16,
+    localparam int A_DP8_WIDTH  = 64,
+    localparam int B_DP8_WIDTH  = 32,
+    localparam int LANES        = 8,
+    localparam int IN_WIDTH_A   = 8,
+    localparam int IN_WIDTH_B   = 4,
+    localparam int DP8_WIDTH    = 18,
+    localparam int NUM_SHIFT    = 3,
+    localparam int NUM_L0       = 8,
+    localparam int NUM_L1       = 4,
+    localparam int NUM_L2       = 2,
+    localparam int NUM_NEG      = 6,
+    localparam int SH0          = 8,
+    localparam int SH1          = 4,
+    localparam int SH2          = 8,
+    localparam int L0_WIDTH     = DP8_WIDTH + SH0,
+    localparam int L1_WIDTH     = L0_WIDTH + SH1,
+    localparam int L2_WIDTH     = L1_WIDTH + SH2,
+    localparam int L3_EXT       = 1,
+    localparam int L3_WIDTH     = L2_WIDTH + L3_EXT,
+    localparam int L0_TAP_WIDTH = 19,
+    localparam int L1_TAP_WIDTH = 30,
+    localparam int L2_TAP_WIDTH = 38,
+    localparam int L3_TAP_WIDTH = 39
+)(
+    input  logic                    clk_i,
+    input  logic                    rst_ni,
+    input  logic [ A_DP8_WIDTH-1:0] a_dp8_i    [0:NUM_DP8-1],
+    input  logic [ B_DP8_WIDTH-1:0] b_dp8_i    [0:NUM_DP8-1],
+    input  logic [     NUM_NEG-1:0] neg_i,
+    input  logic [   NUM_SHIFT-1:0] sel_shift_i,
+    output logic [L0_TAP_WIDTH-1:0] l0_sum_o   [0:NUM_L0-1],
+    output logic [L0_TAP_WIDTH-1:0] l0_carry_o [0:NUM_L0-1],
+    output logic [L1_TAP_WIDTH-1:0] l1_sum_o   [0:NUM_L1-1],
+    output logic [L1_TAP_WIDTH-1:0] l1_carry_o [0:NUM_L1-1],
+    output logic [L2_TAP_WIDTH-1:0] l2_sum_o   [0:NUM_L2-1],
+    output logic [L2_TAP_WIDTH-1:0] l2_carry_o [0:NUM_L2-1],
+    output logic [L3_TAP_WIDTH-1:0] l3_sum_o,
+    output logic [L3_TAP_WIDTH-1:0] l3_carry_o
+);
+
+    logic [DP8_WIDTH-1:0] dp8_sum   [0:NUM_DP8-1];
+    logic [DP8_WIDTH-1:0] dp8_carry [0:NUM_DP8-1];
+
+    logic [ L0_WIDTH-1:0] l0_sum     [0:NUM_L0-1];
+    logic [ L0_WIDTH-1:0] l0_carry   [0:NUM_L0-1];
+    logic [ L0_WIDTH-1:0] l0_sum_q   [0:NUM_L0-1];
+    logic [ L0_WIDTH-1:0] l0_carry_q [0:NUM_L0-1];
+    logic [ L1_WIDTH-1:0] l1_sum     [0:NUM_L1-1];
+    logic [ L1_WIDTH-1:0] l1_carry   [0:NUM_L1-1];
+    logic [ L2_WIDTH-1:0] l2_sum     [0:NUM_L2-1];
+    logic [ L2_WIDTH-1:0] l2_carry   [0:NUM_L2-1];
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [ L3_WIDTH-1:0] l3_sum_w;
+    logic [ L3_WIDTH-1:0] l3_carry_w;
+    /* verilator lint_on UNUSEDSIGNAL */
+
+    genvar i, ln, n, j, k;
+
+    generate
+        for (i = 0; i < NUM_DP8; i++) begin : gen_dp8
+            logic [IN_WIDTH_A-1:0] a_lane [0:LANES-1];
+            logic [IN_WIDTH_B-1:0] b_lane [0:LANES-1];
+            for (ln = 0; ln < LANES; ln++) begin : gen_lane
+                assign a_lane[ln] = a_dp8_i[i][ln*IN_WIDTH_A +: IN_WIDTH_A];
+                assign b_lane[ln] = b_dp8_i[i][ln*IN_WIDTH_B +: IN_WIDTH_B];
+            end
+            dp_8_sqr dp_8_sqr_i (
+                .a_i    (a_lane),
+                .b_i    (b_lane),
+                .sum_o  (dp8_sum[i]),
+                .carry_o(dp8_carry[i])
+            );
+        end
+    endgenerate
+
+    generate
+        for (n = 0; n < NUM_L0; n++) begin : gen_l0
+            localparam int CX0 = 4*(n/2) + (n%2);
+            localparam int CX1 = CX0 + 2;
+            logic [      DP8_WIDTH-1:0] hi_in  [0:1];
+            logic [      DP8_WIDTH-1:0] lo_raw [0:1];
+            logic [      DP8_WIDTH-1:0] lo_in  [0:1];
+            logic [(DP8_WIDTH+SH0)-1:0] hi_sh  [0:1];
+            logic [(DP8_WIDTH+SH0)-1:0] lo_ext [0:1];
+            logic [(DP8_WIDTH+SH0)-1:0] cpr_in [0:3];
+
+            assign hi_in[0]  = dp8_sum[CX0];
+            assign hi_in[1]  = dp8_carry[CX0];
+            assign lo_raw[0] = dp8_sum[CX1];
+            assign lo_raw[1] = dp8_carry[CX1];
+
+            if (n < NUM_NEG) begin : gen_comp
+                comp_n #(.WIDTH(DP8_WIDTH), .SIZE(2)) comp_n_i (
+                    .in_i(lo_raw), .neg_i(neg_i[n]), .out_o(lo_in)
+                );
+            end else begin : gen_nocomp
+                assign lo_in[0] = lo_raw[0];
+                assign lo_in[1] = lo_raw[1];
+            end
+
+            shift_n #(.WIDTH(DP8_WIDTH), .SIZE(2), .SHIFT(SH0), .IS_SIGNED(1'b0)) shift_n_i (
+                .in_i(hi_in), .sel_i(sel_shift_i[0]), .out_o(hi_sh)
+            );
+            ext_n #(.WIDTH(DP8_WIDTH), .SIZE(2), .EXT(SH0), .IS_SIGNED(1'b1)) ext_n_i (
+                .in_i(lo_in), .out_o(lo_ext)
+            );
+
+            assign cpr_in[0] = hi_sh[0];
+            assign cpr_in[1] = hi_sh[1];
+            assign cpr_in[2] = lo_ext[0];
+            assign cpr_in[3] = lo_ext[1];
+
+            cpr_w_n #(.IN_WIDTH(DP8_WIDTH+SH0), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
+                .in_i(cpr_in), .sum_o(l0_sum[n]), .carry_o(l0_carry[n])
+            );
+        end
+    endgenerate
+
+    reg_n #(.WIDTH(L0_WIDTH), .SIZE(NUM_L0)) reg_n_l0_sum_i (
+        .clk_i(clk_i), .rst_ni(rst_ni), .d_i(l0_sum), .q_o(l0_sum_q)
+    );
+    reg_n #(.WIDTH(L0_WIDTH), .SIZE(NUM_L0)) reg_n_l0_carry_i (
+        .clk_i(clk_i), .rst_ni(rst_ni), .d_i(l0_carry), .q_o(l0_carry_q)
+    );
+
+    generate
+        for (j = 0; j < NUM_L1; j++) begin : gen_l1
+            logic [      L0_WIDTH-1:0] hi_in  [0:1];
+            logic [      L0_WIDTH-1:0] lo_in  [0:1];
+            logic [(L0_WIDTH+SH1)-1:0] hi_sh  [0:1];
+            logic [(L0_WIDTH+SH1)-1:0] lo_ext [0:1];
+            logic [(L0_WIDTH+SH1)-1:0] cpr_in [0:3];
+
+            assign hi_in[0] = l0_sum_q[2*j];
+            assign hi_in[1] = l0_carry_q[2*j];
+            assign lo_in[0] = l0_sum_q[2*j+1];
+            assign lo_in[1] = l0_carry_q[2*j+1];
+
+            shift_n #(.WIDTH(L0_WIDTH), .SIZE(2), .SHIFT(SH1), .IS_SIGNED(1'b1)) shift_n_i (
+                .in_i(hi_in), .sel_i(sel_shift_i[1]), .out_o(hi_sh)
+            );
+            ext_n #(.WIDTH(L0_WIDTH), .SIZE(2), .EXT(SH1), .IS_SIGNED(1'b1)) ext_n_i (
+                .in_i(lo_in), .out_o(lo_ext)
+            );
+
+            assign cpr_in[0] = hi_sh[0];
+            assign cpr_in[1] = hi_sh[1];
+            assign cpr_in[2] = lo_ext[0];
+            assign cpr_in[3] = lo_ext[1];
+
+            cpr_w_n #(.IN_WIDTH(L0_WIDTH+SH1), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
+                .in_i(cpr_in), .sum_o(l1_sum[j]), .carry_o(l1_carry[j])
+            );
+        end
+    endgenerate
+
+    generate
+        for (k = 0; k < NUM_L2; k++) begin : gen_l2
+            logic [      L1_WIDTH-1:0] hi_in  [0:1];
+            logic [      L1_WIDTH-1:0] lo_in  [0:1];
+            logic [(L1_WIDTH+SH2)-1:0] hi_sh  [0:1];
+            logic [(L1_WIDTH+SH2)-1:0] lo_ext [0:1];
+            logic [(L1_WIDTH+SH2)-1:0] cpr_in [0:3];
+
+            assign hi_in[0] = l1_sum[2*k];
+            assign hi_in[1] = l1_carry[2*k];
+            assign lo_in[0] = l1_sum[2*k+1];
+            assign lo_in[1] = l1_carry[2*k+1];
+
+            shift_n #(.WIDTH(L1_WIDTH), .SIZE(2), .SHIFT(SH2), .IS_SIGNED(1'b1)) shift_n_i (
+                .in_i(hi_in), .sel_i(sel_shift_i[2]), .out_o(hi_sh)
+            );
+            ext_n #(.WIDTH(L1_WIDTH), .SIZE(2), .EXT(SH2), .IS_SIGNED(1'b1)) ext_n_i (
+                .in_i(lo_in), .out_o(lo_ext)
+            );
+
+            assign cpr_in[0] = hi_sh[0];
+            assign cpr_in[1] = hi_sh[1];
+            assign cpr_in[2] = lo_ext[0];
+            assign cpr_in[3] = lo_ext[1];
+
+            cpr_w_n #(.IN_WIDTH(L1_WIDTH+SH2), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
+                .in_i(cpr_in), .sum_o(l2_sum[k]), .carry_o(l2_carry[k])
+            );
+        end
+    endgenerate
+
+    logic [L2_WIDTH-1:0] l3_cpr_in [0:3];
+    assign l3_cpr_in[0] = l2_sum[0];
+    assign l3_cpr_in[1] = l2_carry[0];
+    assign l3_cpr_in[2] = l2_sum[1];
+    assign l3_cpr_in[3] = l2_carry[1];
+
+    cpr_w_n #(.IN_WIDTH(L2_WIDTH), .IN_SIZE(4), .EXT(L3_EXT), .IS_SIGNED(1'b1)) cpr_w_n_l3_i (
+        .in_i(l3_cpr_in), .sum_o(l3_sum_w), .carry_o(l3_carry_w)
+    );
+
+    generate
+        for (n = 0; n < NUM_L0; n++) begin : gen_l0_tap
+            assign l0_sum_o[n]   = l0_sum_q[n][L0_TAP_WIDTH-1:0];
+            assign l0_carry_o[n] = l0_carry_q[n][L0_TAP_WIDTH-1:0];
+        end
+        for (j = 0; j < NUM_L1; j++) begin : gen_l1_tap
+            assign l1_sum_o[j]   = l1_sum[j][L1_TAP_WIDTH-1:0];
+            assign l1_carry_o[j] = l1_carry[j][L1_TAP_WIDTH-1:0];
+        end
+        for (k = 0; k < NUM_L2; k++) begin : gen_l2_tap
+            assign l2_sum_o[k]   = l2_sum[k][L2_TAP_WIDTH-1:0];
+            assign l2_carry_o[k] = l2_carry[k][L2_TAP_WIDTH-1:0];
+        end
+    endgenerate
+
+    assign l3_sum_o   = l3_sum_w[L3_TAP_WIDTH-1:0];
+    assign l3_carry_o = l3_carry_w[L3_TAP_WIDTH-1:0];
+
+endmodule
