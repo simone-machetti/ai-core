@@ -128,7 +128,7 @@ Consequences:
 - Verified numerically for Re(D) and Im(D) of all three complex modes.
 
 ### Modes 10/11 vs mode 12 — two different negation mechanisms
-- **Modes 10/11 (C8×C8):** `re·re` and `im·im` land in **separate whole DP8s**, so the sign is a whole-DP8 negate — done today by `gate_b_n` negating `b^im`, and **relocated** in the square variant to the per-DP8 carry-save block-negate above (`pe_array_sqr` + the same `neg` in the α/β generators). The per-DP8 `neg[16]` bit comes from the mode LUT (today's `CTR==NEG` pairs).
+- **Modes 10/11 (C8×C8):** `re·re` and `im·im` land in **separate whole DP8s**, so the sign is a whole-DP8 negate — done today by `gate_b_n` negating `b^im`, and **relocated** in the square variant into the tree ([pe_array_sqr](../../../rtl/pe_array_sqr.sv), §7). The negate is a carry-save **one's-complement** of the block's `(sum,carry)` pair (`~sum, ~carry`), which resolves to `−S_DP8−2`; the leftover `+2` per negated block (data-independent) folds into `C`. Across modes 10/11 the negated blocks are always DP8 **{2,3,6,7,10,11}** — the six lo (`CX1`) legs of L0 nodes 0–5 — so the control is a **6-bit `neg`** (one per negatable L0 node), not one per DP8. The α/β generators carry the same 6-bit `neg` on their matching reduction legs.
 - **Mode 12 (C16×C16):** each `Re(D)` DP8(8×4) block **mixes** 4 `+re·re` lanes and 4 `−im·im` lanes — a *per-lane* sign that a whole-DP8 negate cannot express. The baseline realizes it by **software pre-negation**: the caller stores `−b^im` in the operand ([tb_pe_array](../../../tb/tb_pe_array.sv) `pack_b_c16c16`), so `CTR[12]` is all-pass. This is **kept unchanged** in the square variant — operand pre-negation is `a·(−b) = −a·b` via ordinary add-and-square, `α/β/C` computed from the fed (already-negated) data (no §4 breakage). So mode 12 needs **no hardware negate**; the caller keeps pre-negating `b^im`.
 
 ---
@@ -199,17 +199,47 @@ Files in [rtl/](../../../rtl/). The baseline has since been refactored to shared
 | **`gate_b_n_sqr.sv`** (NEW, replaces `gate_b_n`) | | B centering + idle-zero (`WIDTH=4, SIZE=8`): per int4, `out = zero_i ? 0 : {in[3]^~is_signed, in[2:0]}`. **No negate, no carry chain.** |
 | **`disp_array_a_sqr.sv`** (NEW, replaces `disp_array_a`) | | + `is_signed_a_i[0:15]`, + `zero_i[0:15]`; input reg → 8 `mux_n` → **16 `gate_a_n_sqr` (per-DP8)**. Centers A + zeros idle. |
 | **`disp_array_b_sqr.sv`** (NEW, replaces `disp_array_b`) | | + `is_signed_b_i[0:15]`, + `zero_i[0:15]`; input reg → 8 `mux_n` → hi/lo split → **16 `gate_b_n_sqr` (per-DP8)**. `ctr_l/ctr_h`, the negate path, and the carry plumbing **removed**. Gates are per-DP8 because mode 5 idles one DP8 of every pair. |
-| **`ctrl` (square)** | | route `is_signed_a/b[16]` to the dispatchers; emit `zero_i[16]` (idle set = today's `CTR==ZERO`); **drop** the B-negate codes (mode 12 stays SW-pre-negated); add per-DP8 `neg[16]` for `pe_array_sqr`; LUT: mode-5 `is_signed_b` idle DP8s → 1. |
-| **`pe_array_sqr.sv`** | | 16× `dp_8_sqr` + a conditional carry-save **block-negate** on each of the 16 DP8 outputs before L0 (`−(sum,carry) = (~sum,~carry)+2`, per-DP8 `neg`). This is the relocated complex sign (modes 10/11). Allow **+1–2 bit** width bump; re-check mode-8 (widest) headroom. **No idle logic** (idle handled at the dispatcher, §3). |
-| **α-gen / β-gen** (NEW, periphery) | LATER | `PE(A,0)` / `PE(0,B)` cores fed the dispatched (centered/zeroed) operands + the removed-operand centered-zero remap (§5) + the **same per-block `neg`** as `pe_array_sqr`. 8 α (per row) + 8 β (per column), fanned into every PE in the row/column. Mode is grid-uniform. |
+| **`ctrl` (square)** | | route `is_signed_a/b[16]` to the dispatchers; emit `zero_i[16]` (idle set = today's `CTR==ZERO`); **drop** the B-negate codes (mode 12 stays SW-pre-negated); add the **6-bit `neg`** for `pe_array_sqr` (mode 10 = `6'b110011`, mode 11 = `6'b001111`, else 0); LUT: mode-5 `is_signed_b` idle DP8s → 1. |
+| **`pe_array_sqr.sv`** | **built — Gate 3** | 16× `dp_8_sqr` + the same crossed 4-level CPR tree, with **6× [comp_n](../../../rtl/comp_n.sv)** one's-complementing the **lo** legs of L0 nodes 0–5 before `ext_n` (the relocated modes-10/11 negate; `neg[5:0]`). L0 hi `shift_n` runs **unsigned** (hi DP8s never negated); rest signed. Widths: node **18/26/30/38/39**, tap **19/30/38/39** (L3 `EXT=1`). **No idle logic** (dispatcher's job, §3). See [the built tree](#pe_array_sqr--built-gate-3). |
+| **α-gen / β-gen** (NEW, periphery) | LATER | `PE(A,0)` / `PE(0,B)` cores fed the dispatched (centered/zeroed) operands + the removed-operand centered-zero remap (§5) + the **same 6-bit `neg`** as `pe_array_sqr` (§4). 8 α (per row) + 8 β (per column), fanned into every PE in the row/column. Mode is grid-uniform. |
 | **`acc_array_sqr.sv`** (variant) | LATER | inject `−(A_corr + B_corr)` per output lane (dedicated correction CPR row; keep `EXT=2`/`CARRY=2`), add the constant `C` (per-mode LUT; `0` for Re of complex), and the **`÷2`** (right-shift-1 at output). Run the accumulator in 2× units: **seed `<<1` on load, readout `>>1`** so `acc_i`/`out_q` stay native. |
 | **`top_NxN_sqr.sv`** (variant) | LATER | the **bordered grid** (N² `pe_sqr` + N α + N β generators) + the `C` LUT. |
 | **`C` LUT** | | per-mode constant from §3 (signs pre-folded; `C(Re)=0`). No runtime sign logic. |
 
 ### The negation relocation (summary)
 - REMOVE: `b^im` two's-complement negate in `disp_array_b`/`gate_b_n` (int8 negate + L→H carry chain). SAVES that; `gate_b_n_sqr` becomes centering + zero only.
-- ADD: conditional carry-save block-negate of the 16 DP8 outputs at `pe_array_sqr` L0 inputs (modes 10/11), and the same per-block `neg` in the α/β generator reductions.
-- Control is free (re-derive `neg[16]` from the existing complex-sign LUT). Mode 12 is untouched (SW pre-negation). The squarer stays add-only; α/β stay shared.
+- ADD: a carry-save one's-complement (`comp_n`) on the lo legs of L0 nodes 0–5 in `pe_array_sqr` (modes 10/11), and the same 6-bit `neg` in the α/β generator reductions.
+- Control is free (re-derive the 6-bit `neg` from the existing complex-sign LUT). Mode 12 is untouched (SW pre-negation). The squarer stays add-only; α/β stay shared.
+
+### `pe_array_sqr` — built (Gate 3)
+
+The square PE array is the baseline [pe_array](../../../rtl/pe_array.sv) tree with two local changes; everything else (crossed L0 pairing `CX0=4·(n/2)+n%2`, `CX1=CX0+2`; the shift/extend/compress node; the single L0 register; the tap-per-level slicing) is unchanged.
+
+**1 — the leaves.** 16× `dp_8_sqr` replace `dp_8`. Each emits an **18-bit unsigned** square-sum `S_DP8` (16 value + 2 guard); operands arrive pre-centered, so `is_signed_a/b` are gone.
+
+**2 — the negate (modes 10/11).** One `comp_n` (`WIDTH=18, SIZE=2`) sits on the **lo** (`CX1`) carry-save pair of each L0 node 0–5, **before** its `ext_n`, driven by `neg[n]`:
+
+```
+neg[n]=1  →  (lo_sum, lo_carry) = (~S_sum, ~S_carry)   resolves to  −S_DP8 − 2
+```
+
+The tree sign-extends `~S_DP8` to `−S_DP8−1` per row; the leftover **`+2` per negated block** is data-independent and rides into `acc_array_sqr`'s `C` (a `+2·weight` per negated block, on top of the centering `C` of §3). Nodes 6/7 have no `comp_n` — their DP8s are never negated — so `neg` is **6 bits**, indexed by L0 node. Negated DP8s = {2,3,6,7,10,11}; `neg`: mode 10 = `110011`, mode 11 = `001111`, else 0.
+
+**Signedness.** Everything is signed **except the L0 `shift_n`**: it acts on the hi (`CX0`) leg, which is never negated, so `S_DP8 ≥ 0` there and sign-extend = zero-extend → it runs `IS_SIGNED=0` (unsigned). The lo `ext_n` (post-`comp_n`) and every compressor/shift from L0's CPR onward run signed.
+
+**Widths.** A square-sum has no cancellation, so it fills all 16 value bits — one bit more than the baseline dot product — and `dp_8_sqr` is 18-bit (2 guard) vs the baseline's 20-bit (4 guard). The 2 guard bits ride L0–L2 with `EXT=0`; **L3 merges the two halves with no shift** (its value doubles without a shift adding width), so it takes `L3_EXT=1` to hold the margin:
+
+| level | baseline node / tap | **square node / tap** |
+|---|---|---|
+| DP8 | 20 / — | **18** / — |
+| L0 | 28 / 18 | **26 / 19** |
+| L1 | 32 / 29 | **30 / 30** |
+| L2 | 40 / 37 | **38 / 38** |
+| L3 | 40 / 38 | **39 / 39** |
+
+The widest value is mode 8 (R16R16) at L3 (≈2³⁶·¹⁹ → 37-bit) inside the 39-bit node/tap. Unlike the baseline, the square value nearly fills each node, so at L1/L2/L3 **tap = node** (no wider pass-through to strip); only L0 truncates the mode-8 pass-through it never reads. `tap = widest-reading-mode value + 2 guard`.
+
+**Verified** ([tb_pe_array_sqr](../../../tb/tb_pe_array_sqr.sv), Gate 3): driven through the real square dispatchers, golden = per-DP8 `S_DP8` → block negate (`−S_DP8−2`) → crossed weighted tree, checked at each mode's read-level tap. All 11 modes × 200 corner-biased vectors (incl. negate 10/11, idle-zero 5/6, widest mode 8), 0 mismatches, `-Wall` clean. RTL confirmed against [pe_array_sqr.excalidraw](../../diagrams/pe_array_sqr.excalidraw).
 
 ---
 
@@ -227,15 +257,16 @@ Files in [rtl/](../../../rtl/). The baseline has since been refactored to shared
 - **Per-mode `C`** cross-checked independently (§3 table).
 - **`dp_8_sqr`** (Gate 1): `sum_o + carry_o == Σ 16·(AH+b)²+(AL+b)²` over corner-biased signed nibbles + all 8 extreme combos — passes, `-Wall` clean.
 - **Dispatchers** (Gate 2): [tb_disp_array_sqr] models on `tb_disp_array` — a golden router that **routes** (block select), **centers** (`center_a`/`center_b` per `is_signed`), and **zeros** idle DP8s (`zero_i`), checked against every `a_dp8_o`/`b_dp8_o` across all 11 modes × (random + ramp).
+- **`pe_array_sqr`** (Gate 3): `tb_pe_array_sqr` drives the DUT **through** the square dispatchers; golden = per-DP8 `S_DP8` → block negate (a negated block resolves to `−S_DP8−2`) → crossed 4-level weighted tree, compared at each mode's read-level tap. All 11 modes × 200 corner-biased vectors (negate 10/11, idle-zero 5/6, widest mode 8 at L3), 0 mismatches, `-Wall` clean; widths 18/26/30/38/39 (tap 19/30/38/39) confirmed sign-consistent.
 - Equivalence oracle for the full path: **bit-exact match to `top_NxN`** for identical inputs, all modes, single-shot + accumulation, corner-biased extremes. Golden = the existing per-mode matmul model, extended to compute α/β and the `S`/÷2 path.
 - Sign-consistency rule (carry-save): the *reduction tree* outputs must be sign-consistent (never `EXT=0` on a sign-extended multi-row CPR); note `dp_8_sqr`'s own square-sum is unsigned/non-negative and carries no such contract.
 
 ## 10. Staged build (`_sqr`)
 
 1. ✅ **`s_5_bit_sqr`, `dp_8_sqr` + `tb_dp_8_sqr`** (Gate 1) — the square-sum primitive, checked `sum+carry == golden` on pre-centered signed nibbles.
-2. **`gate_a_n_sqr`, `gate_b_n_sqr`, `disp_array_a_sqr`, `disp_array_b_sqr` + `tb_disp_array_sqr`** (Gate 2, current) — centering + idle-zero; golden route/center/zero model.
-3. **`pe_array_sqr`** — 16× `dp_8_sqr` + per-DP8 block-negate (modes 10/11); width bump; sign check.
-4. **`acc_array_sqr`** — correction row + `C` + ÷2 (seed`<<1`/readout`>>1`).
+2. ✅ **`gate_a_n_sqr`, `gate_b_n_sqr`, `disp_array_a_sqr`, `disp_array_b_sqr` + `tb_disp_array_sqr`** (Gate 2) — centering + idle-zero; golden route/center/zero model.
+3. ✅ **`pe_array_sqr` (+ `comp_n`) + `tb_pe_array_sqr`** (Gate 3) — 16× `dp_8_sqr` + 6× `comp_n` block-negate on L0 nodes 0–5 (modes 10/11); widths sized (18/26/30/38/39, tap 19/30/38/39, L3 `EXT=1`) and sign-checked through the dispatchers.
+4. **`acc_array_sqr`** (current) — correction row (`−α−β`) + `C` (per-mode centering constant **+ `2·weight` per negated block**, §4) + ÷2 (seed`<<1`/readout`>>1`).
 5. **α/β generators + `top_NxN_sqr`** — bordered grid; re-verify `== top_NxN`.
 6. **Payoff** — synthesize `top_NxN` vs `top_NxN_sqr`, compare area/power.
 
@@ -244,14 +275,14 @@ Files in [rtl/](../../../rtl/). The baseline has since been refactored to shared
 ## 11. Open items / risks
 
 - Area win unproven — hinges on `2×(5-bit square+adder) < 1× Booth mult`; Gate 5 (synthesis) decides.
-- Exact tree width growth (+1–2 bit) in `pe_array_sqr` — size precisely; confirm mode-8 headroom.
+- ~~Exact tree width growth in `pe_array_sqr`~~ — **resolved** (Gate 3): node 18/26/30/38/39, tap 19/30/38/39, L3 `EXT=1`; mode-8 headroom confirmed by tb.
 - Squarer implementation — `s_5_bit_sqr` is a flat K-map gate cloud; LUT/ROM vs folded PP array affects the win (revisit at synthesis).
-- Complex `neg` relocation cost (§7) — confirm the CS-block-negate + carry injection fits the CPR headroom.
+- ~~Complex `neg` relocation cost~~ — **resolved** (Gate 3): 6× `comp_n` one's-complement on the L0 lo legs, no carry injected (the `+2`/block is deferred to `acc_array_sqr`'s `C`); fits the existing CPR headroom.
 - α/β generator cost & row/col fan-out — must stay small to preserve amortization.
 
 ## 12. References
 - General math + hardware bit-level: [square_basics.tex](./square_basics.tex)
 - Per-mode centered sheets: `mode_1_opt`…`mode_12_opt` (`.tex`/`.pdf`/`.md`) in this folder.
 - Baseline RTL: [ctrl.sv](../../../rtl/ctrl.sv), [disp_array_a.sv](../../../rtl/disp_array_a.sv), [disp_array_b.sv](../../../rtl/disp_array_b.sv), [gate_b_n.sv](../../../rtl/gate_b_n.sv), [dp_8.sv](../../../rtl/dp_8.sv), [pe_array.sv](../../../rtl/pe_array.sv), [acc_array.sv](../../../rtl/acc_array.sv).
-- Square RTL (built): [s_5_bit_sqr.sv](../../../rtl/s_5_bit_sqr.sv), [dp_8_sqr.sv](../../../rtl/dp_8_sqr.sv).
+- Square RTL (built): [s_5_bit_sqr.sv](../../../rtl/s_5_bit_sqr.sv), [dp_8_sqr.sv](../../../rtl/dp_8_sqr.sv), [gate_a_n_sqr.sv](../../../rtl/gate_a_n_sqr.sv), [gate_b_n_sqr.sv](../../../rtl/gate_b_n_sqr.sv), [disp_array_a_sqr.sv](../../../rtl/disp_array_a_sqr.sv), [disp_array_b_sqr.sv](../../../rtl/disp_array_b_sqr.sv), [comp_n.sv](../../../rtl/comp_n.sv), [pe_array_sqr.sv](../../../rtl/pe_array_sqr.sv).
 - Staged build plan: `.claude/plans/` (`_sq` plan).
