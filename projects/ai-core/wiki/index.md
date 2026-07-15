@@ -14,6 +14,8 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [Control](modules/ctrl.md) — `ctrl`: shared grid-wide mode decoder + control pipeline — one instance for the whole grid, a lookup table mapping `mode_i` to every datapath control.
 * [Dispatch Array A](modules/disp_array_a.md) — `disp_array_a`: A-path dispatch, one per grid row (per-pair 4→1 A-block select, broadcast to the row).
 * [Dispatch Array B](modules/disp_array_b.md) — `disp_array_b`: B-path dispatch, one per grid column (4→1 B-block select + high/low split + B-gate, broadcast to the column).
+* [Dispatch Array A (Square)](modules/disp_array_a_sqr.md) — `disp_array_a_sqr`: square A dispatch — routes + centers (per-DP8 `gate_a_n_sqr`) + idle-zeros; `+is_signed_a/zero_i`.
+* [Dispatch Array B (Square)](modules/disp_array_b_sqr.md) — `disp_array_b_sqr`: square B dispatch — routes + centers (per-DP8 `gate_b_n_sqr`) + idle-zeros; negate/carry dropped.
 * [PE Array](modules/pe_array.md) — `pe_array`: 16 DP8s + 4-level carry-save shift/compress tree, with a tap (L0–L3) at every level.
 * [Accumulator Array](modules/acc_array.md) — `acc_array`: 8 lanes that resolve a tap, accumulate, and fuse lane pairs into 40-bit results.
 * [Dot Product 8](modules/dp_8.md) — `dp_8`: eight int8×int4 MACs, per-operand signedness, 20-bit sign-consistent carry-save output.
@@ -30,6 +32,8 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [Multiplexer N](modules/mux_n.md) — `mux_n`: SIZE-to-1 multiplexer over WIDTH-bit words.
 * [Gate N](modules/gate_n.md) — `gate_n`: zero gate (pass / zero) over SIZE words.
 * [Gate B N](modules/gate_b_n.md) — `gate_b_n`: conditioning gate (pass / zero / negate) over SIZE words.
+* [Gate A N (Square)](modules/gate_a_n_sqr.md) — `gate_a_n_sqr`: A centering gate (flip AH MSB iff unsigned, AL MSB always) + idle-zero.
+* [Gate B N (Square)](modules/gate_b_n_sqr.md) — `gate_b_n_sqr`: B centering gate (flip nibble MSB iff unsigned) + idle-zero; no negate/carry.
 * [Register N](modules/reg_n.md) — `reg_n`: register bank, SIZE WIDTH-bit registers, shared async reset.
 * [Integrated Clock Gate](modules/icg.md) — `icg`: latch-based clock gate — passes or holds the clock, for per-block gating.
 
@@ -39,6 +43,7 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [tb_pe_array](testbenches/tb_pe_array.md) — independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [tb_acc_array](testbenches/tb_acc_array.md) — `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
 * [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand from `disp_array_a`/`disp_array_b` vs a golden router model, all 11 modes.
+* [tb_disp_array_sqr](testbenches/tb_disp_array_sqr.md) — square dispatchers vs a golden route + center + idle-zero model, all 11 modes.
 * [tb_dp_8](testbenches/tb_dp_8.md) — resolve + sign-consistency of the carry-save dot product, all signedness combos.
 * [tb_dp_8_sqr](testbenches/tb_dp_8_sqr.md) — carry-save square-sum vs a golden `Σ 16·(AH+b)²+(AL+b)²`, pre-centered signed nibbles, corner-biased.
 * [tb_booth_r4](testbenches/tb_booth_r4.md) — weighted partial-product sum equals `a·b`, all signedness combos.

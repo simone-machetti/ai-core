@@ -1,8 +1,10 @@
 # Square variant — implementation reference
 
-Design/implementation notes for the **square** variant of the reconfigurable MatMul PE: replace the per-lane **multiply** inside each `DP8` with an **add-then-square** on centered 4-bit nibbles, and compensate outside the squarer with per-row `α`, per-column `β`, and a per-mode constant `C`. External behaviour of the PE and the N×N grid is unchanged.
+Design/implementation notes for the **square** variant (`_sqr`) of the reconfigurable MatMul PE: replace the per-lane **multiply** inside each `DP8` with an **add-then-square** on centered 4-bit nibbles, and compensate outside the squarer with per-row `α`, per-column `β`, and a per-mode constant `C`. External behaviour of the PE and the N×N grid is unchanged.
 
 This file is the single place to look when implementing. Companion material in the same folder: the general math in [square_basics.tex](./square_basics.tex), the per-mode formula sheets [mode_N_opt.tex](./mode_1_opt.tex)/`.pdf` and notes `mode_N_opt.md`. Staged build plan: the `_sq` plan in `.claude/plans/`.
+
+**Naming:** the variant suffix is `_sqr` (e.g. `dp_8_sqr`, `disp_array_a_sqr`, `top_NxN_sqr`). Operands are **centered at the dispatcher**, so the square datapath (`dp_8_sqr`, `pe_array_sqr`) works on pre-centered signed nibbles and carries **no `is_signed`**.
 
 ---
 
@@ -27,7 +29,7 @@ Result = ½ ( PE − α − β + C )
 `÷2 is exact`: the bracket `PE − α − β + C` always equals `2·Result`, so its LSB is provably 0.
 
 ### Split-then-square (why it is small)
-Split each int8 `a = 2⁴·a_H + a_L`, turning the 8×4 multiply into two 4×4 products, each done as an add-then-square on ~5-bit operands. The squarer is a **5-bit-in / 9-bit-out** unit — the whole area/power bet is that `2×(5-bit square + 5-bit adder) < 1× int8×int4 Booth multiply` per lane (to be settled by synthesis).
+Split each int8 `a = 2⁴·a_H + a_L`, turning the 8×4 multiply into two 4×4 products, each done as an add-then-square on ~5-bit operands. The squarer is a **5-bit-in / 9-bit-out** unit ([s_5_bit_sqr](../../../rtl/s_5_bit_sqr.sv)) — the whole area/power bet is that `2×(5-bit square + 5-bit adder) < 1× int8×int4 Booth multiply` per lane (to be settled by synthesis).
 
 ---
 
@@ -70,7 +72,7 @@ The `−8` on a signed operand's α/β (e.g. `(y−8)²` when y is signed) is th
 - int16 `X` → `X_H^hi` (signed), `X_L^hi, X_H^lo, X_L^lo` (unsigned).
 - complex: `a^re, a^im, b^re, b^im` are each independent operands (top nibble signed, rest unsigned).
 
-This matches the datapath's per-slice signedness (`pe_ctrl` `IS_SIGNED_A_LUT`/`IS_SIGNED_B_LUT`, MSB slice signed) and is what keeps every square in 5-bit. Correctness of `½(PE−α−β+C)=Result` holds for *any* centering; the signedness choice only governs the bit-width.
+This matches the datapath's per-slice signedness ([ctrl](../../../rtl/ctrl.sv) `IS_SIGNED_A_LUT`/`IS_SIGNED_B_LUT`, MSB slice signed) and is what keeps every square in 5-bit. Correctness of `½(PE−α−β+C)=Result` holds for *any* centering; the signedness choice only governs the bit-width. In the square variant these `is_signed_a/b` buses are routed to the **dispatchers** (they drive centering there), not to the square datapath.
 
 ### Per-mode constant `C` (verified)
 
@@ -88,10 +90,20 @@ This matches the datapath's per-slice signedness (`pe_ctrl` `IS_SIGNED_A_LUT`/`I
 | 11 | complex | C8×C8 (16) | Re 0 · Im 73 728 |
 | 12 | complex | C16×C16 (4) | Re 0 · Im 1 297 680 384 |
 
-`C` is data-independent → precompute per mode (a small LUT / constant) and inject once at the accumulator. Block constant = `weight × Nlanes × S²`; `Nlanes` is 8 per DP8(4×4) **except mode 12** (`C-DP4`, `Nlanes = 4`, so block const uses `4·S²`).
+`C` is data-independent → precompute per mode (a small LUT / constant) and inject once at the accumulator. Block constant = `weight × Nlanes × S²`; `Nlanes` is 8 per DP8(4×4) **except mode 12** (`C-DP4`, `Nlanes = 4`, so block const uses `4·S²`). `C` is computed over the **active** lanes only — idle DP8s must contribute nothing (see below), which is what keeps these values correct.
 
-### Zero-gating (modes 5/6, idle lanes)
-A zeroed unsigned lane still nets to 0: `½((y−8)² − 64 − (y−8)² + 64) = 0`. Idle lanes are automatically consistent — no special handling needed in the square math. (Gating is the B-gate `ZERO` code, see §6.)
+### Idle lanes (modes 5/6 zero-gating) — must be a *real* zero
+
+Only modes 5/6 idle-gate (zero) DP8s. **A zeroed lane does not self-cancel in general** — this is the correction to the earlier "no special handling" claim:
+
+- Zeroing `b` then centering an *unsigned* nibble gives `b_c = −8`, so the PE squares `(a_c−8)² ≠ 0` and the β generator adds `S²`. `PE − α` cancels (data-independent, since the idle DP8's A feeds both), but the residual `−β = −S²` leaks unless `C` includes that idle lane's `S²` — and `C` is active-only.
+- **Mode 5** idle DP8s have `bu=1` (unsigned `b`) → `S=8`, `β=64`/lane, uncancelled → a `−32`/lane error. **Mode 6** idle DP8s have signed `b` (`bu=0`) → `S=0` → already clean. That one bit (idle-`b` signedness) is the whole difference.
+
+**Fix — make each idle DP8 a true hardware zero, contributing nothing to `PE`, `α`, `β`, or `C`:**
+1. The dispatchers zero **both** `a_dp8_o` and `b_dp8_o` for idle DP8s (a per-DP8 `zero_i`, applied *after* centering). The PE then squares `(0+0)²=0` — no toggling — and the α/β generators, fed the same zeroed buses, see `0` on their live side.
+2. Treat idle DP8s as **signed** so the removed-operand bias vanishes: `is_signed_b = 1` on the idle DP8s (mode 5's are the only unsigned-`b` idle DP8s — set them to signed; mode-5 `b` is signed anyway, so these were baseline don't-cares). Then the α remap's `−8·bu = 0` → `α = 0`; `is_signed_a` is already 1 there → `β = 0`.
+
+Result: idle DP8s add nothing anywhere, `C` stays the active-only value the sheets give, and **`pe_array_sqr` needs no idle logic** — it's all in the dispatcher (`zero_i` on both gates) + the `is_signed_b` LUT. See §7 for the gate/dispatcher modules.
 
 ---
 
@@ -101,7 +113,7 @@ Complex modes (10/11/12) have negated products, e.g. `Re(D) = Σ a^re·b^re − 
 
 **Uncentered**, negation is free via *subtract-and-square*: `−x·y = ½[(x−y)² − x² − y²]`, with α=x², β=y² unchanged (sign-blind, since `(−y)²=y²`). The baseline formula sheets and the baseline multiply datapath both rely on this.
 
-**Under centering this breaks.** α/β carry a *directional* `−8` that cancels a specific linear term; flipping the product sign flips the sign of the linear term needed, but the shared α/β still cancel the old sign → they double it → a **data-dependent leftover** `4δx·y + 4δy·x`, which cannot be a constant `C`. (Verified: the required "constant" scatters over `{…,−160,…,32,…}`.)
+**Under centering this breaks.** α/β carry a *directional* `−8` that cancels a specific linear term; flipping the product sign flips the sign of the linear term needed, but the shared α/β still cancel the old sign → they double it → a **data-dependent leftover** `4δx·y + 4δy·x`, which cannot be a constant `C`. (Verified: the required "constant" scatters over `{…,−160,…,32,…}`.) Note this afflicts *subtract*-and-square only — **operand pre-negation** (feeding `−y` and using add-and-square) has no such mismatch, because `α/β/C` are then computed from the *fed* data (this is what mode 12 uses, below).
 
 **Fix — negate the whole compensated block:**
 ```
@@ -115,20 +127,27 @@ Consequences:
 - **`C(Re)=0`** for every complex mode: each `+re·re` block pairs with a `−im·im` block of equal weight and signedness, so their constants cancel. `C(Im)` = 2× the per-group constant.
 - Verified numerically for Re(D) and Im(D) of all three complex modes.
 
+### Modes 10/11 vs mode 12 — two different negation mechanisms
+- **Modes 10/11 (C8×C8):** `re·re` and `im·im` land in **separate whole DP8s**, so the sign is a whole-DP8 negate — done today by `gate_b_n` negating `b^im`, and **relocated** in the square variant to the per-DP8 carry-save block-negate above (`pe_array_sqr` + the same `neg` in the α/β generators). The per-DP8 `neg[16]` bit comes from the mode LUT (today's `CTR==NEG` pairs).
+- **Mode 12 (C16×C16):** each `Re(D)` DP8(8×4) block **mixes** 4 `+re·re` lanes and 4 `−im·im` lanes — a *per-lane* sign that a whole-DP8 negate cannot express. The baseline realizes it by **software pre-negation**: the caller stores `−b^im` in the operand ([tb_pe_array](../../../tb/tb_pe_array.sv) `pack_b_c16c16`), so `CTR[12]` is all-pass. This is **kept unchanged** in the square variant — operand pre-negation is `a·(−b) = −a·b` via ordinary add-and-square, `α/β/C` computed from the fed (already-negated) data (no §4 breakage). So mode 12 needs **no hardware negate**; the caller keeps pre-negating `b^im`.
+
 ---
 
-## 5. Bit-level hardware for centering
+## 5. Bit-level hardware for centering (+ idle-zero)
 
-The bias is one primitive: **flip the nibble MSB** (the weight-8 bit) → `−8`, converting unsigned→signed. One XOR per nibble MSB, gated by `~is_signed`. There is **no separate `−16`** operation.
+The bias is one primitive: **flip the nibble MSB** (the weight-8 bit) → `−8`, converting unsigned→signed. One XOR per nibble MSB, gated by the **unsigned flag** `~is_signed` (flip iff unsigned — polarity confirmed). There is **no separate `−16`** operation.
 
 ### Where each piece lives
 
 | logic | what | where | shared? |
 |---|---|---|---|
-| `−8` MSB-flip (centering → `x_c, y_c`) | flip nibble MSB iff unsigned | **dispatcher output** | per row (a), per column (b) — identical for PE and α/β, so do it once |
+| `−8` MSB-flip (centering → `x_c, y_c`) | flip nibble MSB iff unsigned | **dispatcher output** (`gate_a_n_sqr`/`gate_b_n_sqr`) | per row (a), per column (b) — identical for PE and α/β, so do it once |
+| idle-zero (`zero_i`) | force `a_dp8_o = b_dp8_o = 0` for idle DP8s, **after** centering | **same gates** | per-DP8; makes idle a real zero (§3) |
 | α/β `−S` completion (the `−16` bit) | removed operand's extra `−8` | **α/β generator input** | per generator (2 gates) |
 | add + 5-bit square | — | PE / α / β cores (identical) | — |
 | constant `C` | per-mode | acc-array injection | grid-wide (one per mode) |
+
+The A operand centers **both** nibbles of each int8: low nibble (`a[3]`) MSB is flipped **always** (a low nibble is never a MSN → always unsigned); high nibble (`a[7]`) MSB is flipped iff `~is_signed_a`. The B nibble (`b[3]`) is flipped iff `~is_signed_b`. Because the square datapath receives these pre-centered nibbles, `dp_8_sqr` carries no `is_signed` and does no flipping.
 
 ### α/β generator remap (optimized, other operand removed)
 The `−16` is never a real `−16`: it is two `−8`s summed. In the optimized generator (the removed operand's path is gone, so there is no adder to add the second `−8`), apply the total bias `S` to the top two bits of the live operand (β shown; α is symmetric with the removed-operand flag as the OR term). `au = ~is_signed_a`, `bu = ~is_signed_b`:
@@ -156,38 +175,41 @@ So the `−16` case (both unsigned) is literally "set bit 4" (prepend a `1` to t
 
 ## 6. Baseline RTL — what exists today (read before changing)
 
-Files in [rtl/](../../../rtl/). Relevant structure:
+Files in [rtl/](../../../rtl/). The baseline has since been refactored to shared control/dispatch (one `ctrl`, per-row `disp_array_a`, per-column `disp_array_b`, `pe` cores in the `top_NxN` grid). Relevant structure:
 
-- **`disp_array.sv` + `gate_b_n.sv`** — routes/gates the B operand. `gate_b_n` codes (2-bit `sel`): `00` pass, `01` zero (idle lanes), `10` `GATE_NEG`, `11` `GATE_NEG_CARRY`. Negating an int8 B negates its two int4 nibbles across two halves: low nibble `GATE_NEG`, high nibble `GATE_NEG_CARRY` (carry chained low→high) for an exact full-width two's-complement.
-- **`pe_ctrl.sv`** — per-mode LUTs. `CTR_L_LUT`/`CTR_H_LUT` drive the B-gate codes: `2'd1` (zero) appears on the idle-lane modes; `2'd2`/`2'd3` (NEG / NEG_CARRY) appear on the **complex** entries' imaginary pairs → **the complex minus is done by negating `b^im`**. `IS_SIGNED_A_LUT`/`IS_SIGNED_B_LUT` give per-DP8 signedness (MSB slice signed).
+- **`disp_array_a.sv`** — A-path dispatch (per row): input reg + 8× `mux_n` (4→1 block select), broadcast to the pair. **No gate** (A is never gated/negated today).
+- **`disp_array_b.sv` + `gate_b_n.sv`** — B-path dispatch (per column). `gate_b_n` codes (2-bit `sel`): `00` pass, `01` zero (idle lanes), `10` `GATE_NEG`, `11` `GATE_NEG_CARRY`. Negating an int8 B negates its two int4 nibbles across two halves: low nibble `GATE_NEG`, high nibble `GATE_NEG_CARRY` (carry chained low→high) for an exact full-width two's-complement.
+- **`ctrl.sv`** — shared per-mode LUTs. `CTR_L_LUT`/`CTR_H_LUT` drive the B-gate codes: `2'd1` (zero) on the idle-lane modes (5/6); `2'd2`/`2'd3` (NEG / NEG_CARRY) on the **complex** entries 10/11 imaginary pairs → the complex minus of 10/11 is `b^im` negation. Entry 12 is all-pass (mode 12 uses SW pre-negation, §4). `IS_SIGNED_A_LUT`/`IS_SIGNED_B_LUT` give per-DP8 signedness (MSB slice signed).
 - **`dp_8.sv`** — the primitive being replaced. Ports: `a_i[8×int8]`, `b_i[8×int4]`, `is_signed_a_i`, `is_signed_b_i`, → 20-bit carry-save `sum_o`/`carry_o` (16-bit value + 4 guard, sign-consistent).
 - **`pe_array.sv`** — instantiates 16 `dp_8` and reduces their carry-save outputs through a **purely additive** 4-level CPR-4:2 tree (`node = prev + shift`, shifts 8/4/8/– at L0..L3, all `IS_SIGNED=1` = sign-extension only). Node widths 28/32/40/40; carry-save taps 18/29/37/38 exported at every level. **No subtract, no per-block sign anywhere in the tree.** L0 is registered.
 - **`acc_array.sv`** — resolves/accumulates the tap; folds a 3rd CPR row via the `acc_i`/`sel_acc` mux (seed OR feedback, exclusive).
-- **`pe_datapath.sv` / `top_pe_bas.sv` / `top_NxN_bas.sv`** — datapath, single-PE top, grid.
+- **`pe.sv` / `top_NxN.sv`** — self-contained PE core, and the N×N grid.
 
-**Key takeaway:** today the complex sign is *entirely operand negation* in `disp_array`; the tree only adds. That is exactly the *subtract-and-square* path that centering forbids (§4).
+**Key takeaway:** today the complex sign (10/11) is *operand negation* in `disp_array_b`; the tree only adds. That is the *subtract-and-square*-style path that centering forbids for the square math, so it must relocate (§4, §7).
 
 ---
 
 ## 7. Required changes, module by module
 
-| module | change |
-|---|---|
-| **`dp_8_sq.sv`** (NEW, drop-in for `dp_8`) | split each `a` into nibbles, MSB-flip unsigned nibbles (or receive already-centered operands from the dispatcher), form `(a_H+b)`/`(a_L+b)` with 5-bit adders, 5-bit-in/9-bit-out squares, weight the `a_H` square by 2⁴, sum 16 squares → `S_DP8` (raw square-sum, **no α/β inside**). Same ports as `dp_8` + no extra inputs. Output ≈ 21-bit carry-save (`S_DP8 ≈ 2¹⁶`, ~+1 bit vs baseline). Reuse `add_n`, `cpr_w_n`/`fa`, `ext_n`/`shift_n`. |
-| **centering** | one XOR per nibble MSB, gated by `~is_signed`, at the **dispatcher output** (shared per row/col by PE and the α/β generators). See §5. |
-| **`disp_array` / `gate_b_n`** | **remove** the complex B-negate path (`GATE_NEG`/`GATE_NEG_CARRY` for imaginary pairs). You no longer negate `b^im`. Keep `ZERO` (idle-lane) gating. |
-| **`pe_array`** (→ PE) | **add** a conditional carry-save negate on each of the 16 DP8 outputs before L0: `−(sum,carry) = (~sum, ~carry) + 2` (XOR both 20/21-bit words with a per-DP8 `neg` bit + inject the two `+1`s as CPR carry-ins). This is the relocated complex sign. Otherwise structurally unchanged; allow **+1–2 bit** width bump and re-check mode-8 (widest) headroom. |
-| **`neg` control** | derive a per-DP8 `neg` bit from the existing complex-sign info (the `CTR_*`/mode LUT that today selects `GATE_NEG`). Dynamic per Re/Im cycle, same timing as today's B-negate. |
-| **α-gen / β-gen** (NEW, periphery) | 8 α-units (per row) + 8 β-units (per column). Each: the `−S` top-bit remap (§5) + 5-bit square + a copy of the mode-weighted **signed** reduction (same weights AND the same per-block `neg` as `pe_array`) → `A_corr[r]` / `B_corr[c]`, fanned into every PE in that row/column. Mode is grid-uniform. |
-| **`acc_array_sq.sv`** (variant) | inject `−(A_corr + B_corr)` per output lane (a dedicated correction CPR row so it coexists with running-accumulate; keep `EXT=2`/`CARRY=2`), add the constant `C` (per-mode LUT; `0` for Re of complex modes), and the **`÷2`** (right-shift-1 at output). Run the accumulator in 2× units: **seed `<<1` on load, readout `>>1`** so `acc_i`/`out_q` stay native and external behaviour is identical. |
-| **`top_pe_sq.sv`** (variant) | instantiate the `_sq` datapath; pipeline the per-cycle α/β/correction inputs to the acc stage (α/β are **per-operand-presentation** inputs — they change each accumulation iteration with the operands — not the one-time seed). |
-| **`top_NxN_sq.sv`** (variant, LATER) | the grid + the 8 α / 8 β generators at the periphery. |
-| **`C` LUT** | per-mode constant from §3 (signs pre-folded; `C(Re)=0`). No runtime sign logic. |
+| module | status | change |
+|---|---|---|
+| **`s_5_bit_sqr.sv`** | **built** | flat K-map-minimized signed 5-bit squarer (`[−16,15]` → unsigned `[0,256]`; only `−16` sets the 9th bit). 16 instances per `dp_8_sqr`. |
+| **`dp_8_sqr.sv`** | **built — Gate 1** | drop-in DP8 for the square path. Takes **pre-centered** signed nibbles (`a_i`/`b_i`, **no `is_signed`, no clk**), splits `a` into `{AH,AL}`, 5-bit signed add, 16× `s_5_bit_sqr`, 2× **unsigned** `cpr_w_n` 8:2 (EXT=3→12b) + AH `<<4` + **unsigned** `cpr_w_n` 4:2 (EXT=2) → **18-bit unsigned** carry-save `S_DP8` (raw square-sum; **no α/β/C/÷2**). Non-negative → **no sign-consistency contract** (the hardest `dp_8` property vanishes). |
+| **`gate_a_n_sqr.sv`** (NEW) | | A centering + idle-zero (`WIDTH=8, SIZE=8`): per int8, `out = zero_i ? 0 : {in[7]^~is_signed, in[6:4], ~in[3], in[2:0]}`. Combinational. |
+| **`gate_b_n_sqr.sv`** (NEW, replaces `gate_b_n`) | | B centering + idle-zero (`WIDTH=4, SIZE=8`): per int4, `out = zero_i ? 0 : {in[3]^~is_signed, in[2:0]}`. **No negate, no carry chain.** |
+| **`disp_array_a_sqr.sv`** (NEW, replaces `disp_array_a`) | | + `is_signed_a_i[0:15]`, + `zero_i[0:15]`; input reg → 8 `mux_n` → **16 `gate_a_n_sqr` (per-DP8)**. Centers A + zeros idle. |
+| **`disp_array_b_sqr.sv`** (NEW, replaces `disp_array_b`) | | + `is_signed_b_i[0:15]`, + `zero_i[0:15]`; input reg → 8 `mux_n` → hi/lo split → **16 `gate_b_n_sqr` (per-DP8)**. `ctr_l/ctr_h`, the negate path, and the carry plumbing **removed**. Gates are per-DP8 because mode 5 idles one DP8 of every pair. |
+| **`ctrl` (square)** | | route `is_signed_a/b[16]` to the dispatchers; emit `zero_i[16]` (idle set = today's `CTR==ZERO`); **drop** the B-negate codes (mode 12 stays SW-pre-negated); add per-DP8 `neg[16]` for `pe_array_sqr`; LUT: mode-5 `is_signed_b` idle DP8s → 1. |
+| **`pe_array_sqr.sv`** | | 16× `dp_8_sqr` + a conditional carry-save **block-negate** on each of the 16 DP8 outputs before L0 (`−(sum,carry) = (~sum,~carry)+2`, per-DP8 `neg`). This is the relocated complex sign (modes 10/11). Allow **+1–2 bit** width bump; re-check mode-8 (widest) headroom. **No idle logic** (idle handled at the dispatcher, §3). |
+| **α-gen / β-gen** (NEW, periphery) | LATER | `PE(A,0)` / `PE(0,B)` cores fed the dispatched (centered/zeroed) operands + the removed-operand centered-zero remap (§5) + the **same per-block `neg`** as `pe_array_sqr`. 8 α (per row) + 8 β (per column), fanned into every PE in the row/column. Mode is grid-uniform. |
+| **`acc_array_sqr.sv`** (variant) | LATER | inject `−(A_corr + B_corr)` per output lane (dedicated correction CPR row; keep `EXT=2`/`CARRY=2`), add the constant `C` (per-mode LUT; `0` for Re of complex), and the **`÷2`** (right-shift-1 at output). Run the accumulator in 2× units: **seed `<<1` on load, readout `>>1`** so `acc_i`/`out_q` stay native. |
+| **`top_NxN_sqr.sv`** (variant) | LATER | the **bordered grid** (N² `pe_sqr` + N α + N β generators) + the `C` LUT. |
+| **`C` LUT** | | per-mode constant from §3 (signs pre-folded; `C(Re)=0`). No runtime sign logic. |
 
 ### The negation relocation (summary)
-- REMOVE: `b^im` two's-complement negate in `disp_array` (int8 negate + L→H carry chain). SAVES that.
-- ADD: conditional carry-save negate of the 16 DP8 outputs at `pe_array` L0 inputs, and the same per-block `neg` in the α/β generator reductions.
-- Control is free (re-derive `neg` from the existing complex-sign LUT). Net: a modest, bounded increase (negating a ~21-bit CS pair vs an 8-bit operand), partly offset by dropping the operand negator. The squarer stays add-only; α/β stay shared.
+- REMOVE: `b^im` two's-complement negate in `disp_array_b`/`gate_b_n` (int8 negate + L→H carry chain). SAVES that; `gate_b_n_sqr` becomes centering + zero only.
+- ADD: conditional carry-save block-negate of the 16 DP8 outputs at `pe_array_sqr` L0 inputs (modes 10/11), and the same per-block `neg` in the α/β generator reductions.
+- Control is free (re-derive `neg[16]` from the existing complex-sign LUT). Mode 12 is untouched (SW pre-negation). The squarer stays add-only; α/β stay shared.
 
 ---
 
@@ -203,29 +225,33 @@ Files in [rtl/](../../../rtl/). Relevant structure:
 
 - **Math, all 11 modes**: `½(PE − α − β + C) == Σ a·b` (real) and `== Re/Im(D)` (complex), over random + corner-biased inputs; every square argument ∈ `[−16,14]`. (Independent block-model checker + per-mode checkers all pass.)
 - **Per-mode `C`** cross-checked independently (§3 table).
-- Equivalence oracle for RTL: **bit-exact match to `top_pe_bas`** for identical inputs, all modes, single-shot + accumulation, corner-biased extremes (to catch sign-consistency at the square-sum boundary). Golden = the existing per-mode matmul model used by `tb_top_pe_bas`, extended to compute α/β and the `S`/÷2 path.
-- Sign-consistency rule (carry-save): outputs must be sign-consistent (never `EXT=0` on a sign-extended multi-row CPR); test with corner-biased extremes.
+- **`dp_8_sqr`** (Gate 1): `sum_o + carry_o == Σ 16·(AH+b)²+(AL+b)²` over corner-biased signed nibbles + all 8 extreme combos — passes, `-Wall` clean.
+- **Dispatchers** (Gate 2): [tb_disp_array_sqr] models on `tb_disp_array` — a golden router that **routes** (block select), **centers** (`center_a`/`center_b` per `is_signed`), and **zeros** idle DP8s (`zero_i`), checked against every `a_dp8_o`/`b_dp8_o` across all 11 modes × (random + ramp).
+- Equivalence oracle for the full path: **bit-exact match to `top_NxN`** for identical inputs, all modes, single-shot + accumulation, corner-biased extremes. Golden = the existing per-mode matmul model, extended to compute α/β and the `S`/÷2 path.
+- Sign-consistency rule (carry-save): the *reduction tree* outputs must be sign-consistent (never `EXT=0` on a sign-extended multi-row CPR); note `dp_8_sqr`'s own square-sum is unsigned/non-negative and carries no such contract.
 
-## 10. Staged build (from the `_sq` plan)
+## 10. Staged build (`_sqr`)
 
-1. `dp_8_sq` + `tb_dp_8_sq` — check `S_DP8` == golden square-sum AND `½(S_DP8 − α_tb − β_tb) == dp_8(a,b)` (α/β in the tb). Proves the compensation math at DP8 level with no α/β hardware.
-2. `acc_array_sq` — correction row + ÷2 + seed`<<1`/readout`>>1`.
-3. `pe_datapath_sq` + `top_pe_sq` — α/β/correction as tb input ports; prove `== top_pe_bas` across all modes, single-shot + accumulating. Add the per-DP8 `neg` for complex.
-4. α/β generator RTL + `top_NxN_sq` grid — 8 α / 8 β periphery; re-verify grid equivalence.
-5. Payoff — synthesize `top_NxN_bas` vs `top_NxN_sq`, compare area/power.
+1. ✅ **`s_5_bit_sqr`, `dp_8_sqr` + `tb_dp_8_sqr`** (Gate 1) — the square-sum primitive, checked `sum+carry == golden` on pre-centered signed nibbles.
+2. **`gate_a_n_sqr`, `gate_b_n_sqr`, `disp_array_a_sqr`, `disp_array_b_sqr` + `tb_disp_array_sqr`** (Gate 2, current) — centering + idle-zero; golden route/center/zero model.
+3. **`pe_array_sqr`** — 16× `dp_8_sqr` + per-DP8 block-negate (modes 10/11); width bump; sign check.
+4. **`acc_array_sqr`** — correction row + `C` + ÷2 (seed`<<1`/readout`>>1`).
+5. **α/β generators + `top_NxN_sqr`** — bordered grid; re-verify `== top_NxN`.
+6. **Payoff** — synthesize `top_NxN` vs `top_NxN_sqr`, compare area/power.
 
 ---
 
 ## 11. Open items / risks
 
-- Area win unproven — hinges on `2×(5-bit square+adder) < 1× Booth mult`; Gate 5 decides.
-- Exact tree width growth (+1–2 bit) — size precisely; confirm mode-8 headroom.
-- Squarer implementation — LUT/ROM vs folded PP array; affects the win.
-- Complex `neg` relocation cost (§7) — confirm the CS-negate + carry injection fits the existing CPR headroom (`pe_array` runs `EXT=0`).
+- Area win unproven — hinges on `2×(5-bit square+adder) < 1× Booth mult`; Gate 5 (synthesis) decides.
+- Exact tree width growth (+1–2 bit) in `pe_array_sqr` — size precisely; confirm mode-8 headroom.
+- Squarer implementation — `s_5_bit_sqr` is a flat K-map gate cloud; LUT/ROM vs folded PP array affects the win (revisit at synthesis).
+- Complex `neg` relocation cost (§7) — confirm the CS-block-negate + carry injection fits the CPR headroom.
 - α/β generator cost & row/col fan-out — must stay small to preserve amortization.
 
 ## 12. References
 - General math + hardware bit-level: [square_basics.tex](./square_basics.tex)
 - Per-mode centered sheets: `mode_1_opt`…`mode_12_opt` (`.tex`/`.pdf`/`.md`) in this folder.
-- Baseline RTL: [pe_array.sv](../../../rtl/pe_array.sv), [disp_array.sv](../../../rtl/disp_array.sv), [gate_b_n.sv](../../../rtl/gate_b_n.sv), [pe_ctrl.sv](../../../rtl/pe_ctrl.sv), [dp_8.sv](../../../rtl/dp_8.sv), [acc_array.sv](../../../rtl/acc_array.sv).
+- Baseline RTL: [ctrl.sv](../../../rtl/ctrl.sv), [disp_array_a.sv](../../../rtl/disp_array_a.sv), [disp_array_b.sv](../../../rtl/disp_array_b.sv), [gate_b_n.sv](../../../rtl/gate_b_n.sv), [dp_8.sv](../../../rtl/dp_8.sv), [pe_array.sv](../../../rtl/pe_array.sv), [acc_array.sv](../../../rtl/acc_array.sv).
+- Square RTL (built): [s_5_bit_sqr.sv](../../../rtl/s_5_bit_sqr.sv), [dp_8_sqr.sv](../../../rtl/dp_8_sqr.sv).
 - Staged build plan: `.claude/plans/` (`_sq` plan).
