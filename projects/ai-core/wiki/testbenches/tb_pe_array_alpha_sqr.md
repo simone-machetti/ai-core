@@ -32,7 +32,7 @@ The golden reads the **dispatched** (centered) `a_dp8` off the DUT and applies t
 ALPHA_DP8 = Σ_k 16·(AH_k − 8·bu)² + (AL_k − 8·bu)²        bu = ~is_signed_b
 ```
 
-where `AH_k − 8·bu` is `is_signed_b ? AH_k : AH_k − 8` (and likewise AL) — mirroring `gate_n_sqr`. Then the same block-negate as the PE (`negd ? −ALPHA_DP8−2 : ALPHA_DP8`), the crossed 4-level weighted tree (`SEL_SHIFT_LUT` gates the `<<8`/`<<4`/`<<8`), and `resolve_tap` at `TAP_LEVEL[mode]`. Mode tables (`SEL_A`, `IS_SIGNED_A`/`IS_SIGNED_B`, `ZERO_I_LUT`, `NEG_I`, `SEL_SHIFT_LUT`, `TAP_LEVEL`) are copied from [tb_pe_array_sqr](./tb_pe_array_sqr.md); the B side is dropped.
+where `AH_k − 8·bu` is `is_signed_b ? AH_k : AH_k − 8` (and likewise AL) — mirroring `gate_n_sqr`. Then the same block-negate as the PE (`negd ? −ALPHA_DP8−2 : ALPHA_DP8`), the crossed 4-level weighted tree (`SEL_SHIFT_LUT` gates the `<<8`/`<<4`/`<<8`), and `resolve_tap` at `TAP_LEVEL[mode]`. Because the array emits **`−α`** (its taps are one's-complemented), the golden compares each read tap against `−(weighted tree) − 2`, not the plain sum. Mode tables (`SEL_A`, `IS_SIGNED_A`/`IS_SIGNED_B`, `ZERO_I_LUT`, `NEG_I`, `SEL_SHIFT_LUT`, `TAP_LEVEL`) are copied from [tb_pe_array_sqr](./tb_pe_array_sqr.md); the B side is dropped.
 
 **Idle** DP8s (modes 5/6) are clean without special-casing: `is_signed_b = 1` on a dispatcher-zeroed A gives `ALPHA_DP8 = 0`, which the golden reproduces.
 

@@ -18,8 +18,9 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [Dispatch Array B (Square)](modules/disp_array_b_sqr.md) — `disp_array_b_sqr`: square B dispatch — routes + centers (per-DP8 `gate_b_n_sqr`) + idle-zeros; negate/carry dropped.
 * [PE Array](modules/pe_array.md) — `pe_array`: 16 DP8s + 4-level carry-save shift/compress tree, with a tap (L0–L3) at every level.
 * [PE Array (Square)](modules/pe_array_sqr.md) — `pe_array_sqr`: square-variant PE array — 16× `dp_8_sqr` + the same crossed tree, with the complex negate relocated in as per-block `comp_n`; `neg_i[5:0]`, no `is_signed`.
-* [PE Array Alpha (Square)](modules/pe_array_alpha_sqr.md) — `pe_array_alpha_sqr`: per-row A-only correction generator — `pe_array_sqr` with `dp_8_alpha_sqr` cores (B dropped, `+is_signed_b`); same tree/widths/taps.
-* [PE Array Beta (Square)](modules/pe_array_beta_sqr.md) — `pe_array_beta_sqr`: per-column B-only correction generator — `pe_array_sqr` with `dp_8_beta_sqr` cores (A dropped, `+is_signed_a`/`zero`); same tree/widths/taps.
+* [PE Array Alpha (Square)](modules/pe_array_alpha_sqr.md) — `pe_array_alpha_sqr`: per-row A-only correction generator — `pe_array_sqr` with `dp_8_alpha_sqr` cores (B dropped, `+is_signed_b`); same tree/widths/taps. Emits `−α` (one's-complemented taps).
+* [PE Array Beta (Square)](modules/pe_array_beta_sqr.md) — `pe_array_beta_sqr`: per-column B-only correction generator — `pe_array_sqr` with `dp_8_beta_sqr` cores (A dropped, `+is_signed_a`/`zero`); same tree/widths/taps. Emits `−β` (one's-complemented taps).
+* [Constant LUT (Square)](modules/const_sqr.md) — `const_sqr`: per-mode `C` for `½(PE − α − β + C)` — folds centering `C_real`, the α/β-complement `+4`, and the block-negate `−2N`; makes the accumulator fully additive.
 * [Accumulator Array](modules/acc_array.md) — `acc_array`: 8 lanes that resolve a tap, accumulate, and fuse lane pairs into 40-bit results.
 * [Dot Product 8](modules/dp_8.md) — `dp_8`: eight int8×int4 MACs, per-operand signedness, 20-bit sign-consistent carry-save output.
 * [Dot Product 8 (Square)](modules/dp_8_sqr.md) — `dp_8_sqr`: square-variant DP8 — add-then-square (16× `s_5_bit_sqr`) over pre-centered nibbles, 18-bit unsigned carry-save square-sum; drop-in for `dp_8`.

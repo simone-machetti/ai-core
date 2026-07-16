@@ -10,6 +10,11 @@
 //   -8 injected in dp_8_beta_sqr) through the same L(.) as the PE, so the
 //   downstream reconstruction Result = 1/2(PE - alpha - beta + C) is exact.
 //
+//   Output taps are one's-complemented: the module emits -beta (each tap pair
+//   resolves to -beta_tap - 2) so the accumulator ADDS it instead of
+//   subtracting. Done once here (shared by the column's PEs) rather than in
+//   every accumulator; the deferred -2 per operand is the +4 folded into const_sqr.
+//
 //   Everything below the DP8 leaves is identical to pe_array_sqr: the crossed
 //   L0 pairing, the 6 comp_n block-negates on L0 nodes 0..5 (beta's blocks carry
 //   the *same* neg as the PE - a negated block resolves to -BETA_DP8-2), the
@@ -219,22 +224,25 @@ module pe_array_beta_sqr #(
         .in_i(l3_cpr_in), .sum_o(l3_sum_w), .carry_o(l3_carry_w)
     );
 
+    // Emit -beta: one's-complement every output tap (~b_sum, ~b_carry resolve to
+    // -beta_tap - 2). The accumulator then just ADDS this (never subtracts); the
+    // deferred -2 per operand is the +4 already folded into const_sqr.
     generate
         for (n = 0; n < NUM_L0; n++) begin : gen_l0_tap
-            assign l0_sum_o[n]   = l0_sum_q[n][L0_TAP_WIDTH-1:0];
-            assign l0_carry_o[n] = l0_carry_q[n][L0_TAP_WIDTH-1:0];
+            assign l0_sum_o[n]   = ~l0_sum_q[n][L0_TAP_WIDTH-1:0];
+            assign l0_carry_o[n] = ~l0_carry_q[n][L0_TAP_WIDTH-1:0];
         end
         for (j = 0; j < NUM_L1; j++) begin : gen_l1_tap
-            assign l1_sum_o[j]   = l1_sum[j][L1_TAP_WIDTH-1:0];
-            assign l1_carry_o[j] = l1_carry[j][L1_TAP_WIDTH-1:0];
+            assign l1_sum_o[j]   = ~l1_sum[j][L1_TAP_WIDTH-1:0];
+            assign l1_carry_o[j] = ~l1_carry[j][L1_TAP_WIDTH-1:0];
         end
         for (k = 0; k < NUM_L2; k++) begin : gen_l2_tap
-            assign l2_sum_o[k]   = l2_sum[k][L2_TAP_WIDTH-1:0];
-            assign l2_carry_o[k] = l2_carry[k][L2_TAP_WIDTH-1:0];
+            assign l2_sum_o[k]   = ~l2_sum[k][L2_TAP_WIDTH-1:0];
+            assign l2_carry_o[k] = ~l2_carry[k][L2_TAP_WIDTH-1:0];
         end
     endgenerate
 
-    assign l3_sum_o   = l3_sum_w[L3_TAP_WIDTH-1:0];
-    assign l3_carry_o = l3_carry_w[L3_TAP_WIDTH-1:0];
+    assign l3_sum_o   = ~l3_sum_w[L3_TAP_WIDTH-1:0];
+    assign l3_carry_o = ~l3_carry_w[L3_TAP_WIDTH-1:0];
 
 endmodule

@@ -8,6 +8,10 @@ It reduces the 16 per-DP8 beta square-sums `BETA_DP8` through the **same** linea
 
 Everything below the DP8 leaves is byte-identical to [pe_array_sqr](./pe_array_sqr.md) (crossed L0 pairing, 6 [comp_n](./comp_n.md) block-negates on L0 nodes 0–5, unsigned L0-hi `shift_n`, single L0 register, tap slicing). β's blocks carry the **same** `neg` as the PE — a negated block resolves to `−BETA_DP8−2`. Idle DP8s are forced to a real zero via `zero_i` (the β low block's fixed `−8` would otherwise leak).
 
+## Output — emits `−β`
+
+The output taps are **one's-complemented** (`~l*_sum_o` / `~l*_carry_o`, all four levels), so the module emits **`−β`**: each carry-save tap pair resolves to `−β_tap − 2`. This lets the accumulator just **add** the β term instead of subtracting it — the whole square accumulator is then a pure carry-save sum `PE + (−α) + (−β) + C`, with **no subtractor**. The complement is done **once here** (shared by the column's 8 PEs) rather than in each of the 64 accumulators. The deferred `−2` per operand (one for α, one for β) is the `+4` folded into [const_sqr](./const_sqr.md)'s `C`. The 6 block-`comp_n` are unchanged — they still give β the complex σ sign inside the tree; the output `~` then negates the whole (correctly-signed) result.
+
 ## Interface
 
 Same as [pe_array_sqr](./pe_array_sqr.md), except `a_dp8_i` is **dropped** and per-DP8 `is_signed_a_i` + `zero_i` are **added**:
@@ -20,7 +24,7 @@ Same as [pe_array_sqr](./pe_array_sqr.md), except `a_dp8_i` is **dropped** and p
 | `zero_i[0:15]`           | in  | 1 each      | **NEW** — idle-zero for the β low block.                            |
 | `neg_i[5:0]`             | in  | 6           | Per-block negate (modes 10/11), same as PE.                         |
 | `sel_shift_i[2:0]`       | in  | 1 each      | Per-level shift enable.                                             |
-| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save taps at every level.                                     |
+| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save `−β` taps (one's-complemented) at every level.           |
 
 ## Instantiation
 

@@ -2,6 +2,12 @@
 
 Change history for the AI-Core wiki — newest first. Entries follow OKF: grouped by ISO-8601 date, each line `**[Action]**: description`.
 
+## 2026-07-16 (later)
+
+- **[Update]**: The α/β generators now **emit `−α` / `−β`** — [pe_array_alpha_sqr](modules/pe_array_alpha_sqr.md) / [pe_array_beta_sqr](modules/pe_array_beta_sqr.md) one's-complement every output tap (`~tap = −tap−2`), so the square accumulator is **fully additive** (`PE + (−α) + (−β) + C`, no subtractor). The complement is amortized in the 16 shared generators instead of the 64 per-PE accumulators; the deferred `−2` per operand is the `+4` folded into `const_sqr`. The 6 block-`comp_n` are unchanged (complex σ sign). Re-verified: [tb_pe_array_alpha_sqr](testbenches/tb_pe_array_alpha_sqr.md) / [tb_pe_array_beta_sqr](testbenches/tb_pe_array_beta_sqr.md) goldens now check `−(tree)−2` at the read tap — all 11 modes × 200, `-Wall` clean.
+- **[Creation]**: Added [const_sqr](modules/const_sqr.md) — the per-mode `C` LUT for `½(PE − α − β + C)`, addressed by the 4-bit mode. Folds the centering constant `C_real`, the α/β-complement `+4` (every output), and the block-negate `−2N` (negated Re outputs of modes 10/11). Emits `c_o = C_real+4` (positive/Im) and signed `c_neg_o = 4−2N` (Re); both are the value the accumulator **adds**.
+- **[Update]**: `index.md` — added `const_sqr` (Modules); noted the `−α`/`−β` emission on the α/β generator entries.
+
 ## 2026-07-16
 
 - **[Creation]**: Square variant — the α/β correction generators. Added [pe_array_alpha_sqr](modules/pe_array_alpha_sqr.md) (per-row, A-only) and [pe_array_beta_sqr](modules/pe_array_beta_sqr.md) (per-column, B-only): each is [pe_array_sqr](modules/pe_array_sqr.md) with one operand removed and the DP8 core swapped, reducing the per-DP8 α/β square-sums through the *same* tree `L(·)` as the PE (so `Result = ½(PE − α − β + C)` is exact) — identical crossed tree, `comp_n` block-negate, widths (18/26/30/38/39) and taps (19/30/38/39). Verified with [tb_pe_array_alpha_sqr](testbenches/tb_pe_array_alpha_sqr.md) / [tb_pe_array_beta_sqr](testbenches/tb_pe_array_beta_sqr.md) through the real dispatchers — golden α/β square-sum + block negate + crossed weighted tree vs each read-level tap, all 11 modes × 200 corner-biased, 0 mismatches, `-Wall` clean.

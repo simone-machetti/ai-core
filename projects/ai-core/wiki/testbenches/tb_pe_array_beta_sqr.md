@@ -32,7 +32,7 @@ The golden reads the **dispatched** (centered) `b_dp8` off the DUT and applies t
 BETA_DP8 = Σ_k 16·(B_k − 8·au)² + (idle ? 0 : (B_k − 8))²        au = ~is_signed_a
 ```
 
-where the high block is `is_signed_a ? B_k : B_k − 8` (mirroring `gate_n_sqr`) and the low block is `zero ? 0 : B_k − 8` (mirroring `gate_n_beta_sqr` — the **fixed** `−8` with idle-zero). Then the same block-negate (`negd ? −BETA_DP8−2 : BETA_DP8`), the crossed 4-level weighted tree, and `resolve_tap` at `TAP_LEVEL[mode]`. Mode tables are copied from [tb_pe_array_sqr](./tb_pe_array_sqr.md); the A side is dropped.
+where the high block is `is_signed_a ? B_k : B_k − 8` (mirroring `gate_n_sqr`) and the low block is `zero ? 0 : B_k − 8` (mirroring `gate_n_beta_sqr` — the **fixed** `−8` with idle-zero). Then the same block-negate (`negd ? −BETA_DP8−2 : BETA_DP8`), the crossed 4-level weighted tree, and `resolve_tap` at `TAP_LEVEL[mode]`. Because the array emits **`−β`** (its taps are one's-complemented), the golden compares each read tap against `−(weighted tree) − 2`, not the plain sum. Mode tables are copied from [tb_pe_array_sqr](./tb_pe_array_sqr.md); the A side is dropped.
 
 **Idle** DP8s (modes 5/6): the low block's fixed `−8` is killed by `zero_i` and the high block self-cleans via `is_signed_a = 1`, so `BETA_DP8 = 0` — this exercises the β-specific idle-leak fix.
 

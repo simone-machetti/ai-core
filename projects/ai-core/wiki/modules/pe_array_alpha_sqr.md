@@ -8,18 +8,22 @@ It reduces the 16 per-DP8 alpha square-sums `ALPHA_DP8` through the **same** lin
 
 Everything below the DP8 leaves is byte-identical to [pe_array_sqr](./pe_array_sqr.md): the crossed L0 pairing (`CX0 = 4·(n/2)+n%2`, `CX1 = CX0+2`), the 6 [comp_n](./comp_n.md) block-negates on L0 nodes 0–5, the unsigned L0-hi `shift_n`, the single L0 register, and the tap slicing. α's blocks carry the **same** `neg` as the PE — a negated block resolves to `−ALPHA_DP8−2`, the deferred `+2` folding into `acc_array_sqr`'s `C`.
 
+## Output — emits `−α`
+
+The output taps are **one's-complemented** (`~l*_sum_o` / `~l*_carry_o`, all four levels), so the module emits **`−α`**: each carry-save tap pair resolves to `−α_tap − 2`. This lets the accumulator just **add** the α term instead of subtracting it — the whole square accumulator is then a pure carry-save sum `PE + (−α) + (−β) + C`, with **no subtractor**. The complement is done **once here** (shared by the row's 8 PEs) rather than in each of the 64 accumulators. The deferred `−2` per operand (one for α, one for β) is the `+4` folded into [const_sqr](./const_sqr.md)'s `C`. The 6 block-`comp_n` are unchanged — they still give α the complex σ sign inside the tree; the output `~` then negates the whole (correctly-signed) result.
+
 ## Interface
 
 Same as [pe_array_sqr](./pe_array_sqr.md), except `b_dp8_i` is **dropped** and a per-DP8 `is_signed_b_i` is **added**:
 
-| Signal                   | Dir | Width       | Description                                         |
-| ------------------------ | --- | ----------- | --------------------------------------------------- |
-| `clk_i` / `rst_ni`       | in  | 1           | Clock / async active-low reset.                     |
-| `a_dp8_i[0:15]`          | in  | 64 each     | Pre-centered A per DP8, from `disp_array_a_sqr`.    |
-| `is_signed_b_i[0:15]`    | in  | 1 each      | **NEW** — removed-B signedness (drives the α bias). |
-| `neg_i[5:0]`             | in  | 6           | Per-block negate (modes 10/11), same as PE.         |
-| `sel_shift_i[2:0]`       | in  | 1 each      | Per-level shift enable.                             |
-| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save taps at every level.                     |
+| Signal                   | Dir | Width       | Description                                               |
+| ------------------------ | --- | ----------- | --------------------------------------------------------- |
+| `clk_i` / `rst_ni`       | in  | 1           | Clock / async active-low reset.                           |
+| `a_dp8_i[0:15]`          | in  | 64 each     | Pre-centered A per DP8, from `disp_array_a_sqr`.          |
+| `is_signed_b_i[0:15]`    | in  | 1 each      | **NEW** — removed-B signedness (drives the α bias).       |
+| `neg_i[5:0]`             | in  | 6           | Per-block negate (modes 10/11), same as PE.               |
+| `sel_shift_i[2:0]`       | in  | 1 each      | Per-level shift enable.                                   |
+| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save `−α` taps (one's-complemented) at every level. |
 
 ## Instantiation
 
