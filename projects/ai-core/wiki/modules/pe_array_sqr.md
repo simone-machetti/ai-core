@@ -13,16 +13,16 @@ Each [dp_8_sqr](./dp_8_sqr.md) produces one length-8 **square-sum** `S_DP8` in 1
 
 None — fixed to the PE configuration; the shape is baked in as `localparam`s. The key ones (contrast with [pe_array](./pe_array.md)):
 
-| Localparam                    | Value             | Meaning                                                          |
-| ----------------------------- | ----------------- | ---------------------------------------------------------------- |
-| `NUM_DP8`                     | 16                | `dp_8_sqr` cores driving the tree.                               |
-| `NUM_L0`/`NUM_L1`/`NUM_L2`    | 8 / 4 / 2         | node count at L0/L1/L2 (L3 is a single node).                    |
-| `NUM_NEG`                     | 6                 | `comp_n` block-negate gates (one per L0 node 0–5).               |
-| `DP8_WIDTH`                   | 18                | each `dp_8_sqr` carry-save row width (unsigned square-sum).      |
-| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8         | per-level left-shift amount (L0/L1/L2; L3 has no shift).         |
-| `L3_EXT`                      | 1                 | extra guard growth at L3 (the merge without a shift).            |
-| `L0_WIDTH`…`L3_WIDTH`         | 26 / 30 / 38 / 39 | internal node width at each level (what feeds the next level).   |
-| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 19 / 30 / 38 / 39 | tap width exported to the accumulator at each level.             |
+| Localparam                    | Value             | Meaning                                                        |
+| ----------------------------- | ----------------- | -------------------------------------------------------------- |
+| `NUM_DP8`                     | 16                | `dp_8_sqr` cores driving the tree.                             |
+| `NUM_L0`/`NUM_L1`/`NUM_L2`    | 8 / 4 / 2         | node count at L0/L1/L2 (L3 is a single node).                  |
+| `NUM_NEG`                     | 6                 | `comp_n` block-negate gates (one per L0 node 0–5).             |
+| `DP8_WIDTH`                   | 18                | each `dp_8_sqr` carry-save row width (unsigned square-sum).    |
+| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8         | per-level left-shift amount (L0/L1/L2; L3 has no shift).       |
+| `L3_EXT`                      | 1                 | extra guard growth at L3 (the merge without a shift).          |
+| `L0_WIDTH`…`L3_WIDTH`         | 26 / 30 / 38 / 39 | internal node width at each level (what feeds the next level). |
+| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 19 / 30 / 38 / 39 | tap width exported to the accumulator at each level.           |
 
 Signedness: everything runs signed (`IS_SIGNED = 1'b1`) **except the L0 `shift_n`** — see [Signedness](#signedness-l0-hi-is-unsigned). Every `cpr_w_n` runs `EXT = 0` except L3, which runs `EXT = L3_EXT = 1`.
 
@@ -78,11 +78,11 @@ end
 
 Nodes 6 and 7 have no `comp_n` (their DP8s are never negated), which is why `neg_i` is **6 bits, not 16** — one per possibly-negated node, not one per DP8. Complementing both rows makes the pair resolve to `−S_DP8 − 2`; the tree sign-extends `~S_DP8` to `−S_DP8 − 1` per row and the deferred `+2` per block rides into `acc_array_sqr`'s `C`. `neg_i[n]` maps directly onto the `comp_n` of L0 node `n`.
 
-| Mode | `neg_i[5:0]` | Negated L0 nodes → DP8s        |
-| ---- | ------------ | ------------------------------ |
-| 10   | `110011`     | 0,1,4,5 → DP8 2,3,10,11        |
-| 11   | `001111`     | 0,1,2,3 → DP8 2,3,6,7          |
-| all others | `000000` | none                          |
+| Mode       | `neg_i[5:0]` | Negated L0 nodes → DP8s |
+| ---------- | ------------ | ----------------------- |
+| 10         | `110011`     | 0,1,4,5 → DP8 2,3,10,11 |
+| 11         | `001111`     | 0,1,2,3 → DP8 2,3,6,7   |
+| all others | `000000`     | none                    |
 
 Mode 12 (`C16C16`) does **not** appear here: its Im-part negation is done in software by the caller (it stores `−b_im`), so no hardware negate — see [square_imp.md](../../doc/formulas/square/square_imp.md) §4.
 

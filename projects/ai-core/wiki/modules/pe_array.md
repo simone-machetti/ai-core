@@ -29,8 +29,8 @@ Every `cpr_w_n` in the tree runs with `EXT = 0` — the DP8's 4 guard bits are h
 | `rst_ni`                     | in  | 1       | Asynchronous active-low reset.                                          |
 | `a_dp8_i[0:15]`              | in  | 64 each | A operand per DP8 (8 × int8), from `disp_array`.                        |
 | `b_dp8_i[0:15]`              | in  | 32 each | B operand per DP8 (8 × int4), from `disp_array`.                        |
-| `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 multiplicand signedness, from `ctrl`.                          |
-| `is_signed_b_i[0:15]`        | in  | 1 each  | Per-DP8 multiplier signedness, from `ctrl`.                            |
+| `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 multiplicand signedness, from `ctrl`.                           |
+| `is_signed_b_i[0:15]`        | in  | 1 each  | Per-DP8 multiplier signedness, from `ctrl`.                             |
 | `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`. |
 | `l0_sum_o`/`l0_carry_o[0:7]` | out | 18 each | L0 taps (carry-save).                                                   |
 | `l1_sum_o`/`l1_carry_o[0:3]` | out | 29 each | L1 taps.                                                                |

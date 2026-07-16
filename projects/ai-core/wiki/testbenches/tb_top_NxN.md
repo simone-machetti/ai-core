@@ -23,11 +23,11 @@ Larger arrays cost far more to build, so bump `N` deliberately (e.g. `PARAMS="N=
 ## What it checks
 
 | Aspect       | Detail                                                                                                                       |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Fan-out      | distinct A per row, B per col; every PE must equal `golden(A[row] · B[col])`, so a mis-routed operand mismatches            |
-| Modes        | all 11 (8 real + 3 complex), selected through the shared `mode`                                                             |
-| One-shot     | `sel_acc = 0`, `acc = 0`, all enabled; each PE `out_q == golden(A[r]·B[c])`                                                 |
-| Accumulation | per-PE seed via `acc`, shared `sel_acc` runs `NUM_ACC` iterations; `out_q == seed + NUM_ACC · golden`                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Fan-out      | distinct A per row, B per col; every PE must equal `golden(A[row] · B[col])`, so a mis-routed operand mismatches             |
+| Modes        | all 11 (8 real + 3 complex), selected through the shared `mode`                                                              |
+| One-shot     | `sel_acc = 0`, `acc = 0`, all enabled; each PE `out_q == golden(A[r]·B[c])`                                                  |
+| Accumulation | per-PE seed via `acc`, shared `sel_acc` runs `NUM_ACC` iterations; `out_q == seed + NUM_ACC · golden`                        |
 | Scaling      | enable every `nr × nc` top-left rectangle (`1 ≤ nr,nc ≤ N`); enabled PEs compute golden while disabled ones stay held at `0` |
 
 ## How it checks

@@ -8,18 +8,18 @@ The square variant drops the complex-mode negate from the B dispatcher (`gate_b_
 
 ## Parameters
 
-| Parameter | Default | Description                                |
-| --------- | ------- | ------------------------------------------ |
-| `WIDTH`   | `8`     | Bit width of each word.                    |
-| `SIZE`    | `2`     | Number of words (all share `neg_i`).       |
+| Parameter | Default | Description                          |
+| --------- | ------- | ------------------------------------ |
+| `WIDTH`   | `8`     | Bit width of each word.              |
+| `SIZE`    | `2`     | Number of words (all share `neg_i`). |
 
 ## Interface
 
-| Signal          | Dir | Width        | Description                                       |
-| --------------- | --- | ------------ | ------------------------------------------------- |
-| `in_i[0:SIZE-1]`  | in  | `WIDTH` each | Input words.                                      |
-| `neg_i`         | in  | 1            | Shared select: `1` = complement, `0` = pass.      |
-| `out_o[0:SIZE-1]` | out | `WIDTH` each | `neg_i ? ~in_i : in_i`, per word.                 |
+| Signal            | Dir | Width        | Description                                  |
+| ----------------- | --- | ------------ | -------------------------------------------- |
+| `in_i[0:SIZE-1]`  | in  | `WIDTH` each | Input words.                                 |
+| `neg_i`           | in  | 1            | Shared select: `1` = complement, `0` = pass. |
+| `out_o[0:SIZE-1]` | out | `WIDTH` each | `neg_i ? ~in_i : in_i`, per word.            |
 
 ## Instantiation
 

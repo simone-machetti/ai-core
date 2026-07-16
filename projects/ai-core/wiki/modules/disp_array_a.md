@@ -10,24 +10,24 @@ The A and B operand paths are fully independent, so the old unified dispatch arr
 
 **None — fixed to the PE configuration.** All sizing is `localparam`. The key locals:
 
-| Localparam    | Value | Meaning                                       |
-| ------------- | ----- | --------------------------------------------- |
-| `NUM_BLK`     | 4     | 64-bit blocks per 256-bit operand.            |
-| `BLK_WIDTH`   | 64    | Bit width of one operand block.               |
-| `NUM_PAIR`    | 8     | DP8 pairs (each pair = two adjacent DP8s).    |
-| `NUM_DP8`     | 16    | Total DP8 cores (`2 × NUM_PAIR`).             |
-| `SEL_WIDTH`   | 2     | Block-select width, `$clog2(NUM_BLK)`.        |
-| `A_DP8_WIDTH` | 64    | A operand per DP8 (`= BLK_WIDTH`, 8 × int8).  |
+| Localparam    | Value | Meaning                                      |
+| ------------- | ----- | -------------------------------------------- |
+| `NUM_BLK`     | 4     | 64-bit blocks per 256-bit operand.           |
+| `BLK_WIDTH`   | 64    | Bit width of one operand block.              |
+| `NUM_PAIR`    | 8     | DP8 pairs (each pair = two adjacent DP8s).   |
+| `NUM_DP8`     | 16    | Total DP8 cores (`2 × NUM_PAIR`).            |
+| `SEL_WIDTH`   | 2     | Block-select width, `$clog2(NUM_BLK)`.       |
+| `A_DP8_WIDTH` | 64    | A operand per DP8 (`= BLK_WIDTH`, 8 × int8). |
 
 ## Interface
 
-| Signal          | Dir | Width   | Description                                                   |
-| --------------- | --- | ------- | ------------------------------------------------------------- |
-| `clk_i`         | in  | 1       | Clock (gated per row by the row's ICG).                       |
-| `rst_ni`        | in  | 1       | Asynchronous active-low reset.                                |
+| Signal          | Dir | Width   | Description                                                               |
+| --------------- | --- | ------- | ------------------------------------------------------------------------- |
+| `clk_i`         | in  | 1       | Clock (gated per row by the row's ICG).                                   |
+| `rst_ni`        | in  | 1       | Asynchronous active-low reset.                                            |
 | `pe_in_a_i`     | in  | 256     | Operand A for this row — four 64-bit blocks (block `b` = `[b*64 +: 64]`). |
-| `sel_a_i[0:7]`  | in  | 2 each  | Per-pair A-block select (4→1), from `ctrl`.                    |
-| `a_dp8_o[0:15]` | out | 64 each | A operand per DP8 (8 × int8), broadcast to the row's PEs.      |
+| `sel_a_i[0:7]`  | in  | 2 each  | Per-pair A-block select (4→1), from `ctrl`.                               |
+| `a_dp8_o[0:15]` | out | 64 each | A operand per DP8 (8 × int8), broadcast to the row's PEs.                 |
 
 ## Instantiation
 

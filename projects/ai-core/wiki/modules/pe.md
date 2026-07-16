@@ -12,32 +12,32 @@ The PE is fed by the shared dispatch (broadcast to the whole row/column) and com
 
 None — fixed to the PE configuration; the shape is baked in as `localparam`s. The key ones:
 
-| Localparam                    | Value             | Meaning                                    |
-| ----------------------------- | ----------------- | ------------------------------------------ |
-| `NUM_DP8`                     | 16                | DP8 cores driving the tree.                |
-| `A_DP8_WIDTH`/`B_DP8_WIDTH`   | 64 / 32           | Dispatched A / B operand per DP8.          |
-| `NUM_LANE`                    | 8                 | Output lanes.                              |
-| `PE_WIDTH`                    | 20                | Per-lane / `acc_i` / `out_o` width.        |
-| `NUM_SHIFT`                   | 3                 | Tree shift-enable bits.                    |
-| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18 / 29 / 37 / 38 | `pe_array` tap widths.                     |
+| Localparam                    | Value             | Meaning                             |
+| ----------------------------- | ----------------- | ----------------------------------- |
+| `NUM_DP8`                     | 16                | DP8 cores driving the tree.         |
+| `A_DP8_WIDTH`/`B_DP8_WIDTH`   | 64 / 32           | Dispatched A / B operand per DP8.   |
+| `NUM_LANE`                    | 8                 | Output lanes.                       |
+| `PE_WIDTH`                    | 20                | Per-lane / `acc_i` / `out_o` width. |
+| `NUM_SHIFT`                   | 3                 | Tree shift-enable bits.             |
+| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18 / 29 / 37 / 38 | `pe_array` tap widths.              |
 
 ## Interface
 
-| Signal                | Dir | Width   | Description                                                    |
-| --------------------- | --- | ------- | -------------------------------------------------------------- |
-| `clk_i`               | in  | 1       | Clock (gated per PE by that PE's ICG).                         |
-| `rst_ni`              | in  | 1       | Asynchronous active-low reset (ungated).                       |
-| `a_dp8_i[0:15]`       | in  | 64 each | Dispatched A per DP8, from the row's `disp_array_a`.           |
-| `b_dp8_i[0:15]`       | in  | 32 each | Dispatched B per DP8, from the column's `disp_array_b`.        |
+| Signal                | Dir | Width   | Description                                                                       |
+| --------------------- | --- | ------- | --------------------------------------------------------------------------------- |
+| `clk_i`               | in  | 1       | Clock (gated per PE by that PE's ICG).                                            |
+| `rst_ni`              | in  | 1       | Asynchronous active-low reset (ungated).                                          |
+| `a_dp8_i[0:15]`       | in  | 64 each | Dispatched A per DP8, from the row's `disp_array_a`.                              |
+| `b_dp8_i[0:15]`       | in  | 32 each | Dispatched B per DP8, from the column's `disp_array_b`.                           |
 | `en_i`                | in  | 1       | Active-high PE enable — AND-masks both operands; also gates the clock externally. |
-| `is_signed_a_i[0:15]` | in  | 1 each  | Per-DP8 A signedness, from `ctrl`.                            |
-| `is_signed_b_i[0:15]` | in  | 1 each  | Per-DP8 B signedness, from `ctrl`.                            |
-| `sel_shift_i`         | in  | 3       | Tree shift enables, from `ctrl`.                             |
-| `acc_i[0:7]`          | in  | 20 each | External accumulator word (per PE) — pipelined here.          |
-| `sel_out_i`           | in  | 2       | Tap-level select (already registered in `ctrl`).            |
-| `sel_acc_i`           | in  | 1       | Accumulate select (already pipelined in the grid).          |
-| `prop_carry_i`        | in  | 1       | Lane-fusion carry enable (already registered in `ctrl`).    |
-| `out_o[0:7]`          | out | 20 each | Per-lane results; a fused result is `{out[even], out[odd]}`.  |
+| `is_signed_a_i[0:15]` | in  | 1 each  | Per-DP8 A signedness, from `ctrl`.                                                |
+| `is_signed_b_i[0:15]` | in  | 1 each  | Per-DP8 B signedness, from `ctrl`.                                                |
+| `sel_shift_i`         | in  | 3       | Tree shift enables, from `ctrl`.                                                  |
+| `acc_i[0:7]`          | in  | 20 each | External accumulator word (per PE) — pipelined here.                              |
+| `sel_out_i`           | in  | 2       | Tap-level select (already registered in `ctrl`).                                  |
+| `sel_acc_i`           | in  | 1       | Accumulate select (already pipelined in the grid).                                |
+| `prop_carry_i`        | in  | 1       | Lane-fusion carry enable (already registered in `ctrl`).                          |
+| `out_o[0:7]`          | out | 20 each | Per-lane results; a fused result is `{out[even], out[odd]}`.                      |
 
 ## Instantiation
 

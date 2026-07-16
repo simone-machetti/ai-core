@@ -8,9 +8,9 @@ This gate verifies the **tree** — weights, crossed pairing, the relocated nega
 
 ## Parameters
 
-| Parameter  | Default | Description                          |
-| ---------- | ------- | ------------------------------------ |
-| `NUM_RAND` | `200`   | Random operand vectors per mode.     |
+| Parameter  | Default | Description                      |
+| ---------- | ------- | -------------------------------- |
+| `NUM_RAND` | `200`   | Random operand vectors per mode. |
 
 ## Run
 

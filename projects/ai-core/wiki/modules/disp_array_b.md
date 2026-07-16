@@ -32,7 +32,7 @@ The A and B operand paths are fully independent, so the old unified dispatch arr
 | `sel_b_i[0:7]`  | in  | 2 each  | Per-pair B-block select (4→1), from `ctrl`.                                          |
 | `ctr_l_i[0:7]`  | in  | 2 each  | Odd-DP8 (`2p+1`, low L) B-gate op: `0` pass, `1` zero, `2` negate, `3` negate-carry. |
 | `ctr_h_i[0:7]`  | in  | 2 each  | Even-DP8 (`2p`, high H) B-gate op: `0` pass, `1` zero, `2` negate, `3` negate-carry. |
-| `b_dp8_o[0:15]` | out | 32 each | B operand per DP8 (8 × int4), broadcast to the column's PEs.                          |
+| `b_dp8_o[0:15]` | out | 32 each | B operand per DP8 (8 × int4), broadcast to the column's PEs.                         |
 
 ## Instantiation
 
