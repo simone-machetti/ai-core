@@ -244,7 +244,6 @@ module tb_pe_array_beta_sqr #(
         lvl = TAP_LEVEL[mi];
         for (int node = 0; node < (1 << (3-lvl)); node++) begin
             got = resolve_tap(lvl, node);
-            // taps are one's-complemented (module emits -beta): read = -tree - 2
             case (lvl)
                 0:       exp = -l0e[node] - 2;
                 1:       exp = -l1e[node] - 2;

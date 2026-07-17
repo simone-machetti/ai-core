@@ -224,9 +224,6 @@ module pe_array_beta_sqr #(
         .in_i(l3_cpr_in), .sum_o(l3_sum_w), .carry_o(l3_carry_w)
     );
 
-    // Emit -beta: one's-complement every output tap (~b_sum, ~b_carry resolve to
-    // -beta_tap - 2). The accumulator then just ADDS this (never subtracts); the
-    // deferred -2 per operand is the +4 already folded into const_sqr.
     generate
         for (n = 0; n < NUM_L0; n++) begin : gen_l0_tap
             assign l0_sum_o[n]   = ~l0_sum_q[n][L0_TAP_WIDTH-1:0];

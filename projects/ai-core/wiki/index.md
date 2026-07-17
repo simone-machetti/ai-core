@@ -22,6 +22,7 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [PE Array Beta (Square)](modules/pe_array_beta_sqr.md) — `pe_array_beta_sqr`: per-column B-only correction generator — `pe_array_sqr` with `dp_8_beta_sqr` cores (A dropped, `+is_signed_a`/`zero`); same tree/widths/taps. Emits `−β` (one's-complemented taps).
 * [Constant LUT (Square)](modules/const_sqr.md) — `const_sqr`: per-mode `C` for `½(PE − α − β + C)` — folds centering `C_real`, the α/β-complement `+4`, and the block-negate `−2N`; makes the accumulator fully additive.
 * [Accumulator Array](modules/acc_array.md) — `acc_array`: 8 lanes that resolve a tap, accumulate, and fuse lane pairs into 40-bit results.
+* [Accumulator Array (Square)](modules/acc_array_sqr.md) — `acc_array_sqr`: all-additive resolve `½(PE − α − β + C)` — triple tap mux + acc-mux `<<1` + const mux (`RH=sign(RL)`) → CPR 8:2 → `add_n` → `÷2` (`>>1` + `H→L` cross-bit). No subtractor; native-unit `acc_i`, true-value register.
 * [Dot Product 8](modules/dp_8.md) — `dp_8`: eight int8×int4 MACs, per-operand signedness, 20-bit sign-consistent carry-save output.
 * [Dot Product 8 (Square)](modules/dp_8_sqr.md) — `dp_8_sqr`: square-variant DP8 — add-then-square (16× `s_5_bit_sqr`) over pre-centered nibbles, 18-bit unsigned carry-save square-sum; drop-in for `dp_8`.
 * [Dot Product 8 Alpha (Square)](modules/dp_8_alpha_sqr.md) — `dp_8_alpha_sqr`: A-only α square-sum — `dp_8_sqr` with B removed, the removed-B `−8` injected by two `gate_n_sqr` banks; 18-bit carry-save.
@@ -54,6 +55,7 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [tb_pe_array_alpha_sqr](testbenches/tb_pe_array_alpha_sqr.md) — `disp_a_sqr → pe_array_alpha_sqr`: golden α square-sum (removed-B `−8` bias) + block negate + tree vs each tap, all 11 modes.
 * [tb_pe_array_beta_sqr](testbenches/tb_pe_array_beta_sqr.md) — `disp_b_sqr → pe_array_beta_sqr`: golden β square-sum (high `−8·au` / low fixed `−8` + idle-zero) + block negate + tree vs each tap, all 11 modes.
 * [tb_acc_array](testbenches/tb_acc_array.md) — `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
+* [tb_acc_array_sqr](testbenches/tb_acc_array_sqr.md) — whole square path (`disp → pe∥α∥β → const → acc`) as an equivalence oracle: `pe_out` == baseline matmul, all 11 modes × 2000, single-shot + accumulation, 0 mismatches.
 * [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand from `disp_array_a`/`disp_array_b` vs a golden router model, all 11 modes.
 * [tb_disp_array_sqr](testbenches/tb_disp_array_sqr.md) — square dispatchers vs a golden route + center + idle-zero model, all 11 modes.
 * [tb_dp_8](testbenches/tb_dp_8.md) — resolve + sign-consistency of the carry-save dot product, all signedness combos.
