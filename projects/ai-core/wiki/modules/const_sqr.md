@@ -47,11 +47,7 @@ Invalid mode addresses return 0 on both outputs. Mode 12's `c_neg_o = +4` is emi
 
 ## Parameters
 
-| Parameter    | Default | Description                                            |
-| ------------ | ------- | ------------------------------------------------------ |
-| `MODE_WIDTH` | `4`     | Mode address width.                                    |
-| `C_WIDTH`    | `32`    | Positive-constant width (holds the widest `C_real+4`). |
-| `CNEG_WIDTH` | `8`     | Signed Re-constant width (holds `−64 … +4`).           |
+None — fixed to the mode-constant LUT (the mode addresses and constants are hardcoded, so the widths are not overridable). The interface widths are `localparam`s: `MODE_WIDTH = 4` (mode address), `C_WIDTH = 32` (positive constant, holds the widest `C_real + 4`), `CNEG_WIDTH = 8` (signed Re constant, holds `−64 … +4`).
 
 ## Notes
 

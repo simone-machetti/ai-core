@@ -46,7 +46,7 @@
 //   the negated (Re) outputs; both are the final constant, added, never
 //   subtracted. Invalid mode addresses return 0 on both.
 //
-// Parameters:
+// Local parameters (fixed - the mode addresses and constants are hardcoded):
 //   MODE_WIDTH - mode address width (4)
 //   C_WIDTH    - positive-constant width (32, holds the widest C_real + 4)
 //   CNEG_WIDTH - signed Re-constant width (8 bits hold -64..+4)
@@ -55,9 +55,9 @@
 `timescale 1 ns/1 ps
 
 module const_sqr #(
-    parameter int MODE_WIDTH = 4,
-    parameter int C_WIDTH    = 32,
-    parameter int CNEG_WIDTH = 8
+    localparam int MODE_WIDTH = 4,
+    localparam int C_WIDTH    = 32,
+    localparam int CNEG_WIDTH = 8
 )(
     input  logic        [MODE_WIDTH-1:0] mode_i,
     output logic        [   C_WIDTH-1:0] c_o,
