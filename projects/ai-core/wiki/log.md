@@ -2,6 +2,17 @@
 
 Change history for the AI-Core wiki — newest first. Entries follow OKF: grouped by ISO-8601 date, each line `**[Action]**: description`.
 
+## 2026-07-19
+
+- **[Update]**: [top_NxN_sqr](architectures/top_NxN_sqr.md) — rebalanced the shared `const_sqr` pipeline: register the 4-bit `mode` **once ahead** of `const_sqr` and its `c`/`c_neg` outputs **once after**, instead of registering the wide outputs twice. Same two-register delay to the acc-stage tap, one `reg_n` fewer (44 flops vs 80: a 4-bit mode register replaces a second copy of the 32+8-bit outputs). Re-verified `tb_top_NxN_sqr` — 11/11 streaming, 0 mismatches, `-Wall` clean.
+
+## 2026-07-18
+
+- **[Update]**: Rewrote both grid testbenches — [tb_top_NxN](testbenches/tb_top_NxN.md) and [tb_top_NxN_sqr](testbenches/tb_top_NxN_sqr.md) — for **full-throughput streaming**: a fresh operand is driven into every row/column on every clock (like a real application), and each PE `out_q` is checked against a golden delayed by `D = LAT−1 = 2` via a depth-`(LAT+2)` ring buffer. Three streaming passes: single-shot, accumulation as a real K-tile matmul (`seed + Σ` of `NUM_ACC` **distinct** streamed tiles, `sel_acc` feeding back), and rectangle scaling. The two benches are byte-identical apart from the DUT, module/`$dumpvars` names and display strings (`reset_dut` clean deassertion kept in both), so bas ≡ sqr stays provable against the identical neutral matmul. Both N=2, all 11 modes × 3 passes, **0 mismatches**, `-Wall` clean — the square result proves the shared −α/−β generator pipelines stay aligned with each PE's product cycle-by-cycle at full throughput. (The old held-operand benches were renamed `*_old` for removal.)
+- **[Creation]**: Added the **square grid** (Gate 6) — [top_NxN_sqr](architectures/top_NxN_sqr.md) (the `top_NxN` analogue: `ctrl_sqr` + shared `const_sqr` registered ×2 + per-row `{disp_a_sqr + α gen}` + per-col `{disp_b_sqr + β gen}` + N² `pe_sqr` + `icg`), [pe_sqr](modules/pe_sqr.md) (square PE core: `pe_array_sqr` + `acc_array_sqr` + 2 acc regs, `en_i` masks A/B/`−α`/`−β`), and [ctrl_sqr](modules/ctrl_sqr.md) (square mode decoder, drops `ctr_l`/`ctr_h`, adds `zero`/`neg`/`sel_const`). α/β generators share the row/column clock-gate.
+- **[Creation]**: Added [tb_top_NxN_sqr](testbenches/tb_top_NxN_sqr.md) — the baseline `tb_top_NxN` reused verbatim (square grid is bit-exact and shares the interface). All 11 modes × 3 passes (one-shot, accumulation, rectangle scaling), N=2, **0 mismatches**, `-Wall` clean. Needed a clean reset deassertion (off the clock edge): a gated square PE otherwise latches the `½(0−2−2)=−2` pipeline-empty transient (α/β emit `~0=−2`).
+- **[Update]**: `index.md` — added `top_NxN_sqr` (Architectures), `pe_sqr` / `ctrl_sqr` (Modules), `tb_top_NxN_sqr` (Testbenches).
+
 ## 2026-07-16 (later)
 
 - **[Creation]**: Added [acc_array_sqr](modules/acc_array_sqr.md) — the square accumulator: all-additive resolve `½(PE − α − β + C)`. Per lane a triple tap mux (PE/`−α`/`−β`), an acc mux with a `<<1` on its output (native-unit `acc_i`, true-value register, no accumulation decay), a const mux from [const_sqr](modules/const_sqr.md) with `RH=sign(RL)`, then CPR 8:2 → `add_n` → arithmetic `>>1` (`÷2`) with an `H→L` cross-lane bit. No subtractor/carry-in; same 3 pipeline stages as the baseline (PE/α/β in parallel).

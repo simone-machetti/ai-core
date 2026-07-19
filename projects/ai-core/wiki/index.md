@@ -7,11 +7,14 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 ## Architectures
 
 * [PE Grid (baseline)](architectures/top_NxN.md) — `top_NxN`: baseline `N × N` grid of `pe` cores with one shared `ctrl` and per-row/per-column dispatch (`disp_array_a`/`disp_array_b`); row/column enables (`en_row`/`en_col`) scale the active region to any `rows × cols` rectangle; default 2×2, chip 8×8, single PE = N=1.
+* [PE Grid (square)](architectures/top_NxN_sqr.md) — `top_NxN_sqr`: the square `N × N` grid — `ctrl_sqr` + shared `const_sqr` + per-row `{disp_a_sqr + α gen}` + per-col `{disp_b_sqr + β gen}` + N² `pe_sqr` + `icg`. Same interface/behaviour as `top_NxN`; α/β generators share the row/col clock-gate. Verified bit-exact vs `top_NxN` at full streaming throughput (single-shot + accumulate + scaling).
 
 ## Modules
 
 * [Processing Element](modules/pe.md) — `pe`: the self-contained per-PE core — `en_i` operand mask + `pe_array` + `acc_array` + the two acc pipeline registers.
 * [Control](modules/ctrl.md) — `ctrl`: shared grid-wide mode decoder + control pipeline — one instance for the whole grid, a lookup table mapping `mode_i` to every datapath control.
+* [Processing Element (square)](modules/pe_sqr.md) — `pe_sqr`: the square PE core — `pe_array_sqr` + `acc_array_sqr` + 2 acc regs; takes the shared `−α`/`−β` taps and `c`/`c_neg` as inputs; `en_i` masks A, B and the tap buses for a fully-quiet gated PE.
+* [Control (square)](modules/ctrl_sqr.md) — `ctrl_sqr`: the square `ctrl` — `mode →` every square control; drops `ctr_l`/`ctr_h`, adds `zero`/`neg`/`sel_const`; mode-5 all-signed.
 * [Dispatch Array A](modules/disp_array_a.md) — `disp_array_a`: A-path dispatch, one per grid row (per-pair 4→1 A-block select, broadcast to the row).
 * [Dispatch Array B](modules/disp_array_b.md) — `disp_array_b`: B-path dispatch, one per grid column (4→1 B-block select + high/low split + B-gate, broadcast to the column).
 * [Dispatch Array A (Square)](modules/disp_array_a_sqr.md) — `disp_array_a_sqr`: square A dispatch — routes + centers (per-DP8 `gate_a_n_sqr`) + idle-zeros; `+is_signed_a/zero_i`.
@@ -49,7 +52,8 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 
 ## Testbenches
 
-* [tb_top_NxN](testbenches/tb_top_NxN.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col), all 11 modes, one-shot + accumulate + rectangle scaling via `en_row`/`en_col`; default 2×2.
+* [tb_top_NxN](testbenches/tb_top_NxN.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col) at full pipeline throughput (fresh operand every clock, pipeline-delayed golden), all 11 modes, streaming single-shot + accumulation (`seed + Σ` tiles) + rectangle scaling via `en_row`/`en_col`; default 2×2.
+* [tb_top_NxN_sqr](testbenches/tb_top_NxN_sqr.md) — the square grid as an equivalence oracle: baseline `tb_top_NxN` streaming bench reused verbatim (bit-exact), full-throughput streaming, all 11 modes × 3 passes, N=2, 0 mismatches.
 * [tb_pe_array](testbenches/tb_pe_array.md) — independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [tb_pe_array_sqr](testbenches/tb_pe_array_sqr.md) — `disp_sqr → pe_array_sqr` tree check: golden square-sum + block negate + crossed weighted reduction vs each read-level tap, all 11 modes, corner-biased.
 * [tb_pe_array_alpha_sqr](testbenches/tb_pe_array_alpha_sqr.md) — `disp_a_sqr → pe_array_alpha_sqr`: golden α square-sum (removed-B `−8` bias) + block negate + tree vs each tap, all 11 modes.

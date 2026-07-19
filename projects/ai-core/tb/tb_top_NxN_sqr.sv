@@ -2,8 +2,10 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Self-checking, full-throughput (streaming) testbench for the N x N PE grid,
-//   top_NxN. Unlike a present-one-operand-then-wait bench, this drives a fresh
+//   Self-checking, full-throughput (streaming) testbench for the square N x N PE
+//   grid, top_NxN_sqr - the top_NxN streaming tb reused verbatim (the square grid
+//   is bit-exact to the multiply grid and shares its interface, so only the DUT
+//   changes). Unlike a present-one-operand-then-wait bench, this drives a fresh
 //   operand into every row/column on every clock, exactly like a real streaming
 //   application, and checks each PE's out_q against a pipeline-delayed golden.
 //   The pipeline latency is LAT clocks; in a loop that drives an operand and
@@ -39,7 +41,7 @@
 
 /* verilator lint_off UNUSEDSIGNAL */
 
-module tb_top_NxN #(
+module tb_top_NxN_sqr #(
     parameter int N                = 2,
     parameter int NUM_STREAM       = 40,
     parameter int NUM_ACC          = 8,
@@ -118,7 +120,7 @@ module tb_top_NxN #(
     int err;
     int npass;
 
-    top_NxN #(.N(N)) dut (
+    top_NxN_sqr #(.N(N)) dut (
         .clk_i     (clk_i),
         .rst_ni    (rst_ni),
         .in_a_i    (in_a),
@@ -372,11 +374,11 @@ module tb_top_NxN #(
     initial begin
         int err0, NOUT, lvl, rn, in, slot, cs;
         longint r;
-        $display("\nStarting top_NxN streaming verification (%0dx%0d PEs, %0d modes, NUM_STREAM=%0d NUM_ACC=%0d)...\n",
+        $display("\nStarting top_NxN_sqr streaming verification (%0dx%0d PEs, %0d modes, NUM_STREAM=%0d NUM_ACC=%0d)...\n",
                  NUM_ROW, NUM_COL, NUM_MODE, NUM_STREAM, NUM_ACC);
 `ifdef VCD
         $dumpfile("activity.vcd");
-        $dumpvars(0, tb_top_NxN.dut.gen_pe_row[0].gen_pe_col[0].pe_i);
+        $dumpvars(0, tb_top_NxN_sqr.dut.gen_pe_row[0].gen_pe_col[0].pe_sqr_i);
 `endif
 
         for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
@@ -518,7 +520,7 @@ module tb_top_NxN #(
 `ifdef VCD
         $dumpoff;
 `endif
-        $display("\ntop_NxN streaming verification: %0d/%0d single-shot modes passed (%0d total mismatches)\n",
+        $display("\ntop_NxN_sqr streaming verification: %0d/%0d single-shot modes passed (%0d total mismatches)\n",
                  npass, NUM_MODE, err);
         $finish;
     end

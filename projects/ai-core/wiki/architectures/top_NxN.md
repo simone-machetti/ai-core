@@ -18,17 +18,17 @@ Derived `localparam`s: `NUM_ROW = NUM_COL = N`, `PE_IN_WIDTH = 256`, `MODE_WIDTH
 
 ## Interface
 
-| Signal                      | Dir | Width    | Description                                          |
-| --------------------------- | --- | -------- | --------------------------------------------------- |
-| `clk_i`, `rst_ni`           | in  | 1        | Clock and asynchronous active-low reset (ungated).  |
-| `in_a_i[0:N-1]`             | in  | 256 each | Operand A, one per row (shared across the row).     |
-| `in_b_i[0:N-1]`             | in  | 256 each | Operand B, one per column (shared down the column). |
-| `mode_i`                    | in  | 4        | Operating mode, broadcast to all PEs.               |
-| `sel_acc_i`                 | in  | 1        | Accumulate select, broadcast to all PEs.            |
-| `acc_i[0:N-1][0:N-1][0:7]`  | in  | 20 each  | External accumulator word, per PE (8 lanes).        |
-| `en_row_i[0:N-1]`           | in  | 1 each   | Active-high row enable — `1` runs the row.          |
-| `en_col_i[0:N-1]`           | in  | 1 each   | Active-high column enable — `1` runs the column.    |
-| `out_q_o[0:N-1][0:N-1][0:7]`| out | 20 each  | Per-PE registered result (8 lanes).                 |
+| Signal                       | Dir | Width    | Description                                         |
+| ---------------------------- | --- | -------- | --------------------------------------------------- |
+| `clk_i`, `rst_ni`            | in  | 1        | Clock and asynchronous active-low reset (ungated).  |
+| `in_a_i[0:N-1]`              | in  | 256 each | Operand A, one per row (shared across the row).     |
+| `in_b_i[0:N-1]`              | in  | 256 each | Operand B, one per column (shared down the column). |
+| `mode_i`                     | in  | 4        | Operating mode, broadcast to all PEs.               |
+| `sel_acc_i`                  | in  | 1        | Accumulate select, broadcast to all PEs.            |
+| `acc_i[0:N-1][0:N-1][0:7]`   | in  | 20 each  | External accumulator word, per PE (8 lanes).        |
+| `en_row_i[0:N-1]`            | in  | 1 each   | Active-high row enable — `1` runs the row.          |
+| `en_col_i[0:N-1]`            | in  | 1 each   | Active-high column enable — `1` runs the column.    |
+| `out_q_o[0:N-1][0:N-1][0:7]` | out | 20 each  | Per-PE registered result (8 lanes).                 |
 
 ## Instantiation
 
@@ -69,6 +69,6 @@ pe  pe_i     (.clk_i(clk_pe), .rst_ni(rst_ni),
 - **ICG count:** N² (one per PE) + N (one per `disp_array_a`) + N (one per `disp_array_b`). `ctrl` and the `sel_acc` pipeline are ungated.
 - **Latency:** each `out_q_o[r][c]` is valid 3 clocks after its operands (the PE pipeline depth).
 
-Verified with [tb_top_NxN](../testbenches/tb_top_NxN.md) at the default 2×2: all 11 modes, one-shot, accumulation, and rectangle scaling (every `enabled_rows × enabled_cols`, disabled PEs held at 0).
+Verified with [tb_top_NxN](../testbenches/tb_top_NxN.md) at the default 2×2, driven at **full pipeline throughput** (a fresh operand every clock, checked against a pipeline-delayed golden): all 11 modes, three streaming passes — single-shot, accumulation (`seed + Σ` of `NUM_ACC` distinct tiles), and rectangle scaling (every `enabled_rows × enabled_cols`, disabled PEs held at 0).
 
 Source: [top_NxN.sv](../../rtl/top_NxN.sv) — Diagram: [top_NxN](../../doc/diagrams/top_NxN.excalidraw)
