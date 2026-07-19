@@ -54,6 +54,7 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 
 * [tb_top_NxN](testbenches/tb_top_NxN.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col) at full pipeline throughput (fresh operand every clock, pipeline-delayed golden), all 11 modes, streaming single-shot + accumulation (`seed + Σ` tiles) + rectangle scaling via `en_row`/`en_col`; default 2×2.
 * [tb_top_NxN_sqr](testbenches/tb_top_NxN_sqr.md) — the square grid as an equivalence oracle: baseline `tb_top_NxN` streaming bench reused verbatim (bit-exact), full-throughput streaming, all 11 modes × 3 passes, N=2, 0 mismatches.
+* [tb_top_NxN_global](testbenches/tb_top_NxN_global.md) — pre-synthesis 3-way equivalence: instantiates **both** `top_NxN` and `top_NxN_sqr`, drives identical streaming inputs, and checks `golden == baseline == square` at every PE (`cmp3` flags `BAS!=GOLD`/`SQR!=GOLD`/`BAS!=SQR`); all 11 modes × 3 passes, N=2, 0 mismatches.
 * [tb_pe_array](testbenches/tb_pe_array.md) — independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [tb_pe_array_sqr](testbenches/tb_pe_array_sqr.md) — `disp_sqr → pe_array_sqr` tree check: golden square-sum + block negate + crossed weighted reduction vs each read-level tap, all 11 modes, corner-biased.
 * [tb_pe_array_alpha_sqr](testbenches/tb_pe_array_alpha_sqr.md) — `disp_a_sqr → pe_array_alpha_sqr`: golden α square-sum (removed-B `−8` bias) + block negate + tree vs each tap, all 11 modes.
