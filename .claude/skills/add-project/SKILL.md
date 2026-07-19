@@ -32,16 +32,16 @@ Create these directories under `projects/<name>/`:
 ```
 rtl/                # SystemVerilog source modules
 tb/                 # Verilator testbenches
-scripts/flow/       # End-to-end automation (one subfolder per experiment) — left empty
+scripts/            # Project-specific scripts (sweeps, generators) — left empty
 doc/diagrams/       # Block diagrams
 doc/formulas/       # Mathematical formulas
-doc/charts/         # Comparison charts (generated)
+doc/charts/         # Charts and their generator scripts (generated)
 doc/data/           # Extracted results (generated)
 ```
 
-Add an empty `.gitkeep` file inside each of `rtl/`, `tb/`, `scripts/flow/`, `doc/diagrams/`, `doc/formulas/`, `doc/charts/`, and `doc/data/` so git tracks the otherwise-empty folders.
+Add an empty `.gitkeep` file inside each of `rtl/`, `tb/`, `scripts/`, `doc/diagrams/`, `doc/formulas/`, `doc/charts/`, and `doc/data/` so git tracks the otherwise-empty folders.
 
-Do NOT scaffold any design-specific automation (no `regres`/sweep scripts) — `scripts/flow/` is intentionally left empty for the user to populate. When the user later adds experiments, each goes in its own subfolder under `scripts/flow/<experiment>/` providing the conventional trio `run.py`, `ext.py`, `gen.py` so it is drivable by the generic `make flow-run` / `flow-ext` / `flow-gen EXP=<experiment>` targets.
+Do NOT scaffold any design-specific automation (no sweep/generator scripts) — `scripts/` is intentionally left empty for the user to populate. When the user later adds experiments, each is a plain, self-contained script placed directly under `scripts/` (e.g. a synthesis/sim sweep) that writes its results into `doc/data/` and its charts into `doc/charts/`; these are **run directly** (`bash`, `python`), not through `make` targets.
 
 ## 3. Create the generated output dirs
 
@@ -89,7 +89,7 @@ _None yet._
 
 ## Experiments (automation scripts)
 
-_None yet. Add experiment subfolders under `scripts/flow/`._
+_None yet. Add scripts directly under `scripts/` (run directly); they write results to `doc/data/` and charts to `doc/charts/`._
 ```
 
 Render the title `<Name>` as a readable form of the project name (e.g. `my-accel` → `My-Accel`).

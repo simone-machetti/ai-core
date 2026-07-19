@@ -11,7 +11,6 @@ CLK_PERIOD_NS  ?= 1
 PARAMS         ?= none
 KEEP_HIERARCHY ?= 0
 VCD            ?= 0
-EXP            ?=
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
@@ -25,7 +24,7 @@ export SEL_PARAMS         := $(PARAMS)
 export SEL_KEEP_HIERARCHY := $(KEEP_HIERARCHY)
 export SEL_VCD            := $(VCD)
 
-.PHONY: init flow-list flow-run flow-ext flow-gen
+.PHONY: init sim syn post-syn-sta post-syn-sim post-syn-dpa clean-all clean-sim clean-imp
 
 init:
 	mkdir -p $(PROJ_DIR)/sim
@@ -71,19 +70,6 @@ post-syn-dpa: clean-imp
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
 	sta -no_splash -exit $(REPO_HOME)/scripts/post-syn-dpa/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
-
-flow-list:
-	@echo "Experiments in project '$(PROJECT)':"
-	@ls -1 $(PROJ_DIR)/scripts/flow 2>/dev/null | sed 's/^/  - /' || true
-
-flow-run:
-	python3 $(PROJ_DIR)/scripts/flow/$(EXP)/run.py
-
-flow-ext:
-	python3 $(PROJ_DIR)/scripts/flow/$(EXP)/ext.py
-
-flow-gen:
-	python3 $(PROJ_DIR)/scripts/flow/$(EXP)/gen.py
 
 clean-all:
 	rm -rf $(PROJ_DIR)/sim
