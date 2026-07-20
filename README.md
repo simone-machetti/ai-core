@@ -5,71 +5,15 @@ Multi-project sandbox for prototyping RTL designs, built around the `ai-core` de
 Projects:
 
 - [`ai-core`](projects/ai-core/README.md) — next-generation AI-Core architecture (clean redesign, in progress).
-- [`ai-core-legacy`](projects/ai-core-legacy/README.md) — fixed-point multiply-accumulate Processing Elements (PEs) for AI/ML inference. The original reference design.
 
 This README documents the shared EDA flow: the `make` targets, their parameters, and the typical pipeline. For a project's designs, top-levels, RTL parameters, and experiments, see that project's own README.
 
-## Cloning — selecting projects
-
-This is a multi-project repo, but you don't have to download every project. A **partial clone** (`--filter=blob:none`) skips file contents until you check them out, and **sparse-checkout** controls which `projects/<name>/` directories land in your working tree. The shared tooling — the top-level files — is always included. Pick one of the options below; consult the `Projects:` list above for the `<name>` of each project.
-
-> Your git host must support partial clone (`uploadpack.allowFilter=true`). GitHub and GitLab enable it by default.
-
-### One project
+## Cloning
 
 ```bash
-git clone --filter=blob:none --no-checkout <repo-url> ai-core
-cd ai-core
-git sparse-checkout init --cone
-git sparse-checkout set scripts projects/<name>
-git checkout main
-```
-
-### Multiple projects
-
-List every project you want after `scripts` (space-separated):
-
-```bash
-git clone --filter=blob:none --no-checkout <repo-url> ai-core
-cd ai-core
-git sparse-checkout init --cone
-git sparse-checkout set scripts projects/<name-1> projects/<name-2>
-git checkout main
-```
-
-### No project (shared tooling only)
-
-Use this to start a brand-new project, or when you only need the flow scripts. `projects/` stays empty until you create or add one.
-
-```bash
-git clone --filter=blob:none --no-checkout <repo-url> ai-core
-cd ai-core
-git sparse-checkout init --cone
-git sparse-checkout set scripts
-git checkout main
-```
-
-### All projects
-
-A normal full clone gives you everything:
-
-```bash
-git clone <repo-url> ai-core
+git clone https://github.com/simone-machetti/ai-core.git
 cd ai-core
 ```
-
-### Changing your selection later
-
-No re-clone needed — adjust the working set at any time (files are fetched on demand):
-
-```bash
-git sparse-checkout add projects/<name>         # add another project to the current set
-git sparse-checkout set scripts projects/<name> # replace the whole selection
-git sparse-checkout list                        # show what is currently checked out
-git sparse-checkout disable                     # materialize all projects (switch to full)
-```
-
-The `Projects:` list at the top of this README is the catalog of everything that exists — including projects you have not checked out — and is the one shared file every new project edits, so it is where collaborators coordinate.
 
 ## Quick start
 
@@ -133,7 +77,7 @@ make post-syn-dpa PROJECT=<project> TOP_LEVEL=<top_level> CLK_PERIOD_NS=1.0 OUT_
 └── CLAUDE.md             # AI assistant guidance for this repository
 ```
 
-All `make` targets require `PROJECT=<name>` to select the project they operate on (there is no default; targets fail fast if it is unset or names a project that is not in your checkout). The flow scripts in `scripts/` resolve project-specific paths through the `SEL_PROJECT` env var exported by the Makefile.
+All `make` targets require `PROJECT=<name>` to select the project they operate on (there is no default; targets fail fast if it is unset or names a project that does not exist). The flow scripts in `scripts/` resolve project-specific paths through the `SEL_PROJECT` env var exported by the Makefile.
 
 ## Environment setup
 
@@ -187,7 +131,7 @@ This repository ships [Claude Code](https://claude.com/claude-code) skills under
 
 | Skill                                                | Purpose                                                                                                                                                                                                                              |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`add-project`](.claude/skills/add-project/SKILL.md) | Scaffold a new empty project under `projects/<name>/`: creates the `rtl/`, `tb/`, `scripts/`, and `doc/` skeleton, runs `make init`, writes a stub project README, and registers the project in this README's `Projects:` list. |
+| [`add-project`](.claude/skills/add-project/SKILL.md) | Scaffold a new empty project under `projects/<name>/`: creates the `rtl/`, `tb/`, `scripts/`, and `doc/` skeleton, runs `make init`, writes a stub project README, and registers the project in this README's `Projects:` list.      |
 | [`update-wiki`](.claude/skills/update-wiki/SKILL.md) | Update a project's OKF design-doc wiki under `projects/<project>/wiki/` after design progress: ingest new/changed `rtl/`, `tb/`, `doc/` into concept pages, refresh `index.md`/`log.md`, and lint for OKF conformance.               |
 
 A typical greenfield flow is `/add-project` to create the skeleton, then populate `rtl/` and `tb/` to verify, characterize, and document the design.
@@ -215,17 +159,31 @@ Outputs go to `projects/<PROJECT>/sim/<OUT_DIR>/`. Pass `VCD=1` to also dump an 
 ### Logic synthesis (Yosys + ABC, ASAP7 target)
 
 ```bash
-make syn TOP_LEVEL=<top_level> OUT_DIR=<name> [PARAMS="KEY=VAL ..."] [KEEP_HIERARCHY=1]
+make syn TOP_LEVEL=<top_level> OUT_DIR=<name> [PARAMS="KEY=VAL ..."] [KEEP_HIERARCHY=1] \
+    [KEEP_MODULES="mod ..."] [BLACKBOX_MODULES="mod ..."]
 ```
 
-| Parameter        | Required        | Description                                                  |
-| ---------------- | --------------- | ------------------------------------------------------------ |
-| `TOP_LEVEL`      | yes             | RTL module to synthesize; can be any module in the hierarchy |
-| `OUT_DIR`        | yes             | Output subdirectory under `imp/`                             |
-| `PARAMS`         | no              | Project-specific RTL elaboration parameters                  |
-| `KEEP_HIERARCHY` | no (default: 0) | Preserve module boundaries in the netlist (skips `flatten`)  |
+| Parameter          | Required        | Description                                                             |
+| ------------------ | --------------- | ----------------------------------------------------------------------- |
+| `TOP_LEVEL`        | yes             | RTL module to synthesize; can be any module in the hierarchy            |
+| `OUT_DIR`          | yes             | Output subdirectory under `imp/`                                        |
+| `PARAMS`           | no              | Project-specific RTL elaboration parameters                             |
+| `KEEP_HIERARCHY`   | no (default: 0) | Preserve every module boundary in the netlist (skips `flatten`)         |
+| `KEEP_MODULES`     | no              | Preserve only the listed module boundaries and flatten below them       |
+| `BLACKBOX_MODULES` | no              | Do not elaborate the listed modules; link their netlists from an earlier run |
 
 Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`.
+
+#### Netlist hierarchy
+
+| Mode               | Netlist                               | `report/area.rpt`                 |
+| ------------------ | ------------------------------------- | --------------------------------- |
+| default            | fully flat                            | one number                        |
+| `KEEP_HIERARCHY=1` | every module boundary                 | every module                      |
+| `KEEP_MODULES`     | listed modules only, flat inside each | top + listed modules              |
+| `BLACKBOX_MODULES` | one shared module per listed name     | top + one entry per linked module |
+
+The netlist of the BLACKBOX_MODULES is read from `imp/<mod>/output/netlist.v` and the run fails if it is missing. A linked module is not resynthesized, so its area is exactly the one from its own run — rerun the first pass after changing its RTL.
 
 ### Post-synthesis static timing analysis (OpenSTA)
 
@@ -280,8 +238,8 @@ Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`.
 Project-specific automation — synthesis sweeps, result extraction, and chart/table generation — lives under `projects/<PROJECT>/scripts/` and writes its outputs into that project's `doc/data/` (extracted results) and `doc/charts/` (generated charts). These are plain, self-contained scripts, **run directly** rather than through `make`:
 
 ```bash
-bash   projects/<PROJECT>/scripts/<sweep>.sh      # drive a batch of make syn/sim runs
-python projects/<PROJECT>/doc/charts/<chart>.py   # (re)generate a chart from the extracted data
+bash   projects/<PROJECT>/scripts/<sweep>.sh    # drive a batch of make syn/sim runs
+python projects/<PROJECT>/doc/charts/<chart>.py # (re)generate a chart from the extracted data
 ```
 
 Each script embeds or reads the data it needs; see the project's own README for the experiments it provides.
@@ -307,3 +265,5 @@ make clean-all                # remove all sim/ and imp/ directories
 | `PARAMS`         | sim, syn, post-syn-sim                             | `"KEY=VAL ..."`                 | Project-specific RTL elaboration parameters                                                |
 | `VCD`            | sim                                                | `0` (default), `1`              | Enable Verilator tracing and dump `activity.vcd` (off by default; costly on large designs) |
 | `KEEP_HIERARCHY` | syn, post-syn-dpa                                  | `0` (default), `1`              | Preserve module boundaries in the netlist                                                  |
+| `KEEP_MODULES`   | syn                                                | `"mod ..."` (default: `none`)   | Preserve only the listed module boundaries and flatten everything below them               |
+| `BLACKBOX_MODULES` | syn                                              | `"mod ..."` (default: `none`)   | Do not elaborate the listed modules; link their netlists from `imp/<mod>/output/netlist.v` |

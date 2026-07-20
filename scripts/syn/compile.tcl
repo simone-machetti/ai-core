@@ -2,9 +2,6 @@
 # Author: Simone Machetti
 # -----------------------------------------------------------------------------
 
-# -----------------------------------------------------------------------------
-# Reset the design
-# -----------------------------------------------------------------------------
 yosys "design -reset"
 
 # -----------------------------------------------------------------------------
@@ -32,6 +29,9 @@ foreach dir [lsort [split [exec find $rtl_dir -type d] "\n"]] {
     append inc_flags " -I $dir"
 }
 
+# -----------------------------------------------------------------------------
+# RTL elaboration parameters
+# -----------------------------------------------------------------------------
 set g_flags ""
 if {$env(SEL_PARAMS) ne "none"} {
     foreach param [split $env(SEL_PARAMS)] {
@@ -39,9 +39,28 @@ if {$env(SEL_PARAMS) ne "none"} {
     }
 }
 
+# -----------------------------------------------------------------------------
+# Keep module boundaries (full or partial hierarchy)
+# -----------------------------------------------------------------------------
 set kh_flag ""
-if {$env(SEL_KEEP_HIERARCHY) eq "1"} {
+if {$env(SEL_KEEP_HIERARCHY) eq "1" || $env(SEL_KEEP_MODULES) ne "none"} {
     set kh_flag " --keep-hierarchy"
 }
 
-yosys "read_slang --single-unit [join $rtl_files]$inc_flags --top $env(SEL_TOP_LEVEL)$g_flags$kh_flag"
+# -----------------------------------------------------------------------------
+# Blackboxed modules (not elaborated, linked in run.tcl)
+# -----------------------------------------------------------------------------
+set blackbox_modules {}
+if {$env(SEL_BLACKBOX_MODULES) ne "none"} {
+    set blackbox_modules [split [string trim $env(SEL_BLACKBOX_MODULES)]]
+}
+
+set bb_flags ""
+foreach mod $blackbox_modules {
+    append bb_flags " --blackboxed-module $mod"
+}
+
+# -----------------------------------------------------------------------------
+# Elaborate design
+# -----------------------------------------------------------------------------
+yosys "read_slang --single-unit [join $rtl_files]$inc_flags --top $env(SEL_TOP_LEVEL)$g_flags$kh_flag$bb_flags"

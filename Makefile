@@ -2,27 +2,31 @@
 # Author: Simone Machetti
 # -----------------------------------------------------------------------------
 
-PROJECT        ?=
-TOP_LEVEL      ?=
-OUT_DIR        ?= no_name
-NETLIST_DIR    ?= no_name
-VCD_DIR        ?= no_name
-CLK_PERIOD_NS  ?= 1
-PARAMS         ?= none
-KEEP_HIERARCHY ?= 0
-VCD            ?= 0
+PROJECT          ?=
+TOP_LEVEL        ?=
+OUT_DIR          ?= no_name
+NETLIST_DIR      ?= no_name
+VCD_DIR          ?= no_name
+CLK_PERIOD_NS    ?= 1
+PARAMS           ?= none
+KEEP_HIERARCHY   ?= 0
+KEEP_MODULES     ?= none
+BLACKBOX_MODULES ?= none
+VCD              ?= 0
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
-export SEL_PROJECT        := $(PROJECT)
-export SEL_TOP_LEVEL      := $(TOP_LEVEL)
-export SEL_OUT_DIR        := $(OUT_DIR)
-export SEL_NETLIST_DIR    := $(NETLIST_DIR)
-export SEL_VCD_DIR        := $(VCD_DIR)
-export SEL_CLK_PERIOD_NS  := $(CLK_PERIOD_NS)
-export SEL_PARAMS         := $(PARAMS)
-export SEL_KEEP_HIERARCHY := $(KEEP_HIERARCHY)
-export SEL_VCD            := $(VCD)
+export SEL_PROJECT          := $(PROJECT)
+export SEL_TOP_LEVEL        := $(TOP_LEVEL)
+export SEL_OUT_DIR          := $(OUT_DIR)
+export SEL_NETLIST_DIR      := $(NETLIST_DIR)
+export SEL_VCD_DIR          := $(VCD_DIR)
+export SEL_CLK_PERIOD_NS    := $(CLK_PERIOD_NS)
+export SEL_PARAMS           := $(PARAMS)
+export SEL_KEEP_HIERARCHY   := $(KEEP_HIERARCHY)
+export SEL_KEEP_MODULES     := $(KEEP_MODULES)
+export SEL_BLACKBOX_MODULES := $(BLACKBOX_MODULES)
+export SEL_VCD              := $(VCD)
 
 .PHONY: init sim syn post-syn-sta post-syn-sim post-syn-dpa clean-all clean-sim clean-imp
 
