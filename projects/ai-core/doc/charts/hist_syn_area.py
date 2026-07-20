@@ -4,10 +4,11 @@
 # Description:
 #   Stacked-bar chart of synthesized cell area for the baseline (top_NxN) and
 #   square (top_NxN_sqr) PE grids at 8x8 and 16x16, split into PE / Dispatch /
-#   Alpha-Beta / Others. Per-component unit areas are the synthesized ASAP7
-#   values from doc/data/res_syn_area.xlsx, assembled by instance count
-#   (shared x1, per-row/col xN, per-PE xN^2). Colours are taken from the legacy
-#   area_ai_core_level_16.png generator. Writes hist_syn_area.png next to this.
+#   Alpha-Beta / Others. All four bars are measured on the complete synthesized
+#   grids (imp/top_{8x8,16x16}[_sqr]/report/area.rpt), assembled per category in
+#   doc/data/res_syn_area.xlsx. Others carries ctrl, const, the ICG cells and the
+#   top-level glue. Colours are taken from the legacy area_ai_core_level_16.png
+#   generator. Writes hist_syn_area.png next to this.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
@@ -16,45 +17,39 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-PE_BAS     = 3758.942700
-PE_SQR     = 3264.184980
-DISP_A     =  348.680700
-DISP_B     =  502.485120
-DISP_A_SQR =  394.782660
-DISP_B_SQR =  349.599240
-ALPHA      = 1890.267840
-BETA       = 1699.809300
-CTRL       =    9.229140
-CTRL_SQR   =    9.462420
-CONST_SQR  =    4.067820
-A_DFF      =    0.379080
-TOPREG_BAS =  2 * A_DFF
-TOPREG_SQR = 46 * A_DFF
+BASELINE_8X8 = {
+    "PE":         240572.33280,
+    "Dispatch":     6809.32656,
+    "Alpha-Beta":      0.00000,
+    "Others":         40.40118,
+}
 
+SQUARE_8X8 = {
+    "PE":         208907.83872,
+    "Dispatch":     5955.05520,
+    "Alpha-Beta":  28720.61712,
+    "Others":         63.30636,
+}
 
-def baseline(n):
-    return {
-        "PE":         n * n * PE_BAS,
-        "Dispatch":   n * (DISP_A + DISP_B),
-        "Alpha-Beta": 0.0,
-        "Others":     CTRL + TOPREG_BAS,
-    }
+BASELINE_16X16 = {
+    "PE":         962289.33120,
+    "Dispatch":    13618.65312,
+    "Alpha-Beta":      0.00000,
+    "Others":        122.98230,
+}
 
-
-def square(n):
-    return {
-        "PE":         n * n * PE_SQR,
-        "Dispatch":   n * (DISP_A_SQR + DISP_B_SQR),
-        "Alpha-Beta": n * (ALPHA + BETA),
-        "Others":     CTRL_SQR + CONST_SQR + TOPREG_SQR,
-    }
-
+SQUARE_16X16 = {
+    "PE":         835631.35488,
+    "Dispatch":    11910.11040,
+    "Alpha-Beta":  57441.23424,
+    "Others":        145.88748,
+}
 
 bars = [
-    ("Baseline 8×8",   baseline(8)),
-    ("Square 8×8",     square(8)),
-    ("Baseline 16×16", baseline(16)),
-    ("Square 16×16",   square(16)),
+    ("Baseline 8×8",   BASELINE_8X8),
+    ("Square 8×8",     SQUARE_8X8),
+    ("Baseline 16×16", BASELINE_16X16),
+    ("Square 16×16",   SQUARE_16X16),
 ]
 
 SECTIONS = ["PE", "Alpha-Beta", "Dispatch", "Others"]

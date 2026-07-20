@@ -1,6 +1,6 @@
 # Integrated Clock Gate
 
-`icg` — an integrated clock-gating cell: passes the clock to a block while enabled and holds it low while disabled, so a block can be frozen without stopping the free-running clock.
+`icg` — an integrated clock-gating cell: passes the clock to a block while enabled and holds it low while disabled, so a block can be frozen without stopping the free-running clock. Synthesis maps it to the ASAP7 `ICGx1` standard cell; simulation uses a behavioural latch-and-AND model.
 
 ## Purpose
 
@@ -30,17 +30,32 @@ icg icg_i (
 
 ## Internal logic
 
-The enable passes through a latch that is transparent while `clk_i` is low, then is ANDed with the clock:
+Two implementations of the same function, selected by `SYNTHESIS` — a macro the Slang frontend defines implicitly and the simulator does not, so each flow picks its own branch with no flag plumbing.
+
+**Synthesis** — the ASAP7 integrated clock gate, instantiated directly. Scan enable is tied off:
+
+```systemverilog
+ICGx1_ASAP7_75t_R icg_cell_i (
+    .CLK (clk_i),
+    .ENA (en_i),
+    .SE  (1'b0),
+    .GCLK(clk_o)
+);
+```
+
+**Simulation** — the behavioural model, which keeps the RTL portable and technology independent:
 
 ```systemverilog
 always_latch begin
     if (clk_i == 1'b0) begin
-        clk_en <= en_i;
+        clk_en = en_i;
     end
 end
 assign clk_o = clk_i & clk_en;
 ```
 
-Sampling `en_i` only while `clk_i` is low means the AND gate's enable input is stable for the whole high pulse, so toggling `en_i` mid-cycle cannot chop `clk_o` into a runt pulse — the gate opens or closes cleanly between cycles. This is the behavioural model of the standard-cell integrated clock gate; a real build maps it to the library ICG.
+Sampling `en_i` only while `clk_i` is low means the AND gate's enable input is stable for the whole high pulse, so toggling `en_i` mid-cycle cannot chop `clk_o` into a runt pulse — the gate opens or closes cleanly between cycles.
 
-Source: [icg.sv](../../rtl/icg.sv)
+Instantiating the library cell rather than letting synthesis infer the latch matters for two reasons. Clock-tree synthesis recognizes an `ICGx1` as a clock gate and balances it as one, instead of treating a latch and an AND as ordinary logic sitting in the clock path. And Yosys has no liberty-driven latch mapper — `dfflibmap` covers flip-flops only — so the inferred `$_DLATCH_N_` reached the netlist unmapped, leaving a cell with no Verilog model and no area. The flow now also applies the platform latch map (`cells_latch_R.v`) after `dfflibmap`, so any design that does infer a latch gets a real cell; this module no longer needs it. Cell area is 0.26244 µm², against 0.24786 µm² for the three-gate inferred version that was missing its latch.
+
+Source: [icg.sv](../../rtl/icg.sv) · used by [top_NxN](../architectures/top_NxN.md), [top_NxN_sqr](../architectures/top_NxN_sqr.md) · measured in [Synthesis Area](../experiments/syn_area.md)

@@ -88,11 +88,20 @@ yosys "techmap"
 yosys "opt"
 
 # -----------------------------------------------------------------------------
-# Technology mapping
+# Technology mapping Flip-Flops
 # -----------------------------------------------------------------------------
 yosys "dfflibmap -liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"
 yosys "opt"
 
+# -----------------------------------------------------------------------------
+# Technology mapping Latches
+# -----------------------------------------------------------------------------
+yosys "techmap -map $env(ASAP7_HOME)/yoSys/cells_latch_R.v"
+yosys "opt"
+
+# -----------------------------------------------------------------------------
+# Technology mapping Combinational Logic
+# -----------------------------------------------------------------------------
 yosys "abc \
     -liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib \
     -liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib \

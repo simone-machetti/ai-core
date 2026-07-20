@@ -79,7 +79,7 @@ _None yet._
 
 ## Experiments
 
-_None yet._
+* [Synthesis Area](experiments/syn_area.md) — `top_NxN` vs `top_NxN_sqr` cell area at 8×8 and 16×16, measured on the complete synthesized grids (per-component pass A, blackbox-linked pass B). Square is −1.53 % at 8×8 and −7.26 % at 16×16; 8×8 is the crossover, the asymptote is 0.8684.
 
 ## References
 

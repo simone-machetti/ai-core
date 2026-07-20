@@ -2,6 +2,9 @@
 # Author: Simone Machetti
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Reset the design
+# -----------------------------------------------------------------------------
 yosys "design -reset"
 
 # -----------------------------------------------------------------------------
@@ -63,4 +66,4 @@ foreach mod $blackbox_modules {
 # -----------------------------------------------------------------------------
 # Elaborate design
 # -----------------------------------------------------------------------------
-yosys "read_slang --single-unit [join $rtl_files]$inc_flags --top $env(SEL_TOP_LEVEL)$g_flags$kh_flag$bb_flags"
+yosys "read_slang --single-unit [join $rtl_files]$inc_flags --extern-modules --top $env(SEL_TOP_LEVEL)$g_flags$kh_flag$bb_flags"
