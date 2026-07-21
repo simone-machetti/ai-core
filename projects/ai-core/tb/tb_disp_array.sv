@@ -15,11 +15,19 @@
 
 `timescale 1 ns/1 ps
 
+`ifndef CLK_PERIOD_NS
+`define CLK_PERIOD_NS 10
+`endif
+
 /* verilator lint_off UNUSEDSIGNAL */
 
 module tb_disp_array #(
     parameter int NUM_RAND = 500
 );
+
+    localparam real CLK_PERIOD = `CLK_PERIOD_NS;
+    localparam real CLK_HALF   = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
 
     localparam int NUM_BLK      = 4;
     localparam int BLK_WIDTH    = 64;
@@ -121,7 +129,7 @@ module tb_disp_array #(
     );
 
     initial clk_i = 1'b0;
-    always #5 clk_i = ~clk_i;
+    always #(CLK_HALF) clk_i = ~clk_i;
 
     function automatic logic [B_DP8_WIDTH-1:0] gate32(input logic [B_DP8_WIDTH-1:0] x, input logic [OP_WIDTH-1:0] op);
         logic [B_DP8_WIDTH-1:0] y;
@@ -210,12 +218,12 @@ module tb_disp_array #(
             for (int t = 0; t < NUM_RAND; t++) begin
                 rand_vec;
                 @(posedge clk_i);
-                #1;
+                #(T_SETTLE);
                 check(mi);
             end
             ramp_vec;
             @(posedge clk_i);
-            #1;
+            #(T_SETTLE);
             check(mi);
             $display("  mode %0d: PASS", MODE_NUM[mi]);
         end

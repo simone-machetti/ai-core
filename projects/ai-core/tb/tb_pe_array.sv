@@ -20,11 +20,19 @@
 
 `timescale 1 ns/1 ps
 
+`ifndef CLK_PERIOD_NS
+`define CLK_PERIOD_NS 10
+`endif
+
 /* verilator lint_off UNUSEDSIGNAL */
 
 module tb_pe_array #(
     parameter int NUM_RAND = 2000
 );
+
+    localparam real CLK_PERIOD = `CLK_PERIOD_NS;
+    localparam real CLK_HALF   = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
 
     localparam int NUM_BLK      = 4;
     localparam int BLK_WIDTH    = 64;
@@ -221,7 +229,7 @@ module tb_pe_array #(
     );
 
     initial clk_i = 1'b0;
-    always #5 clk_i = ~clk_i;
+    always #(CLK_HALF) clk_i = ~clk_i;
 
     function automatic logic signed [15:0] rand_signed(input int width);
         logic [15:0] r;
@@ -405,7 +413,7 @@ module tb_pe_array #(
                 pack(mi);
                 @(posedge clk_i);
                 @(posedge clk_i);
-                #1;
+                #(T_SETTLE);
                 compare(mi);
             end
             if (err == err0) begin

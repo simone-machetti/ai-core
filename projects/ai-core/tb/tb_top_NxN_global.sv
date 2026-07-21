@@ -45,6 +45,10 @@
 
 `timescale 1 ns/1 ps
 
+`ifndef CLK_PERIOD_NS
+`define CLK_PERIOD_NS 10
+`endif
+
 /* verilator lint_off UNUSEDSIGNAL */
 
 module tb_top_NxN_global #(
@@ -53,6 +57,10 @@ module tb_top_NxN_global #(
     parameter int NUM_ACC          = 8,
     parameter int NUM_STREAM_SCALE = 10
 );
+
+    localparam real CLK_PERIOD = `CLK_PERIOD_NS;
+    localparam real CLK_HALF   = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
 
     localparam int NUM_BLK   = 4;
     localparam int BLK_WIDTH = 64;
@@ -154,7 +162,7 @@ module tb_top_NxN_global #(
     );
 
     initial clk_i = 1'b0;
-    always #5 clk_i = ~clk_i;
+    always #(CLK_HALF) clk_i = ~clk_i;
 
     function automatic logic signed [15:0] rand_signed(input int width);
         logic [15:0] r;
@@ -405,9 +413,9 @@ module tb_top_NxN_global #(
         sel_acc = 1'b0;
         rst_ni  = 1'b0;
         repeat (3) @(posedge clk_i);
-        #1;
+        #(T_SETTLE);
         rst_ni  = 1'b1;
-        #1;
+        #(T_SETTLE);
     endtask
 
     initial begin
@@ -444,7 +452,7 @@ module tb_top_NxN_global #(
                 end
                 sel_acc = 1'b0;
                 @(posedge clk_i);
-                #1;
+                #(T_SETTLE);
                 cs = t - D;
                 if (cs >= 0) stream_check(mi, cs % DEPTH, NUM_ROW, NUM_COL);
             end
@@ -495,7 +503,7 @@ module tb_top_NxN_global #(
                     sel_acc = 1'b1;
                 end
                 @(posedge clk_i);
-                #1;
+                #(T_SETTLE);
             end
             for (int rr = 0; rr < NUM_ROW; rr++)
                 for (int cc = 0; cc < NUM_COL; cc++)
@@ -539,7 +547,7 @@ module tb_top_NxN_global #(
                         end
                         sel_acc = 1'b0;
                         @(posedge clk_i);
-                        #1;
+                        #(T_SETTLE);
                         cs = t - D;
                         if (cs >= 0) stream_check(mi, cs % DEPTH, nr, nc);
                     end

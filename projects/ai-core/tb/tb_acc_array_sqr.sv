@@ -35,12 +35,20 @@
 
 `timescale 1 ns/1 ps
 
+`ifndef CLK_PERIOD_NS
+`define CLK_PERIOD_NS 10
+`endif
+
 /* verilator lint_off UNUSEDSIGNAL */
 
 module tb_acc_array_sqr #(
     parameter int NUM_RAND = 2000,
     parameter int NUM_ACC  = 8
 );
+
+    localparam real CLK_PERIOD = `CLK_PERIOD_NS;
+    localparam real CLK_HALF   = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
 
     localparam int NUM_BLK      = 4;
     localparam int BLK_WIDTH    = 64;
@@ -283,7 +291,7 @@ module tb_acc_array_sqr #(
     );
 
     initial clk_i = 1'b0;
-    always #5 clk_i = ~clk_i;
+    always #(CLK_HALF) clk_i = ~clk_i;
 
     function automatic logic signed [15:0] rand_signed(input int width);
         logic [15:0] r;
@@ -502,7 +510,7 @@ module tb_acc_array_sqr #(
                 @(posedge clk_i);
                 @(posedge clk_i);
                 @(posedge clk_i);
-                #1;
+                #(T_SETTLE);
                 compare(mi);
             end
             if (err == err0) begin
@@ -531,12 +539,12 @@ module tb_acc_array_sqr #(
             end
             sel_acc = 1'b0;
             repeat (3) @(posedge clk_i);
-            #1;
+            #(T_SETTLE);
             for (int it = 1; it < NUM_ACC; it++) begin
                 sel_acc = 1'b1;
                 @(posedge clk_i);
             end
-            #1;
+            #(T_SETTLE);
             err0 = err;
             for (int o = 0; o < NOUT; o++) begin
                 rn = MM_OUT[mi][o][2];

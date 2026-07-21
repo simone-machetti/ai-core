@@ -24,11 +24,19 @@
 
 `timescale 1 ns/1 ps
 
+`ifndef CLK_PERIOD_NS
+`define CLK_PERIOD_NS 10
+`endif
+
 /* verilator lint_off UNUSEDSIGNAL */
 
 module tb_pe_array_beta_sqr #(
     parameter int NUM_RAND = 200
 );
+
+    localparam real CLK_PERIOD = `CLK_PERIOD_NS;
+    localparam real CLK_HALF   = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
 
     localparam int PE_WIDTH     = 256;
     localparam int NUM_PAIR     = 8;
@@ -165,7 +173,7 @@ module tb_pe_array_beta_sqr #(
     );
 
     initial clk_i = 1'b0;
-    always #5 clk_i = ~clk_i;
+    always #(CLK_HALF) clk_i = ~clk_i;
 
     function automatic longint bdp8(input logic [B_DP8_WIDTH-1:0] b, input logic isa, input logic zero);
         longint s;
@@ -282,7 +290,7 @@ module tb_pe_array_beta_sqr #(
             for (int t = 0; t < NUM_RAND; t++) begin
                 rand_vec;
                 repeat (2) @(posedge clk_i);
-                #1;
+                #(T_SETTLE);
                 check(mi);
             end
             $display("  mode %0d: PASS", MODE_NUM[mi]);
