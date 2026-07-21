@@ -48,10 +48,11 @@ Measured 2×2 and assembled grids, mW:
 
 **At 8×8 the square wins in 10 of 11 modes and loses in mode 1.** At 16×16 it wins in all 11, but mode 1 only breaks even. The mean margin is −6.88 % at 8×8 and −13.96 % at 16×16 — both **better** than the all-mode figures of −3.59 % and −10.89 % in [Synthesis Power](syn_pwr.md), because the single averaged VCD is dominated by the high-power modes.
 
-### Baseline power does not track arithmetic work
+### Baseline power tracks lane utilization
 
-The baseline alone spans 1.86 to 3.35 mW at 2×2, a **1.80× spread**, and it is not explained by how much computation a mode performs. Mode 1 does 128 MACs (M·K·N) for 2.92 mW; mode 8 does 16 MACs — an eighth of the work — for 3.30 mW, *more* power. The two low modes are 5 and 6, the only two with K = 32. Power is set by how much the datapath toggles under a given operand packing, not by the useful work extracted from it.
+The baseline spans 1.86 to 3.35 mW at 2×2, a **1.80× spread**, and it is explained by how many of the PE's 128 MAC lanes the mode occupies. A lane is one 8×4 multiply, so a mode's lane count is its logical product count scaled by the lanes each product needs — a 16-bit A costs two lanes, an 8-bit B costs two nibbles. On that measure **modes 5 and 6 sit at 50 % and every other mode is at 100 %**, and the power follows directly: 0.34–0.37 mW per PE for the two half-occupied modes against 0.60–0.71 mW for the rest, almost exactly 2×.
 
+Counting logical products alone (M·K·N) is misleading here — it makes mode 8 look like an eighth of mode 1's work when both fill the array — and the remaining spread among the 100 % modes comes from operand packing and tap level, not from occupancy.
 ### Both terms scale with the mode; their ratio sets the crossover
 
 The square's economics are an N² per-tile saving against an N per-row/column cost, and **both** vary by mode:
