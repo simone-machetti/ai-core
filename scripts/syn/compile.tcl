@@ -37,7 +37,7 @@ foreach dir [lsort [split [exec find $rtl_dir -type d] "\n"]] {
 # -----------------------------------------------------------------------------
 set g_flags ""
 if {$env(SEL_PARAMS) ne "none"} {
-    foreach param [split $env(SEL_PARAMS)] {
+    foreach param [regexp -all -inline {\S+} $env(SEL_PARAMS)] {
         append g_flags " -G $param"
     }
 }
@@ -55,7 +55,7 @@ if {$env(SEL_KEEP_HIERARCHY) eq "1" || $env(SEL_KEEP_MODULES) ne "none"} {
 # -----------------------------------------------------------------------------
 set blackbox_modules {}
 if {$env(SEL_BLACKBOX_MODULES) ne "none"} {
-    set blackbox_modules [split [string trim $env(SEL_BLACKBOX_MODULES)]]
+    set blackbox_modules [regexp -all -inline {\S+} $env(SEL_BLACKBOX_MODULES)]
 }
 
 set bb_flags ""

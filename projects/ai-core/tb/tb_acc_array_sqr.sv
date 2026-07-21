@@ -58,7 +58,6 @@ module tb_acc_array_sqr #(
     localparam int SEL_WIDTH    = 2;
     localparam int A_DP8_WIDTH  = 64;
     localparam int B_DP8_WIDTH  = 32;
-    localparam int OP_WIDTH     = 2;
     localparam int NUM_SHIFT    = 3;
     localparam int NUM_L0       = 8;
     localparam int NUM_L1       = 4;

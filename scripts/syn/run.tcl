@@ -43,7 +43,7 @@ foreach mod $blackbox_modules {
 # -----------------------------------------------------------------------------
 set keep_modules {}
 if {$env(SEL_KEEP_MODULES) ne "none"} {
-    set keep_modules [split [string trim $env(SEL_KEEP_MODULES)]]
+    set keep_modules [regexp -all -inline {\S+} $env(SEL_KEEP_MODULES)]
 }
 set partial_flatten [expr {[llength $keep_modules] > 0 || [llength $blackbox_modules] > 0}]
 
