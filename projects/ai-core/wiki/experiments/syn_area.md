@@ -81,7 +81,7 @@ sudo fallocate -l 32G /swapfile2
 sudo chmod 600 /swapfile2
 sudo mkswap /swapfile2
 sudo swapon /swapfile2
-sudo sysctl vm.swappiness=10   # prefer dropping page cache over swapping the heap
+sudo sysctl vm.swappiness=10 # prefer dropping page cache over swapping the heap
 ```
 
 Afterwards — not while a run is in flight, `swapoff` has to page everything back in:

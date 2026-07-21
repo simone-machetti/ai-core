@@ -80,6 +80,7 @@ _None yet._
 ## Experiments
 
 * [Synthesis Area](experiments/syn_area.md) — `top_NxN` vs `top_NxN_sqr` cell area at 8×8 and 16×16, measured on the complete synthesized grids (per-component pass A, blackbox-linked pass B). Square is −1.53 % at 8×8 and −7.26 % at 16×16; 8×8 is the crossover, the asymptote is 0.8684.
+* [Synthesis Power](experiments/syn_pwr.md) — `top_NxN` vs `top_NxN_sqr` VCD-annotated dynamic power, measured on the complete 2×2 grids and assembled per component for the larger sizes (gate-level simulation of an 8×8 does not fit in memory). Square is +34.81 % at 2×2, −3.59 % at 8×8 and −10.89 % at 16×16; the power crossover is N = 6.38, one grid size earlier than the area crossover at N = 7.05, and the asymptote is 0.8151.
 
 ## References
 

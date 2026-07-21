@@ -33,6 +33,7 @@ fi
 
 verilator \
     -sv \
+    --build-jobs 0 \
     --binary \
     --timing \
     "${trace_flags[@]}" \
@@ -42,8 +43,8 @@ verilator \
     "${g_flags[@]}" \
     "${inc_flags[@]}" \
     "${vlt_files[@]}" \
-    --top-module "tb_${SEL_TOP_LEVEL}" \
-    "${PROJ}/tb/tb_${SEL_TOP_LEVEL}.sv" \
+    --top-module "${SEL_TB}" \
+    "${PROJ}/tb/${SEL_TB}.sv" \
     -Mdir "${SIM}/build/obj_dir" \
     -o "${SIM}/build/simv" \
     | tee "${SIM}/output/compile.log"

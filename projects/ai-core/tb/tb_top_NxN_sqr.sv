@@ -120,6 +120,54 @@ module tb_top_NxN_sqr #(
     int err;
     int npass;
 
+`ifdef POST_SYN_SIM
+    localparam int ACC_FLAT = NUM_ROW * NUM_COL * NUM_LANE * ACC_W;
+
+    logic [NUM_ROW*PE_WIDTH-1:0] in_a_flat;
+    logic [NUM_COL*PE_WIDTH-1:0] in_b_flat;
+    logic [        ACC_FLAT-1:0] acc_flat;
+    logic [         NUM_ROW-1:0] en_row_flat;
+    logic [         NUM_COL-1:0] en_col_flat;
+    logic [        ACC_FLAT-1:0] out_q_flat;
+
+    function automatic int acc_pos(input int r, input int c, input int l);
+        return (((NUM_ROW - 1 - r) * NUM_COL + (NUM_COL - 1 - c)) * NUM_LANE + (NUM_LANE - 1 - l)) * ACC_W;
+    endfunction
+
+    always_comb begin
+        for (int r = 0; r < NUM_ROW; r++) begin
+            in_a_flat[(NUM_ROW-1-r)*PE_WIDTH +: PE_WIDTH] = in_a[r];
+            en_row_flat[NUM_ROW-1-r]                      = en_row[r];
+        end
+        for (int c = 0; c < NUM_COL; c++) begin
+            in_b_flat[(NUM_COL-1-c)*PE_WIDTH +: PE_WIDTH] = in_b[c];
+            en_col_flat[NUM_COL-1-c]                      = en_col[c];
+        end
+        for (int r = 0; r < NUM_ROW; r++)
+            for (int c = 0; c < NUM_COL; c++)
+                for (int l = 0; l < NUM_LANE; l++)
+                    acc_flat[acc_pos(r, c, l) +: ACC_W] = acc_word[r][c][l];
+    end
+
+    always_comb
+        for (int r = 0; r < NUM_ROW; r++)
+            for (int c = 0; c < NUM_COL; c++)
+                for (int l = 0; l < NUM_LANE; l++)
+                    out_q[r][c][l] = out_q_flat[acc_pos(r, c, l) +: ACC_W];
+
+    top_NxN_sqr dut (
+        .clk_i     (clk_i),
+        .rst_ni    (rst_ni),
+        .in_a_i    (in_a_flat),
+        .in_b_i    (in_b_flat),
+        .mode_i    (mode),
+        .sel_acc_i (sel_acc),
+        .acc_i     (acc_flat),
+        .en_row_i  (en_row_flat),
+        .en_col_i  (en_col_flat),
+        .out_q_o   (out_q_flat)
+    );
+`else
     top_NxN_sqr #(.N(N)) dut (
         .clk_i     (clk_i),
         .rst_ni    (rst_ni),
@@ -132,6 +180,7 @@ module tb_top_NxN_sqr #(
         .en_col_i  (en_col),
         .out_q_o   (out_q)
     );
+`endif
 
     initial clk_i = 1'b0;
     always #5 clk_i = ~clk_i;
@@ -378,7 +427,7 @@ module tb_top_NxN_sqr #(
                  NUM_ROW, NUM_COL, NUM_MODE, NUM_STREAM, NUM_ACC);
 `ifdef VCD
         $dumpfile("activity.vcd");
-        $dumpvars(0, tb_top_NxN_sqr.dut.gen_pe_row[0].gen_pe_col[0].pe_sqr_i);
+        $dumpvars(0, tb_top_NxN_sqr.dut);
 `endif
 
         for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;

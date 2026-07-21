@@ -143,7 +143,7 @@ The `TOP_LEVEL` values and `PARAMS` keys are project-specific; the syntax below 
 ### Pre-synthesis simulation (Verilator)
 
 ```bash
-make sim TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> [PARAMS="KEY=VAL ..."] [VCD=1]
+make sim TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> [TB=<testbench>] [PARAMS="KEY=VAL ..."] [VCD=1]
 ```
 
 | Parameter       | Required | Description                                                                                                    |
@@ -151,6 +151,7 @@ make sim TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> [PARAMS="KEY=V
 | `TOP_LEVEL`     | yes      | RTL module to simulate                                                                                         |
 | `CLK_PERIOD_NS` | yes      | Clock period in nanoseconds                                                                                    |
 | `OUT_DIR`       | yes      | Output subdirectory under `sim/`                                                                               |
+| `TB`            | no       | Testbench module to run; default `tb_<top_level>`                                                              |
 | `PARAMS`        | no       | Project-specific RTL elaboration parameters                                                                    |
 | `VCD`           | no       | `1` enables Verilator tracing and dumps `activity.vcd`; default `0` (off — tracing is costly on large designs) |
 
@@ -163,13 +164,13 @@ make syn TOP_LEVEL=<top_level> OUT_DIR=<name> [PARAMS="KEY=VAL ..."] [KEEP_HIERA
     [KEEP_MODULES="mod ..."] [BLACKBOX_MODULES="mod ..."]
 ```
 
-| Parameter          | Required        | Description                                                             |
-| ------------------ | --------------- | ----------------------------------------------------------------------- |
-| `TOP_LEVEL`        | yes             | RTL module to synthesize; can be any module in the hierarchy            |
-| `OUT_DIR`          | yes             | Output subdirectory under `imp/`                                        |
-| `PARAMS`           | no              | Project-specific RTL elaboration parameters                             |
-| `KEEP_HIERARCHY`   | no (default: 0) | Preserve every module boundary in the netlist (skips `flatten`)         |
-| `KEEP_MODULES`     | no              | Preserve only the listed module boundaries and flatten below them       |
+| Parameter          | Required        | Description                                                                  |
+| ------------------ | --------------- | ---------------------------------------------------------------------------- |
+| `TOP_LEVEL`        | yes             | RTL module to synthesize; can be any module in the hierarchy                 |
+| `OUT_DIR`          | yes             | Output subdirectory under `imp/`                                             |
+| `PARAMS`           | no              | Project-specific RTL elaboration parameters                                  |
+| `KEEP_HIERARCHY`   | no (default: 0) | Preserve every module boundary in the netlist (skips `flatten`)              |
+| `KEEP_MODULES`     | no              | Preserve only the listed module boundaries and flatten below them            |
 | `BLACKBOX_MODULES` | no              | Do not elaborate the listed modules; link their netlists from an earlier run |
 
 Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`.
@@ -203,35 +204,46 @@ Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`.
 ### Post-synthesis gate-level simulation
 
 ```bash
-make post-syn-sim TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> NETLIST_DIR=<netlist_dir> [PARAMS="KEY=VAL ..."]
+make post-syn-sim TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> NETLIST_DIR=<netlist_dir> \
+    [TB=<testbench>] [PARAMS="KEY=VAL ..."] [VCD=1]
 ```
 
-| Parameter       | Required | Description                                                  |
-| --------------- | -------- | ------------------------------------------------------------ |
-| `TOP_LEVEL`     | yes      | RTL module to simulate                                       |
-| `CLK_PERIOD_NS` | yes      | Clock period in nanoseconds                                  |
-| `OUT_DIR`       | yes      | Output subdirectory under `sim/`                             |
-| `NETLIST_DIR`   | yes      | Directory containing the synthesized netlist from `make syn` |
-| `PARAMS`        | no       | Project-specific RTL elaboration parameters                  |
+| Parameter       | Required | Description                                                                                          |
+| --------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `TOP_LEVEL`     | yes      | RTL module to simulate                                                                               |
+| `CLK_PERIOD_NS` | yes      | Clock period in nanoseconds                                                                          |
+| `OUT_DIR`       | yes      | Output subdirectory under `sim/`                                                                     |
+| `NETLIST_DIR`   | yes      | Directory containing the synthesized netlist from `make syn`                                         |
+| `TB`            | no       | Testbench module to run; default `tb_<top_level>`                                                    |
+| `PARAMS`        | no       | Project-specific RTL elaboration parameters                                                          |
+| `VCD`           | no       | `1` enables Verilator tracing and dumps `activity.vcd`; default `0`. Required by `make post-syn-dpa` |
 
-Outputs go to `projects/<PROJECT>/sim/<OUT_DIR>/`. Compiles the testbench with the `POST_SYNTH` compile-time flag to instantiate the flattened gate-level netlist instead of the RTL.
+Outputs go to `projects/<PROJECT>/sim/<OUT_DIR>/`. Compiles the testbench with the `POST_SYN_SIM` compile-time flag, which the bench uses to instantiate the synthesized netlist instead of the RTL. Synthesis flattens unpacked array ports into single vectors and drops parameters, so a bench that drives such a top-level needs a `POST_SYN_SIM` branch that instantiates the DUT without parameters and wires the flat ports.
+
+The ASAP7 sequential cells are read from `scripts/post-syn-sim/asap7_seq_behav.v` rather than from the PDK, because Verilator does not implement the 1995 UDP tables the PDK models are built on and miscompiles them silently — see [bugs.md](bugs.md). Add a model there if `dfflibmap` ever emits a cell it does not cover.
 
 ### Post-synthesis dynamic power analysis (OpenSTA)
 
 ```bash
-make post-syn-dpa TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> NETLIST_DIR=<netlist_dir> VCD_DIR=<vcd_dir> [KEEP_HIERARCHY=1]
+make post-syn-dpa TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> NETLIST_DIR=<netlist_dir> VCD_DIR=<vcd_dir> \
+    [TB=<testbench>] [KEEP_HIERARCHY=1] [KEEP_MODULES="mod ..."] [BLACKBOX_MODULES="mod ..."]
 ```
 
-| Parameter        | Required        | Description                                                                                     |
-| ---------------- | --------------- | ----------------------------------------------------------------------------------------------- |
-| `TOP_LEVEL`      | yes             | RTL module name                                                                                 |
-| `CLK_PERIOD_NS`  | yes             | Clock period in nanoseconds                                                                     |
-| `OUT_DIR`        | yes             | Output subdirectory under `imp/`                                                                |
-| `NETLIST_DIR`    | yes             | Directory containing the synthesized netlist from `make syn`                                    |
-| `VCD_DIR`        | yes             | Directory containing `activity.vcd` from `make post-syn-sim`                                    |
-| `KEEP_HIERARCHY` | no (default: 0) | Also generate `power_hierarchy.rpt` with per-instance breakdown (requires hierarchical netlist) |
+| Parameter          | Required        | Description                                                                       |
+| ------------------ | --------------- | --------------------------------------------------------------------------------- |
+| `TOP_LEVEL`        | yes             | RTL module name                                                                   |
+| `CLK_PERIOD_NS`    | yes             | Clock period in nanoseconds                                                       |
+| `OUT_DIR`          | yes             | Output subdirectory under `imp/`                                                  |
+| `NETLIST_DIR`      | yes             | Directory containing the synthesized netlist from `make syn`                      |
+| `VCD_DIR`          | yes             | Directory containing `activity.vcd` from `make post-syn-sim VCD=1`                |
+| `TB`               | no              | Testbench module the VCD was dumped from; default `tb_<top_level>`                |
+| `KEEP_HIERARCHY`   | no (default: 0) | Also generate `power_hierarchy.rpt` with a per-instance breakdown                 |
+| `KEEP_MODULES`     | no              | Same effect as `KEEP_HIERARCHY=1` on the report; pass the value used at synthesis |
+| `BLACKBOX_MODULES` | no              | Same effect as `KEEP_HIERARCHY=1` on the report; pass the value used at synthesis |
 
-Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`.
+Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`. The VCD is annotated onto the scope `<TB>/dut`, so the testbench must name its DUT instance `dut`. `report/vcd_annotated.rpt` and `report/vcd_unannotated.rpt` list how many pins were annotated — a low count means the scope did not match and the power numbers are estimates, not measurements.
+
+The per-instance report needs a netlist with module boundaries, so pass the same hierarchy parameters that were used for `make syn`.
 
 ### Experiment automation
 
@@ -254,16 +266,17 @@ make clean-all                # remove all sim/ and imp/ directories
 
 ### Make-level parameters reference
 
-| Parameter        | Make targets                                       | Values                          | Description                                                                                |
-| ---------------- | -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
-| `PROJECT`        | all                                                | project name                    | Required. Project under `projects/` to operate on (no default)                             |
-| `TOP_LEVEL`      | sim, syn, post-syn-sta, post-syn-sim, post-syn-dpa | module name                     | RTL module to build/simulate; can be any module in the hierarchy                           |
-| `CLK_PERIOD_NS`  | sim, post-syn-sta, post-syn-sim, post-syn-dpa      | e.g. `1.0`                      | Clock period in nanoseconds                                                                |
-| `OUT_DIR`        | all except clean-all                               | directory name                  | Output subdirectory under `sim/` or `imp/`                                                 |
-| `NETLIST_DIR`    | post-syn-sta, post-syn-sim, post-syn-dpa           | e.g. `top_bas_4x8_syn`          | Directory containing the synthesized netlist from `make syn`                               |
-| `VCD_DIR`        | post-syn-dpa                                       | e.g. `top_bas_4x8_post-syn-sim` | Directory containing `activity.vcd` from `make post-syn-sim`                               |
-| `PARAMS`         | sim, syn, post-syn-sim                             | `"KEY=VAL ..."`                 | Project-specific RTL elaboration parameters                                                |
-| `VCD`            | sim                                                | `0` (default), `1`              | Enable Verilator tracing and dump `activity.vcd` (off by default; costly on large designs) |
-| `KEEP_HIERARCHY` | syn, post-syn-dpa                                  | `0` (default), `1`              | Preserve module boundaries in the netlist                                                  |
-| `KEEP_MODULES`   | syn                                                | `"mod ..."` (default: `none`)   | Preserve only the listed module boundaries and flatten everything below them               |
-| `BLACKBOX_MODULES` | syn                                              | `"mod ..."` (default: `none`)   | Do not elaborate the listed modules; link their netlists from `imp/<mod>/output/netlist.v` |
+| Parameter          | Make targets                                       | Values                          | Description                                                                                |
+| ------------------ | -------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
+| `PROJECT`          | all                                                | project name                    | Required. Project under `projects/` to operate on (no default)                             |
+| `TOP_LEVEL`        | sim, syn, post-syn-sta, post-syn-sim, post-syn-dpa | module name                     | RTL module to build/simulate; can be any module in the hierarchy                           |
+| `TB`               | sim, post-syn-sim, post-syn-dpa                    | testbench module name           | Testbench to run (default `tb_$(TOP_LEVEL)`); set it to use an alternative bench           |
+| `CLK_PERIOD_NS`    | sim, post-syn-sta, post-syn-sim, post-syn-dpa      | e.g. `1.0`                      | Clock period in nanoseconds                                                                |
+| `OUT_DIR`          | all except clean-all                               | directory name                  | Output subdirectory under `sim/` or `imp/`                                                 |
+| `NETLIST_DIR`      | post-syn-sta, post-syn-sim, post-syn-dpa           | e.g. `top_bas_4x8_syn`          | Directory containing the synthesized netlist from `make syn`                               |
+| `VCD_DIR`          | post-syn-dpa                                       | e.g. `top_bas_4x8_post-syn-sim` | Directory containing `activity.vcd` from `make post-syn-sim`                               |
+| `PARAMS`           | sim, syn, post-syn-sim                             | `"KEY=VAL ..."`                 | Project-specific RTL elaboration parameters                                                |
+| `VCD`              | sim, post-syn-sim                                  | `0` (default), `1`              | Enable Verilator tracing and dump `activity.vcd` (off by default; costly on large designs) |
+| `KEEP_HIERARCHY`   | syn, post-syn-dpa                                  | `0` (default), `1`              | Preserve module boundaries in the netlist                                                  |
+| `KEEP_MODULES`     | syn, post-syn-dpa                                  | `"mod ..."` (default: `none`)   | Preserve only the listed module boundaries and flatten everything below them               |
+| `BLACKBOX_MODULES` | syn, post-syn-dpa                                  | `"mod ..."` (default: `none`)   | Do not elaborate the listed modules; link their netlists from `imp/<mod>/output/netlist.v` |

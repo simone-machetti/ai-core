@@ -4,6 +4,7 @@
 
 PROJECT          ?=
 TOP_LEVEL        ?=
+TB               ?= tb_$(TOP_LEVEL)
 OUT_DIR          ?= no_name
 NETLIST_DIR      ?= no_name
 VCD_DIR          ?= no_name
@@ -18,6 +19,7 @@ PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
 export SEL_PROJECT          := $(PROJECT)
 export SEL_TOP_LEVEL        := $(TOP_LEVEL)
+export SEL_TB               := $(TB)
 export SEL_OUT_DIR          := $(OUT_DIR)
 export SEL_NETLIST_DIR      := $(NETLIST_DIR)
 export SEL_VCD_DIR          := $(VCD_DIR)

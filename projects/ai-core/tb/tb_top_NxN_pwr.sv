@@ -2,48 +2,41 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Self-checking, full-throughput (streaming) testbench for the N x N PE grid,
-//   top_NxN. Unlike a present-one-operand-then-wait bench, this drives a fresh
-//   operand into every row/column on every clock, exactly like a real streaming
-//   application, and checks each PE's out_q against a pipeline-delayed golden.
-//   The pipeline latency is LAT clocks; in a loop that drives an operand and
-//   takes one posedge per iteration, the output seen at iteration t belongs to
-//   the operand driven at iteration t-D (D = LAT-1). A small ring buffer holds
-//   the per-cycle golden so each output is checked against the operand that
-//   produced it.
+//   Power-stimulus testbench for the N x N PE grid, top_NxN. It drives
+//   activity, it does not check results - the functional proof is tb_top_NxN.
+//   Purpose is to produce an activity.vcd for post-synthesis power analysis
+//   (make post-syn-sim VCD=1, then make post-syn-dpa).
 //
-//   Operands are distinct per PE: N independent corner-biased A matrices (one
-//   per row) and N independent B matrices (one per column), so PE[r][c]
-//   evaluates the plain matmul A[r] . B[c] and any wrong row/col fan-out shows
-//   up as a mismatch. The per-PE golden reuses the mode tables, packing and
-//   result reconstruction of the single-PE testbench.
+//   Stimulus: NUM_STREAM random operand sets per mode, streamed one per clock
+//   with every row and column enabled, single-shot only - sel_acc is tied low,
+//   acc is zero, and no rectangle scaling is exercised. The grid is reset once
+//   at the start, then the modes run back to back with no reset and no idle
+//   between them, so the VCD holds a continuous busy window rather than a
+//   sequence of reset transients. A final drain of LAT clocks lets the last
+//   operands reach out_q.
 //
-//   Three streaming passes, all 11 modes, with a reset between experiment types:
-//     1. Single-shot  - sel_acc = 0, acc = 0; a fresh operand every cycle, each
-//                       PE out_q(t) == golden(A_(t-D)[r] . B_(t-D)[c]).
-//     2. Accumulate   - real K-tile matmul: per-PE seed via acc, then stream
-//                       NUM_ACC distinct operand tiles with sel_acc feeding back,
-//                       out_q == seed + sum over the NUM_ACC tiles of golden.
-//     3. Scaling      - enable an nr x nc top-left rectangle (en_row[r]&en_col[c])
-//                       for every 1<=nr,nc<=N and stream: enabled PEs track the
-//                       delayed golden, disabled ones stay 0 (clock gated, held).
+//   Mode tables and operand packing are those of tb_top_NxN. The operand values
+//   are NOT: rand_signed here is uniform over the full signed range, while the
+//   functional bench biases 40% of draws onto the two extremes to reach
+//   sign-consistency corners - which for power only manufactures toggles.
+//   Uniform independent operands with no reuse and no sparsity still make this
+//   an upper bound on dynamic power, not a typical-workload figure.
 //
 // Parameters:
-//   N                - grid side; the array is N x N PEs (default 2 for a fast build)
-//   NUM_STREAM       - operands streamed per mode in the single-shot pass
-//   NUM_ACC          - distinct tiles accumulated in the accumulation pass
-//   NUM_STREAM_SCALE - operands streamed per rectangle in the scaling pass
+//   N          - grid side; the array is N x N PEs
+//   NUM_STREAM - random operand sets streamed per mode
+//   MODE_SEL   - -1 runs every mode into one VCD; a mode number (1,2,3,5..12)
+//                runs that mode alone, for per-mode power
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
 
 /* verilator lint_off UNUSEDSIGNAL */
 
-module tb_top_NxN #(
-    parameter int N                = 2,
-    parameter int NUM_STREAM       = 40,
-    parameter int NUM_ACC          = 8,
-    parameter int NUM_STREAM_SCALE = 10
+module tb_top_NxN_pwr #(
+    parameter int N          = 2,
+    parameter int NUM_STREAM = 10,
+    parameter int MODE_SEL   = -1
 );
 
     localparam int NUM_BLK   = 4;
@@ -55,14 +48,10 @@ module tb_top_NxN #(
     localparam int MAXM      = 2;
     localparam int MAXK      = 32;
     localparam int MAXN      = 4;
-    localparam int MAXO      = 8;
 
     localparam int MODE_NUM  [0:NUM_MODE-1] = '{1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12};
-    localparam int TAP_LEVEL [0:NUM_MODE-1] = '{0, 1, 1, 2, 3, 2, 3, 2, 1, 2, 2};
 
     localparam int MM_DIMS [0:NUM_MODE-1][0:6] = '{'{2,16,4,8,4,0,8},'{2,16,2,8,8,0,4},'{2,8,2,16,8,0,4},'{1,32,2,8,4,0,2},'{1,32,1,8,8,0,1},'{1,16,2,16,8,0,2},'{1,16,1,16,16,0,1},'{2,8,2,16,16,0,2},'{2,8,2,8,8,1,2},'{1,16,1,8,8,1,1},'{1,4,1,16,16,1,1}};
-
-    localparam int MM_OUT  [0:NUM_MODE-1][0:7][0:3] = '{'{'{0,0,0,-1},'{0,1,1,-1},'{0,2,2,-1},'{0,3,3,-1},'{1,0,4,-1},'{1,1,5,-1},'{1,2,6,-1},'{1,3,7,-1}},'{'{0,0,0,-1},'{0,1,1,-1},'{1,0,2,-1},'{1,1,3,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,-1},'{0,1,1,-1},'{1,0,2,-1},'{1,1,3,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,-1},'{0,1,1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,-1},'{0,1,1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,-1},'{1,1,1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,1},'{1,1,2,3},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}},'{'{0,0,0,1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1},'{0,0,-1,-1}}};
 
     localparam int MM_RE_A [0:NUM_MODE-1][0:1][0:31] = '{'{'{65280,65281,65282,65283,65284,65285,65286,65287,65288,65289,65290,65291,65292,65293,65294,65295,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{65296,65297,65298,65299,65300,65301,65302,65303,65304,65305,65306,65307,65308,65309,65310,65311,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{65280,65281,65282,65283,65284,65285,65286,65287,65288,65289,65290,65291,65292,65293,65294,65295,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{65296,65297,65298,65299,65300,65301,65302,65303,65304,65305,65306,65307,65308,65309,65310,65311,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{8,265,522,779,1036,1293,1550,1807,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{4120,4377,4634,4891,5148,5405,5662,5919,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{65280,65281,65282,65283,65284,65285,65286,65287,65288,65289,65290,65291,65292,65293,65294,65295,65296,65297,65298,65299,65300,65301,65302,65303,65304,65305,65306,65307,65308,65309,65310,65311},'{65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{65280,65281,65282,65283,65284,65285,65286,65287,65288,65289,65290,65291,65292,65293,65294,65295,65296,65297,65298,65299,65300,65301,65302,65303,65304,65305,65306,65307,65308,65309,65310,65311},'{65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{8,265,522,779,1036,1293,1550,1807,4120,4377,4634,4891,5148,5405,5662,5919,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{8,265,522,779,1036,1293,1550,1807,4120,4377,4634,4891,5148,5405,5662,5919,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{8,265,522,779,1036,1293,1550,1807,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{4120,4377,4634,4891,5148,5405,5662,5919,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{65280,65281,65282,65283,65284,65285,65286,65287,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{65296,65297,65298,65299,65300,65301,65302,65303,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{65280,65281,65282,65283,65284,65285,65286,65287,65296,65297,65298,65299,65300,65301,65302,65303,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}},'{'{8,265,522,779,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535},'{65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535,65535}}};
 
@@ -75,16 +64,12 @@ module tb_top_NxN #(
     localparam int MODE_WIDTH = 4;
     localparam int NUM_LANE   = 8;
     localparam int ACC_W      = 20;
-
-    localparam int LAT   = 3;
-    localparam int D     = LAT - 1;
-    localparam int DEPTH = LAT + 2;
+    localparam int LAT        = 3;
 
     logic                    clk_i;
     logic                    rst_ni;
     logic [ MODE_WIDTH-1:0]  mode;
     logic                    sel_acc;
-
     logic [   PE_WIDTH-1:0]  in_a     [0:NUM_ROW-1];
     logic [   PE_WIDTH-1:0]  in_b     [0:NUM_COL-1];
     logic [      ACC_W-1:0]  acc_word [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
@@ -94,29 +79,11 @@ module tb_top_NxN #(
 
     logic [   PE_WIDTH-1:0]  pe_in_a;
     logic [   PE_WIDTH-1:0]  pe_in_b;
-    logic [      ACC_W-1:0]  pe_out   [0:NUM_LANE-1];
 
     logic signed [15:0] A_re   [0:MAXM-1][0:MAXK-1];
     logic signed [15:0] A_im   [0:MAXM-1][0:MAXK-1];
     logic signed [15:0] B_re   [0:MAXK-1][0:MAXN-1];
     logic signed [15:0] B_im   [0:MAXK-1][0:MAXN-1];
-    logic signed [15:0] A_re_s [0:NUM_ROW-1][0:MAXM-1][0:MAXK-1];
-    logic signed [15:0] A_im_s [0:NUM_ROW-1][0:MAXM-1][0:MAXK-1];
-    logic signed [15:0] B_re_s [0:NUM_COL-1][0:MAXK-1][0:MAXN-1];
-    logic signed [15:0] B_im_s [0:NUM_COL-1][0:MAXK-1][0:MAXN-1];
-    longint             X_re   [0:MAXO-1];
-    longint             X_im   [0:MAXO-1];
-
-    longint acc_seed    [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
-    longint acc_seed_im [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
-
-    longint gold_re [0:DEPTH-1][0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
-    longint gold_im [0:DEPTH-1][0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
-    longint accg_re [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
-    longint accg_im [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
-
-    int err;
-    int npass;
 
 `ifdef POST_SYN_SIM
     localparam int ACC_FLAT = NUM_ROW * NUM_COL * NUM_LANE * ACC_W;
@@ -185,13 +152,11 @@ module tb_top_NxN #(
 
     function automatic logic signed [15:0] rand_signed(input int width);
         logic [15:0] r;
-        int pk;
         r = 16'($urandom);
-        pk = $urandom % 5;
         case (width)
-            4:       return (pk == 0) ? -16'sd8     : (pk == 1) ? 16'sd7     : 16'($signed(r[3:0]));
-            8:       return (pk == 0) ? -16'sd128   : (pk == 1) ? 16'sd127   : 16'($signed(r[7:0]));
-            default: return (pk == 0) ? -16'sd32768 : (pk == 1) ? 16'sd32767 : $signed(r);
+            4:       return 16'($signed(r[3:0]));
+            8:       return 16'($signed(r[7:0]));
+            default: return $signed(r);
         endcase
     endfunction
 
@@ -199,17 +164,6 @@ module tb_top_NxN #(
         int m;
         m = (1 << (width - 1)) - 1;
         return 16'($signed(($urandom % (2*m + 1)) - m));
-    endfunction
-
-    function automatic longint read_result(input int lvl, input int node);
-        int hlane, llane;
-        if (lvl == 0) return longint'($signed(pe_out[node]));
-        case (lvl)
-            1:       begin hlane = 2*node;        llane = 2*node + 1;    end
-            2:       begin hlane = (node==0)?2:6; llane = (node==0)?3:7; end
-            default: begin hlane = 6;             llane = 7;             end
-        endcase
-        return longint'($signed({pe_out[hlane], pe_out[llane]}));
     endfunction
 
     task automatic rand_a(input int mi);
@@ -232,24 +186,6 @@ module tb_top_NxN #(
                 B_re[k][n] = rand_signed(PB);
                 B_im[k][n] = (cplx != 0) ? rand_signed_sym(PB) : 16'sd0;
             end
-    endtask
-
-    task automatic golden(input int mi);
-        int K, NOUT, m, n;
-        longint re, im;
-        K = MM_DIMS[mi][1]; NOUT = MM_DIMS[mi][6];
-        for (int o = 0; o < NOUT; o++) begin
-            m = MM_OUT[mi][o][0]; n = MM_OUT[mi][o][1];
-            re = 0; im = 0;
-            for (int k = 0; k < K; k++) begin
-                re = re + longint'(A_re[m][k]) * longint'(B_re[k][n])
-                        - longint'(A_im[m][k]) * longint'(B_im[k][n]);
-                im = im + longint'(A_re[m][k]) * longint'(B_im[k][n])
-                        + longint'(A_im[m][k]) * longint'(B_re[k][n]);
-            end
-            X_re[o] = re;
-            X_im[o] = im;
-        end
     endtask
 
     task automatic pack_a(input int mi);
@@ -312,75 +248,6 @@ module tb_top_NxN #(
         end
     endtask
 
-    task automatic gen_operands(input int mi);
-        for (int rr = 0; rr < NUM_ROW; rr++) begin
-            rand_a(mi);
-            A_re_s[rr] = A_re;
-            A_im_s[rr] = A_im;
-            pack_a(mi);
-            in_a[rr] = pe_in_a;
-        end
-        for (int cc = 0; cc < NUM_COL; cc++) begin
-            rand_b(mi);
-            B_re_s[cc] = B_re;
-            B_im_s[cc] = B_im;
-            pack_b(mi);
-            in_b[cc] = pe_in_b;
-        end
-    endtask
-
-    task automatic stream_golden(input int mi, input int slot);
-        int NOUT;
-        NOUT = MM_DIMS[mi][6];
-        for (int rr = 0; rr < NUM_ROW; rr++)
-            for (int cc = 0; cc < NUM_COL; cc++) begin
-                A_re = A_re_s[rr]; A_im = A_im_s[rr];
-                B_re = B_re_s[cc]; B_im = B_im_s[cc];
-                golden(mi);
-                for (int o = 0; o < NOUT; o++) begin
-                    gold_re[slot][rr][cc][o] = X_re[o];
-                    gold_im[slot][rr][cc][o] = X_im[o];
-                end
-            end
-    endtask
-
-    task automatic stream_check(input int mi, input int slot, input int nr, input int nc);
-        int NOUT, lvl, rn, in;
-        longint r;
-        NOUT = MM_DIMS[mi][6]; lvl = TAP_LEVEL[mi];
-        for (int rr = 0; rr < NUM_ROW; rr++)
-            for (int cc = 0; cc < NUM_COL; cc++) begin
-                for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q[rr][cc][l];
-                if (rr < nr && cc < nc) begin
-                    for (int o = 0; o < NOUT; o++) begin
-                        rn = MM_OUT[mi][o][2];
-                        in = MM_OUT[mi][o][3];
-                        r = read_result(lvl, rn);
-                        if (r !== gold_re[slot][rr][cc][o]) begin
-                            err = err + 1;
-                            $display("  mode %0d PE[%0d][%0d] out %0d Re: golden=%0d dut=%0d",
-                                     MODE_NUM[mi], rr, cc, o, gold_re[slot][rr][cc][o], r);
-                        end
-                        if (in >= 0) begin
-                            r = read_result(lvl, in);
-                            if (r !== gold_im[slot][rr][cc][o]) begin
-                                err = err + 1;
-                                $display("  mode %0d PE[%0d][%0d] out %0d Im: golden=%0d dut=%0d",
-                                         MODE_NUM[mi], rr, cc, o, gold_im[slot][rr][cc][o], r);
-                            end
-                        end
-                    end
-                end else begin
-                    for (int l = 0; l < NUM_LANE; l++)
-                        if (out_q[rr][cc][l] !== '0) begin
-                            err = err + 1;
-                            $display("  scale mode %0d PE[%0d][%0d] lane %0d not held (=%0d)",
-                                     MODE_NUM[mi], rr, cc, l, $signed(out_q[rr][cc][l]));
-                        end
-                end
-            end
-    endtask
-
     task automatic clear_acc;
         for (int rr = 0; rr < NUM_ROW; rr++)
             for (int cc = 0; cc < NUM_COL; cc++)
@@ -390,22 +257,6 @@ module tb_top_NxN #(
     task automatic enable_all;
         for (int rr = 0; rr < NUM_ROW; rr++) en_row[rr] = 1'b1;
         for (int cc = 0; cc < NUM_COL; cc++) en_col[cc] = 1'b1;
-    endtask
-
-    task automatic set_acc_pe(input int row, input int col, input int lvl,
-                              input int node, input longint val);
-        int hlane, llane;
-        if (lvl == 0) begin
-            acc_word[row][col][node] = val[ACC_W-1:0];
-            return;
-        end
-        case (lvl)
-            1:       begin hlane = 2*node;        llane = 2*node + 1;   end
-            2:       begin hlane = (node==0)?2:6; llane = (node==0)?3:7; end
-            default: begin hlane = 6;             llane = 7;            end
-        endcase
-        acc_word[row][col][hlane] = val[2*ACC_W-1:ACC_W];
-        acc_word[row][col][llane] = val[ACC_W-1:0];
     endtask
 
     task automatic reset_dut;
@@ -418,157 +269,67 @@ module tb_top_NxN #(
         #1;
     endtask
 
+    task automatic gen_operands(input int mi);
+        for (int rr = 0; rr < NUM_ROW; rr++) begin
+            rand_a(mi);
+            pack_a(mi);
+            in_a[rr] = pe_in_a;
+        end
+        for (int cc = 0; cc < NUM_COL; cc++) begin
+            rand_b(mi);
+            pack_b(mi);
+            in_b[cc] = pe_in_b;
+        end
+    endtask
+
     initial begin
-        int err0, NOUT, lvl, rn, in, slot, cs;
-        longint r;
-        $display("\nStarting top_NxN streaming verification (%0dx%0d PEs, %0d modes, NUM_STREAM=%0d NUM_ACC=%0d)...\n",
-                 NUM_ROW, NUM_COL, NUM_MODE, NUM_STREAM, NUM_ACC);
+        int nrun;
+        bit ok;
+
+        if (MODE_SEL >= 0) begin
+            ok = 1'b0;
+            for (int mi = 0; mi < NUM_MODE; mi++)
+                if (MODE_NUM[mi] == MODE_SEL) ok = 1'b1;
+            if (!ok)
+                $fatal(1, "MODE_SEL=%0d is not a legal mode - use one of 1,2,3,5,6,7,8,9,10,11,12, or -1 for all",
+                       MODE_SEL);
+        end
+
+        if (MODE_SEL < 0)
+            $display("\nStarting top_NxN power stimulus (%0dx%0d PEs, all %0d modes, %0d vectors/mode)...\n",
+                     NUM_ROW, NUM_COL, NUM_MODE, NUM_STREAM);
+        else
+            $display("\nStarting top_NxN power stimulus (%0dx%0d PEs, mode %0d only, %0d vectors)...\n",
+                     NUM_ROW, NUM_COL, MODE_SEL, NUM_STREAM);
 `ifdef VCD
         $dumpfile("activity.vcd");
-        $dumpvars(0, tb_top_NxN.dut);
+        $dumpvars(0, tb_top_NxN_pwr.dut);
 `endif
 
         for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
         for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
         mode = '0; sel_acc = 1'b0;
         clear_acc(); enable_all();
-        err = 0; npass = 0;
 
-        $display("Streaming single-shot pass (%0d operands/mode)...", NUM_STREAM);
+        reset_dut();
+
+        nrun = 0;
         for (int mi = 0; mi < NUM_MODE; mi++) begin
-            reset_dut();
+            if (MODE_SEL >= 0 && MODE_NUM[mi] != MODE_SEL) continue;
             mode = MODE_WIDTH'(MODE_NUM[mi]);
-            sel_acc = 1'b0; clear_acc(); enable_all();
-            err0 = err;
-            for (int t = 0; t < NUM_STREAM + D; t++) begin
-                slot = t % DEPTH;
-                if (t < NUM_STREAM) begin
-                    gen_operands(mi);
-                    stream_golden(mi, slot);
-                end else begin
-                    for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
-                    for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
-                end
+            for (int t = 0; t < NUM_STREAM; t++) begin
+                gen_operands(mi);
                 sel_acc = 1'b0;
                 @(posedge clk_i);
                 #1;
-                cs = t - D;
-                if (cs >= 0) stream_check(mi, cs % DEPTH, NUM_ROW, NUM_COL);
             end
-            if (err == err0) begin
-                npass = npass + 1;
-                $display("  mode %0d: PASS", MODE_NUM[mi]);
-            end else
-                $display("  mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
+            nrun = nrun + 1;
         end
 
-        $display("\nStreaming accumulation pass (seed + sum of %0d distinct tiles)...", NUM_ACC);
-        for (int mi = 0; mi < NUM_MODE; mi++) begin
-            reset_dut();
-            mode = MODE_WIDTH'(MODE_NUM[mi]);
-            lvl  = TAP_LEVEL[mi];
-            NOUT = MM_DIMS[mi][6];
-            clear_acc(); enable_all();
-            err0 = err;
-            for (int rr = 0; rr < NUM_ROW; rr++)
-                for (int cc = 0; cc < NUM_COL; cc++)
-                    for (int o = 0; o < NOUT; o++) begin
-                        acc_seed[rr][cc][o] = longint'(rand_signed(16));
-                        accg_re[rr][cc][o]  = acc_seed[rr][cc][o];
-                        set_acc_pe(rr, cc, lvl, MM_OUT[mi][o][2], acc_seed[rr][cc][o]);
-                        if (MM_OUT[mi][o][3] >= 0) begin
-                            acc_seed_im[rr][cc][o] = longint'(rand_signed(16));
-                            accg_im[rr][cc][o]     = acc_seed_im[rr][cc][o];
-                            set_acc_pe(rr, cc, lvl, MM_OUT[mi][o][3], acc_seed_im[rr][cc][o]);
-                        end
-                    end
-            for (int t = 0; t < NUM_ACC + D; t++) begin
-                if (t < NUM_ACC) begin
-                    gen_operands(mi);
-                    for (int rr = 0; rr < NUM_ROW; rr++)
-                        for (int cc = 0; cc < NUM_COL; cc++) begin
-                            A_re = A_re_s[rr]; A_im = A_im_s[rr];
-                            B_re = B_re_s[cc]; B_im = B_im_s[cc];
-                            golden(mi);
-                            for (int o = 0; o < NOUT; o++) begin
-                                accg_re[rr][cc][o] += X_re[o];
-                                if (MM_OUT[mi][o][3] >= 0) accg_im[rr][cc][o] += X_im[o];
-                            end
-                        end
-                    sel_acc = (t == 0) ? 1'b0 : 1'b1;
-                end else begin
-                    for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
-                    for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
-                    sel_acc = 1'b1;
-                end
-                @(posedge clk_i);
-                #1;
-            end
-            for (int rr = 0; rr < NUM_ROW; rr++)
-                for (int cc = 0; cc < NUM_COL; cc++) begin
-                    for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q[rr][cc][l];
-                    for (int o = 0; o < NOUT; o++) begin
-                        rn = MM_OUT[mi][o][2];
-                        in = MM_OUT[mi][o][3];
-                        r = read_result(lvl, rn);
-                        if (r !== accg_re[rr][cc][o]) begin
-                            err = err + 1;
-                            $display("  acc mode %0d PE[%0d][%0d] out %0d Re: golden=%0d dut=%0d",
-                                     MODE_NUM[mi], rr, cc, o, accg_re[rr][cc][o], r);
-                        end
-                        if (in >= 0) begin
-                            r = read_result(lvl, in);
-                            if (r !== accg_im[rr][cc][o]) begin
-                                err = err + 1;
-                                $display("  acc mode %0d PE[%0d][%0d] out %0d Im: golden=%0d dut=%0d",
-                                         MODE_NUM[mi], rr, cc, o, accg_im[rr][cc][o], r);
-                            end
-                        end
-                    end
-                end
-            if (err == err0)
-                $display("  acc mode %0d: PASS", MODE_NUM[mi]);
-            else
-                $display("  acc mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
-        end
+        repeat (LAT) @(posedge clk_i);
 
-        $display("\nStreaming scaling pass (enabled rectangle streams; disabled PEs held 0)...");
-        for (int mi = 0; mi < NUM_MODE; mi++) begin
-            err0 = err;
-            for (int nr = 1; nr <= NUM_ROW; nr++)
-                for (int nc = 1; nc <= NUM_COL; nc++) begin
-                    reset_dut();
-                    mode = MODE_WIDTH'(MODE_NUM[mi]);
-                    sel_acc = 1'b0; clear_acc();
-                    for (int rr = 0; rr < NUM_ROW; rr++) en_row[rr] = (rr < nr) ? 1'b1 : 1'b0;
-                    for (int cc = 0; cc < NUM_COL; cc++) en_col[cc] = (cc < nc) ? 1'b1 : 1'b0;
-                    for (int t = 0; t < NUM_STREAM_SCALE + D; t++) begin
-                        slot = t % DEPTH;
-                        if (t < NUM_STREAM_SCALE) begin
-                            gen_operands(mi);
-                            stream_golden(mi, slot);
-                        end else begin
-                            for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
-                            for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
-                        end
-                        sel_acc = 1'b0;
-                        @(posedge clk_i);
-                        #1;
-                        cs = t - D;
-                        if (cs >= 0) stream_check(mi, cs % DEPTH, nr, nc);
-                    end
-                end
-            if (err == err0)
-                $display("  scale mode %0d: PASS", MODE_NUM[mi]);
-            else
-                $display("  scale mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
-        end
-
-`ifdef VCD
-        $dumpoff;
-`endif
-        $display("\ntop_NxN streaming verification: %0d/%0d single-shot modes passed (%0d total mismatches)\n",
-                 npass, NUM_MODE, err);
+        $display("Power stimulus done: %0d mode(s) x %0d vectors = %0d busy clocks.",
+                 nrun, NUM_STREAM, nrun * NUM_STREAM);
         $finish;
     end
 

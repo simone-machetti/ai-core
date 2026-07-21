@@ -38,4 +38,3 @@ report_checks \
     > $REPORT_DIR/critical_paths.rpt
 report_wns > $REPORT_DIR/wns.rpt
 report_tns > $REPORT_DIR/tns.rpt
-# report_units

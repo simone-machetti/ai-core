@@ -20,7 +20,7 @@ read_verilog $env(REPO_HOME)/projects/$env(SEL_PROJECT)/imp/$env(SEL_NETLIST_DIR
 link_design $env(SEL_TOP_LEVEL)
 
 # -----------------------------------------------------------------------------
-# Virtual clock & I/O constraints (required to avoid "No clocks defined")
+# Virtual clock & I/O constraints
 # -----------------------------------------------------------------------------
 set CLK_PERIOD_PS [expr {$env(SEL_CLK_PERIOD_NS) * 1000}]
 create_clock -name clk_i -period $CLK_PERIOD_PS [get_ports clk_i]
@@ -29,7 +29,7 @@ create_clock -name clk_i -period $CLK_PERIOD_PS [get_ports clk_i]
 # VCD-based switching activity
 # -----------------------------------------------------------------------------
 set vcd_verilator "$env(REPO_HOME)/projects/$env(SEL_PROJECT)/sim/$env(SEL_VCD_DIR)/output/activity.vcd"
-read_vcd -scope tb_$env(SEL_TOP_LEVEL)/$env(SEL_TOP_LEVEL)_i $vcd_verilator
+read_vcd -scope $env(SEL_TB)/dut $vcd_verilator
 
 report_activity_annotation -report_annotated   > $REPORT_DIR/vcd_annotated.rpt
 report_activity_annotation -report_unannotated > $REPORT_DIR/vcd_unannotated.rpt
@@ -39,7 +39,8 @@ report_activity_annotation -report_unannotated > $REPORT_DIR/vcd_unannotated.rpt
 # -----------------------------------------------------------------------------
 report_power > $REPORT_DIR/power_summary.rpt
 
-if {$env(SEL_KEEP_HIERARCHY) eq "1"} {
+if {$env(SEL_KEEP_HIERARCHY) eq "1" ||
+    $env(SEL_KEEP_MODULES) ne "none" ||
+    $env(SEL_BLACKBOX_MODULES) ne "none"} {
     report_power -instances [get_cells -hierarchical *] > $REPORT_DIR/power_hierarchy.rpt
 }
-# report_units
