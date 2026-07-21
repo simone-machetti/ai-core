@@ -6,7 +6,7 @@
 #   and square (top_NxN_sqr) PE grids at 8x8 and 16x16, split into PE / Dispatch
 #   / Alpha-Beta / Clock (ICG) / Others. Unlike the area chart, all four bars are
 #   assembled from the per-component unit powers measured on the complete 2x2
-#   grids (imp/dpa_2x2[_sqr]/report/power_hierarchy.rpt) - gate-level simulation
+#   grids at 100 vectors/mode (imp/dpa_2x2[_sqr]/report/power_hierarchy.rpt) - gate-level simulation
 #   of an 8x8 or 16x16 grid does not fit in memory - and collected per category
 #   in doc/data/res_syn_pwr.xlsx. Colours follow hist_syn_area.py, with Clock
 #   added: power has a clock term area does not. Writes hist_syn_pwr.png next to
@@ -20,19 +20,19 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
 UNIT_BASELINE = {
-    "PE":         {"pe":          0.63275, "icg_pe": 0.02080},
-    "Dispatch":   {"disp_a":      0.09890, "disp_b": 0.10600},
+    "PE":         {"pe":          0.64075, "icg_pe": 0.02080},
+    "Dispatch":   {"disp_a":      0.09485, "disp_b": 0.10500},
     "Alpha-Beta": {},
     "Clock":      {"icg_rowcol":  0.00591},
-    "Others":     {"ctrl":        0.00546, "glue":   0.00011},
+    "Others":     {"ctrl":        0.00120, "glue":   0.00000},
 }
 
 UNIT_SQUARE = {
-    "PE":         {"pe_sqr":      0.51300, "icg_pe": 0.01970},
-    "Dispatch":   {"disp_a_sqr":  0.12850, "disp_b_sqr": 0.10450},
-    "Alpha-Beta": {"alpha":       0.37450, "beta":   0.35000},
+    "PE":         {"pe_sqr":      0.50200, "icg_pe": 0.01970},
+    "Dispatch":   {"disp_a_sqr":  0.12400, "disp_b_sqr": 0.10300},
+    "Alpha-Beta": {"alpha":       0.36950, "beta":   0.34600},
     "Clock":      {"icg_rowcol":  0.01490},
-    "Others":     {"ctrl_sqr":    0.00901, "const_sqr": 0.00009, "glue": 0.00168},
+    "Others":     {"ctrl_sqr":    0.00167, "const_sqr": 0.00001, "glue": 0.00129},
 }
 
 COUNT = {

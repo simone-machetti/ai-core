@@ -21,9 +21,9 @@ make post-syn-dpa PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=dpa_2x2 \
     BLACKBOX_MODULES="pe ctrl disp_array_a disp_array_b icg"
 ```
 
-Stimulus is `tb/tb_top_NxN_pwr.sv` / `tb/tb_top_NxN_sqr_pwr.sv` — 10 uniform-random operand sets per mode, streamed one per clock with every row and column enabled, single-shot only (`sel_acc` tied low, `acc` zero, no rectangle scaling), all 11 modes back to back with no reset and no idle between them so the VCD holds one continuous busy window. The two benches are byte-identical apart from the DUT, so the comparison is against the same stimulus.
+Stimulus is `tb/tb_top_NxN_pwr.sv` / `tb/tb_top_NxN_sqr_pwr.sv` — 100 uniform-random operand sets per mode, streamed one per clock with every row and column enabled, single-shot only (`sel_acc` tied low, `acc` zero, no rectangle scaling), all 11 modes back to back with no reset and no idle between them so the VCD holds one continuous busy window. The two benches are byte-identical apart from the DUT, so the comparison is against the same stimulus.
 
-`CLK_PERIOD_NS=10` matches the benches' `always #5` clock. Annotation is complete — 667 361 pins baseline, 858 237 square, **0 unannotated** — so every switching figure comes from the VCD rather than from a default toggle rate.
+`CLK_PERIOD_NS=10` (100 MHz) is the benches' clock, derived from the flow variable rather than hardcoded. Dumping starts after reset deassertion, so the reset transient is not charged to the average. The 100 vectors per mode match [Per-Mode Synthesis Power](syn_mode_pwr.md), so the two experiments are directly comparable — the figure here is the same workload merged into one VCD instead of measured mode by mode. The VCDs are 0.82 GB / 1.05 GB. Annotation is complete — 667 361 pins baseline, 858 237 square, **0 unannotated** — so every switching figure comes from the VCD rather than from a default toggle rate.
 
 All commands are in [run_syn_pwr.sh](../../scripts/run_syn_pwr.sh). Numbers land in `doc/data/res_syn_pwr.xlsx` and `doc/charts/hist_syn_pwr.png`.
 
@@ -55,13 +55,13 @@ Per-component unit power from the 2×2 runs, mW:
 
 | Baseline                                   | Power   | Square                                                 | Power   |
 | ------------------------------------------ | ------- | ------------------------------------------------------ | ------- |
-| [ctrl](../modules/ctrl.md)                 | 0.00546 | [ctrl_sqr](../modules/ctrl_sqr.md)                     | 0.00901 |
-| [disp_array_a](../modules/disp_array_a.md) | 0.09890 | [const_sqr](../modules/const_sqr.md)                   | 0.00009 |
-| [disp_array_b](../modules/disp_array_b.md) | 0.10600 | [disp_array_a_sqr](../modules/disp_array_a_sqr.md)     | 0.12850 |
-| [pe](../modules/pe.md)                     | 0.63275 | [disp_array_b_sqr](../modules/disp_array_b_sqr.md)     | 0.10450 |
-| [icg](../modules/icg.md) (per PE)          | 0.02080 | [pe_array_alpha_sqr](../modules/pe_array_alpha_sqr.md) | 0.37450 |
-| [icg](../modules/icg.md) (per row/col)     | 0.00591 | [pe_array_beta_sqr](../modules/pe_array_beta_sqr.md)   | 0.35000 |
-|                                            |         | [pe_sqr](../modules/pe_sqr.md)                         | 0.51300 |
+| [ctrl](../modules/ctrl.md)                 | 0.00120 | [ctrl_sqr](../modules/ctrl_sqr.md)                     | 0.00167 |
+| [disp_array_a](../modules/disp_array_a.md) | 0.09485 | [const_sqr](../modules/const_sqr.md)                   | 0.00001 |
+| [disp_array_b](../modules/disp_array_b.md) | 0.10500 | [disp_array_a_sqr](../modules/disp_array_a_sqr.md)     | 0.12400 |
+| [pe](../modules/pe.md)                     | 0.64075 | [disp_array_b_sqr](../modules/disp_array_b_sqr.md)     | 0.10300 |
+| [icg](../modules/icg.md) (per PE)          | 0.02080 | [pe_array_alpha_sqr](../modules/pe_array_alpha_sqr.md) | 0.36950 |
+| [icg](../modules/icg.md) (per row/col)     | 0.00591 | [pe_array_beta_sqr](../modules/pe_array_beta_sqr.md)   | 0.34600 |
+|                                            |         | [pe_sqr](../modules/pe_sqr.md)                         | 0.50200 |
 |                                            |         | [icg](../modules/icg.md) (per PE)                      | 0.01970 |
 |                                            |         | [icg](../modules/icg.md) (per row/col)                 | 0.01490 |
 
@@ -69,35 +69,38 @@ Grid totals, mW:
 
 | Grid  | Baseline | Square  | Ratio  | Square vs baseline | Basis     |
 | ----- | -------- | ------- | ------ | ------------------ | --------- |
-| 2×2   | 3.053    | 4.116   | 1.3481 | +34.81 %           | measured  |
-| 8×8   | 43.567   | 42.002  | 0.9641 | −3.59 %            | assembled |
-| 16×16 | 170.782  | 152.179 | 0.8911 | −10.89 %           | assembled |
+| 2×2   | 3.071    | 4.034   | 1.3138 | +31.38 %           | measured  |
+| 8×8   | 44.034   | 41.170  | 0.9350 | −6.50 %            | assembled |
+| 16×16 | 172.745  | 149.115 | 0.8632 | −13.68 %           | assembled |
 
-**The square costs 34.8 % more power at 2×2, saves 3.6 % at 8×8 and 10.9 % at 16×16.** Fitting the component counts gives
+**The square costs 31.4 % more power at 2×2, saves 6.5 % at 8×8 and 13.7 % at 16×16.** Fitting the component counts gives
 
 ```
-P_baseline(N) = 0.65355 N² + 0.21672 N + 0.00557   mW
-P_square(N)   = 0.53270 N² + 0.98730 N + 0.01078   mW
+P_baseline(N) = 0.66155 N² + 0.21167 N + 0.00120   mW
+P_square(N)   = 0.52170 N² + 0.97230 N + 0.00297   mW
 ```
 
-so the per-tile saving is 0.12085 mW (−18.49 % per PE) against a 0.77058 mW cost per row+column. **The power crossover is at N = 6.38** — the square wins from 7×7 up — and the ratio tends to 0.8151.
+so the per-tile saving is 0.13985 mW (−21.14 % per PE) against a 0.76063 mW cost per row+column. **The power crossover is at N = 5.44** — the square wins from 6×6 up — and the ratio tends to 0.7886.
 
-The power crossover arrives **a full grid size earlier than the area crossover**: N = 6.38 against N = 7.05, so the square starts winning on power at 7×7 but only wins on area from 8×8, and at 8×8 the power margin is more than twice the area margin (−3.59 % against −1.53 %). The reason is that the squarer's advantage is larger in switching than in cells — −18.49 % power per tile against −13.16 % area per tile. Replacing a multiplier array with a squarer array removes more toggling than it removes gates.
+The power crossover arrives **well before the area crossover**: N = 5.44 against N = 7.05, so the square starts winning on power at 6×6 but only wins on area from 8×8, and at 8×8 the power margin is over four times the area margin (−6.50 % against −1.53 %). The reason is that the squarer's advantage is larger in switching than in cells — −21.14 % power per tile against −13.16 % area per tile. Replacing a multiplier array with a squarer array removes more toggling than it removes gates.
 
-The α/β generators are the whole of the overhead — 0.7245 mW per row+column between them, against 0.0461 mW of extra dispatch and clock-gate power. They are also unconditionally active: they run every cycle regardless of the mode, which is why the 2×2 penalty is so large and why the crossover exists at all.
+The α/β generators are the whole of the overhead — 0.7155 mW per row+column between them, against 0.0451 mW of extra dispatch and clock-gate power. They are also unconditionally active: they run every cycle regardless of the mode, which is why the 2×2 penalty is so large and why the crossover exists at all.
 
-Split by category at 8×8: PE 41.83 → 34.09 mW, α/β 0 → 5.80 mW, dispatch 1.64 → 1.86 mW, clock gates 0.10 → 0.24 mW.
+Split by category at 8×8: PE 42.34 → 33.39 mW, α/β 0 → 5.72 mW, dispatch 1.60 → 1.82 mW, clock gates 0.10 → 0.24 mW.
 
 ## Cost and reproduction
 
 Per variant, baseline / square:
 
-| Pass                             | Wall time      | Peak RAM          |
-| -------------------------------- | -------------- | ----------------- |
-| B — 2×2 grid synthesis           | 25 / 40 s      | 0.56 / 0.78 GB    |
-| C — gate-level simulation        | 9.2 / 11.6 min | ~0.4 GB (fitted)  |
-| D — VCD-annotated power analysis | 27 / 32 s      | —                 |
+| Pass                             | Wall time      | Peak RAM       |
+| -------------------------------- | -------------- | -------------- |
+| B — 2×2 grid synthesis           | 25 / 40 s      | 0.56 / 0.78 GB |
+| C — Verilator build              | 9.2 / 11.6 min | ~0.4 GB        |
+| C — simulation only              | 18 / 16 s      | 0.18 / 0.23 GB |
+| D — VCD-annotated power analysis | 70 / 85 s      | 1.07 GB        |
 
-Pass C dominates, and essentially all of it is Verilator compiling the netlist, not simulating it: the executable takes **3 seconds** to run. That is worth knowing before scaling up — the cost of gate-level power is a compile cost, so it grows with netlist size and not with how much stimulus is driven, and a longer or richer stimulus is nearly free once the binary exists. Passes A and B are shared with [Synthesis Area](syn_area.md) and need not be rerun if that experiment has already run. Nothing here needs swap at 2×2.
+Pass C dominates, and essentially all of it is Verilator compiling the netlist, not simulating it: 1100 stimulus cycles run in **18 seconds**. The cost of gate-level power is a compile cost — it grows with netlist size, not with how much stimulus is driven, so a longer or richer stimulus is nearly free once the binary exists.
+
+`read_vcd` is markedly **sublinear** in VCD size: going from 0.14 GB to 0.82 GB (5.9×) took the full power run from 30.8 s to 70.5 s (2.3×), and peak memory from 0.78 GB to 1.07 GB. Most of the cost is per-pin bookkeeping rather than per-transition, so stimulus length is cheap on this side too. Passes A and B are shared with [Synthesis Area](syn_area.md) and need not be rerun if that experiment has already run. Nothing here needs swap at 2×2.
 
 Extending the measurement to 8×8 needs about 24 GB for pass C, which fits a 30 GB machine with the swap setup described in [Synthesis Area](syn_area.md), but the compile alone would take hours. 16×16 is out of reach for Verilator at gate level.

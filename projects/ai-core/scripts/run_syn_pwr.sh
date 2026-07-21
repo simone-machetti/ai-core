@@ -10,8 +10,11 @@
 #   to dump activity.vcd, and pass D annotates that activity onto the netlist in
 #   OpenSTA and reports per-instance power. The 8x8 and 16x16 figures are then
 #   assembled from the per-component unit powers, since gate-level simulation of
-#   those grids does not fit in memory. Method, component list, instance counts
-#   and results in the wiki experiment page wiki/experiments/syn_pwr.md.
+#   those grids does not fit in memory. Pass C re-runs the compiled binary with
+#   +vectors=NUM_VEC so the stimulus length matches run_syn_mode_pwr.sh and the
+#   two experiments stay comparable; the make invocation before it only builds.
+#   Method, component list, instance counts and results in the wiki experiment
+#   page wiki/experiments/syn_pwr.md.
 #
 #   Passes A and B duplicate run_syn_area.sh at N=2 - if that script has already
 #   run, only pass B (the 2x2 grids) is actually needed here.
@@ -20,11 +23,14 @@
 cd "$(dirname "$0")/../../.." || exit 1
 source sourceme.sh
 
+PROJ="$REPO_HOME/projects/ai-core"
+
 BB_BAS="pe ctrl disp_array_a disp_array_b icg"
 BB_SQR="pe_sqr ctrl_sqr const_sqr disp_array_a_sqr disp_array_b_sqr \
         pe_array_alpha_sqr pe_array_beta_sqr icg"
 
 CLK=10
+NUM_VEC=100
 
 # -----------------------------------------------------------------------------
 # Pass A - per-module runs
@@ -58,9 +64,11 @@ make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr OUT_DIR=top_2x2_sqr PARAMS="N=2" 
 # -----------------------------------------------------------------------------
 make post-syn-sim PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=pwr_2x2 \
     NETLIST_DIR=top_2x2 TB=tb_top_NxN_pwr CLK_PERIOD_NS=$CLK VCD=1
+( cd "$PROJ/sim/pwr_2x2/output" && "$PROJ/sim/pwr_2x2/build/simv" +vectors=$NUM_VEC )
 
 make post-syn-sim PROJECT=ai-core TOP_LEVEL=top_NxN_sqr OUT_DIR=pwr_2x2_sqr \
     NETLIST_DIR=top_2x2_sqr TB=tb_top_NxN_sqr_pwr CLK_PERIOD_NS=$CLK VCD=1
+( cd "$PROJ/sim/pwr_2x2_sqr/output" && "$PROJ/sim/pwr_2x2_sqr/build/simv" +vectors=$NUM_VEC )
 
 # -----------------------------------------------------------------------------
 # Pass D - VCD-annotated power analysis
