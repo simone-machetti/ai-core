@@ -16,15 +16,16 @@ The output taps are **one's-complemented** (`~l*_sum_o` / `~l*_carry_o`, all fou
 
 Same as [pe_array_sqr](./pe_array_sqr.md), except `a_dp8_i` is **dropped** and per-DP8 `is_signed_a_i` + `zero_i` are **added**:
 
-| Signal                   | Dir | Width       | Description                                                         |
-| ------------------------ | --- | ----------- | ------------------------------------------------------------------- |
-| `clk_i` / `rst_ni`       | in  | 1           | Clock / async active-low reset.                                     |
-| `b_dp8_i[0:15]`          | in  | 32 each     | Pre-centered B per DP8, from `disp_array_b_sqr`.                    |
-| `is_signed_a_i[0:15]`    | in  | 1 each      | **NEW** — removed A-high signedness (drives the β high-block bias). |
-| `zero_i[0:15]`           | in  | 1 each      | **NEW** — idle-zero for the β low block.                            |
-| `neg_i[5:0]`             | in  | 6           | Per-block negate (modes 10/11), same as PE.                         |
-| `sel_shift_i[2:0]`       | in  | 1 each      | Per-level shift enable.                                             |
-| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save `−β` taps (one's-complemented) at every level.           |
+| Signal                   | Dir | Width       | Description                                                                                            |
+| ------------------------ | --- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `clk_i` / `rst_ni`       | in  | 1           | Clock / async active-low reset.                                                                        |
+| `b_dp8_i[0:15]`          | in  | 32 each     | Pre-centered B per DP8, from `disp_array_b_sqr`.                                                       |
+| `is_signed_a_i[0:15]`    | in  | 1 each      | **NEW** — removed A-high signedness (drives the β high-block bias).                                    |
+| `zero_i[0:15]`           | in  | 1 each      | **NEW** — idle-zero for the β low block.                                                               |
+| `neg_i[5:0]`             | in  | 6           | Per-block negate (modes 10/11), same as PE.                                                            |
+| `sel_shift_i[2:0]`       | in  | 1 each      | Per-level shift enable.                                                                                |
+| `en_level_i[2:0]`        | in  | 1 each      | Operand-isolation enable per tree branch (`[0]`=L0→L1, `[1]`=L1→L2, `[2]`=L2→L3); masks below the tap. |
+| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save `−β` taps (one's-complemented) at every level.                                              |
 
 ## Instantiation
 
@@ -32,7 +33,7 @@ Same as [pe_array_sqr](./pe_array_sqr.md), except `a_dp8_i` is **dropped** and p
 pe_array_beta_sqr pe_array_beta_sqr_i (
     .clk_i(clk_i), .rst_ni(rst_ni),
     .b_dp8_i(b_dp8), .is_signed_a_i(is_signed_a), .zero_i(zero_dp8),
-    .neg_i(neg), .sel_shift_i(sel_shift),
+    .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
     .l0_sum_o(l0_sum), .l0_carry_o(l0_carry), /* ...l1..l3... */
     .l3_sum_o(l3_sum), .l3_carry_o(l3_carry)
 );

@@ -153,23 +153,24 @@ module tb_pe_array_sqr #(
 
     logic                    clk_i;
     logic                    rst_ni;
-    logic [   PE_WIDTH-1:0]  pe_in_a;
-    logic [   PE_WIDTH-1:0]  pe_in_b;
-    logic [  SEL_WIDTH-1:0]  sel_a       [0:NUM_PAIR-1];
-    logic [  SEL_WIDTH-1:0]  sel_b       [0:NUM_PAIR-1];
-    logic                    is_signed_a [0:NUM_DP8-1];
-    logic                    is_signed_b [0:NUM_DP8-1];
-    logic                    zero_dp8    [0:NUM_DP8-1];
-    logic [    NUM_NEG-1:0]  neg;
-    logic [  NUM_SHIFT-1:0]  sel_shift;
-    logic [A_DP8_WIDTH-1:0]  a_dp8       [0:NUM_DP8-1];
-    logic [B_DP8_WIDTH-1:0]  b_dp8       [0:NUM_DP8-1];
-    logic [L0_TAP_WIDTH-1:0] l0_sum      [0:NUM_L0-1];
-    logic [L0_TAP_WIDTH-1:0] l0_carry    [0:NUM_L0-1];
-    logic [L1_TAP_WIDTH-1:0] l1_sum      [0:NUM_L1-1];
-    logic [L1_TAP_WIDTH-1:0] l1_carry    [0:NUM_L1-1];
-    logic [L2_TAP_WIDTH-1:0] l2_sum      [0:NUM_L2-1];
-    logic [L2_TAP_WIDTH-1:0] l2_carry    [0:NUM_L2-1];
+    logic [    PE_WIDTH-1:0] pe_in_a;
+    logic [    PE_WIDTH-1:0] pe_in_b;
+    logic [   SEL_WIDTH-1:0] sel_a       [0:NUM_PAIR-1];
+    logic [   SEL_WIDTH-1:0] sel_b       [0:NUM_PAIR-1];
+    logic                    is_signed_a [ 0:NUM_DP8-1];
+    logic                    is_signed_b [ 0:NUM_DP8-1];
+    logic                    zero_dp8    [ 0:NUM_DP8-1];
+    logic [     NUM_NEG-1:0] neg;
+    logic [   NUM_SHIFT-1:0] sel_shift;
+    logic [             2:0] en_level;
+    logic [ A_DP8_WIDTH-1:0] a_dp8       [ 0:NUM_DP8-1];
+    logic [ B_DP8_WIDTH-1:0] b_dp8       [ 0:NUM_DP8-1];
+    logic [L0_TAP_WIDTH-1:0] l0_sum      [  0:NUM_L0-1];
+    logic [L0_TAP_WIDTH-1:0] l0_carry    [  0:NUM_L0-1];
+    logic [L1_TAP_WIDTH-1:0] l1_sum      [  0:NUM_L1-1];
+    logic [L1_TAP_WIDTH-1:0] l1_carry    [  0:NUM_L1-1];
+    logic [L2_TAP_WIDTH-1:0] l2_sum      [  0:NUM_L2-1];
+    logic [L2_TAP_WIDTH-1:0] l2_carry    [  0:NUM_L2-1];
     logic [L3_TAP_WIDTH-1:0] l3_sum;
     logic [L3_TAP_WIDTH-1:0] l3_carry;
 
@@ -188,7 +189,7 @@ module tb_pe_array_sqr #(
     pe_array_sqr pe_array_sqr_i (
         .clk_i(clk_i), .rst_ni(rst_ni),
         .a_dp8_i(a_dp8), .b_dp8_i(b_dp8),
-        .neg_i(neg), .sel_shift_i(sel_shift),
+        .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
         .l0_sum_o(l0_sum), .l0_carry_o(l0_carry),
         .l1_sum_o(l1_sum), .l1_carry_o(l1_carry),
         .l2_sum_o(l2_sum), .l2_carry_o(l2_carry),
@@ -234,6 +235,7 @@ module tb_pe_array_sqr #(
         end
         neg       = NEG_I[mi];
         sel_shift = SEL_SHIFT_LUT[mi];
+        en_level  = {TAP_LEVEL[mi] >= 3, TAP_LEVEL[mi] >= 2, TAP_LEVEL[mi] >= 1};
     endtask
 
     task automatic rand_vec;

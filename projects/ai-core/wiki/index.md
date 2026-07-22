@@ -80,8 +80,8 @@ _None yet._
 ## Experiments
 
 * [Synthesis Area](experiments/syn_area.md) — `top_NxN` vs `top_NxN_sqr` cell area at 8×8 and 16×16, measured on the complete synthesized grids (per-component pass A, blackbox-linked pass B). Square is −1.53 % at 8×8 and −7.26 % at 16×16; 8×8 is the crossover, the asymptote is 0.8684.
-* [Synthesis Power](experiments/syn_pwr.md) — `top_NxN` vs `top_NxN_sqr` VCD-annotated dynamic power at 100 vectors/mode, measured on the complete 2×2 grids and assembled per component for the larger sizes (gate-level simulation of an 8×8 does not fit in memory). Square is +31.38 % at 2×2, −6.50 % at 8×8 and −13.68 % at 16×16; the power crossover is N = 5.44, well before the area crossover at N = 7.05, and the asymptote is 0.7886.
-* [Per-Mode Synthesis Power](experiments/syn_mode_pwr.md) — the same comparison measured once per operating mode (100 vectors each) instead of averaged over all 11. The square's 8×8 margin ranges from **−18.36 % (mode 6) to +6.47 % (mode 1)** and the crossover from **N = 3.01 to N = 14.79**: both the N² per-tile saving and the N α/β overhead scale with the mode, and their ratio decides the winner. Square wins 10 of 11 modes at 8×8, all 11 at 16×16.
+* [Synthesis Power](experiments/syn_pwr.md) — `top_NxN` vs `top_NxN_sqr` VCD-annotated dynamic power at 100 vectors/mode, measured on the complete 2×2 grids and assembled per component for the larger sizes (gate-level simulation of an 8×8 does not fit in memory). Square is +37.06 % at 2×2, −3.50 % at 8×8 and −11.20 % at 16×16; the power crossover is N = 6.48, just before the area crossover at N = 7.05, and the asymptote is 0.8080.
+* [Per-Mode Synthesis Power](experiments/syn_mode_pwr.md) — the same comparison measured once per operating mode (100 vectors each) instead of averaged over all 11. The square's 8×8 margin ranges from **−16.94 % (mode 6) to +8.01 % (mode 1)** and the crossover from **N = 3.25 to N = 17.16**: both the N² per-tile saving and the N α/β overhead scale with the mode, and their ratio decides the winner. Square wins 9 of 11 modes at 8×8 (loses 1 and 3), 10 of 11 at 16×16 (loses 1).
 
 ## References
 

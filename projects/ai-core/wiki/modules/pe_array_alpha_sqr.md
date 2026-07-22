@@ -16,14 +16,15 @@ The output taps are **one's-complemented** (`~l*_sum_o` / `~l*_carry_o`, all fou
 
 Same as [pe_array_sqr](./pe_array_sqr.md), except `b_dp8_i` is **dropped** and a per-DP8 `is_signed_b_i` is **added**:
 
-| Signal                   | Dir | Width       | Description                                               |
-| ------------------------ | --- | ----------- | --------------------------------------------------------- |
-| `clk_i` / `rst_ni`       | in  | 1           | Clock / async active-low reset.                           |
-| `a_dp8_i[0:15]`          | in  | 64 each     | Pre-centered A per DP8, from `disp_array_a_sqr`.          |
-| `is_signed_b_i[0:15]`    | in  | 1 each      | **NEW** — removed-B signedness (drives the α bias).       |
-| `neg_i[5:0]`             | in  | 6           | Per-block negate (modes 10/11), same as PE.               |
-| `sel_shift_i[2:0]`       | in  | 1 each      | Per-level shift enable.                                   |
-| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save `−α` taps (one's-complemented) at every level. |
+| Signal                   | Dir | Width       | Description                                                                                            |
+| ------------------------ | --- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `clk_i` / `rst_ni`       | in  | 1           | Clock / async active-low reset.                                                                        |
+| `a_dp8_i[0:15]`          | in  | 64 each     | Pre-centered A per DP8, from `disp_array_a_sqr`.                                                       |
+| `is_signed_b_i[0:15]`    | in  | 1 each      | **NEW** — removed-B signedness (drives the α bias).                                                    |
+| `neg_i[5:0]`             | in  | 6           | Per-block negate (modes 10/11), same as PE.                                                            |
+| `sel_shift_i[2:0]`       | in  | 1 each      | Per-level shift enable.                                                                                |
+| `en_level_i[2:0]`        | in  | 1 each      | Operand-isolation enable per tree branch (`[0]`=L0→L1, `[1]`=L1→L2, `[2]`=L2→L3); masks below the tap. |
+| `l0..l3_sum_o`/`carry_o` | out | 19/30/38/39 | Carry-save `−α` taps (one's-complemented) at every level.                                              |
 
 ## Instantiation
 
@@ -31,7 +32,7 @@ Same as [pe_array_sqr](./pe_array_sqr.md), except `b_dp8_i` is **dropped** and a
 pe_array_alpha_sqr pe_array_alpha_sqr_i (
     .clk_i(clk_i), .rst_ni(rst_ni),
     .a_dp8_i(a_dp8), .is_signed_b_i(is_signed_b),
-    .neg_i(neg), .sel_shift_i(sel_shift),
+    .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
     .l0_sum_o(l0_sum), .l0_carry_o(l0_carry), /* ...l1..l3... */
     .l3_sum_o(l3_sum), .l3_carry_o(l3_carry)
 );

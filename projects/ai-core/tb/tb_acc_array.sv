@@ -170,33 +170,35 @@ module tb_acc_array #(
 
     logic                    clk_i;
     logic                    rst_ni;
-    logic [   PE_WIDTH-1:0]  pe_in_a;
-    logic [   PE_WIDTH-1:0]  pe_in_b;
-    logic [  SEL_WIDTH-1:0]  sel_a       [0:NUM_PAIR-1];
-    logic [  SEL_WIDTH-1:0]  sel_b       [0:NUM_PAIR-1];
-    logic [   OP_WIDTH-1:0]  ctr_l       [0:NUM_PAIR-1];
-    logic [   OP_WIDTH-1:0]  ctr_h       [0:NUM_PAIR-1];
-    logic [A_DP8_WIDTH-1:0]  a_dp8       [0:NUM_DP8-1];
-    logic [B_DP8_WIDTH-1:0]  b_dp8       [0:NUM_DP8-1];
-    logic                    is_signed_a [0:NUM_DP8-1];
-    logic                    is_signed_b [0:NUM_DP8-1];
-    logic [  NUM_SHIFT-1:0]  sel_shift;
-    logic [L0_TAP_WIDTH-1:0] l0_sum      [0:NUM_L0-1];
-    logic [L0_TAP_WIDTH-1:0] l0_carry    [0:NUM_L0-1];
-    logic [L1_TAP_WIDTH-1:0] l1_sum      [0:NUM_L1-1];
-    logic [L1_TAP_WIDTH-1:0] l1_carry    [0:NUM_L1-1];
-    logic [L2_TAP_WIDTH-1:0] l2_sum      [0:NUM_L2-1];
-    logic [L2_TAP_WIDTH-1:0] l2_carry    [0:NUM_L2-1];
+    logic [    PE_WIDTH-1:0] pe_in_a;
+    logic [    PE_WIDTH-1:0] pe_in_b;
+    logic [   SEL_WIDTH-1:0] sel_a       [0:NUM_PAIR-1];
+    logic [   SEL_WIDTH-1:0] sel_b       [0:NUM_PAIR-1];
+    logic [    OP_WIDTH-1:0] ctr_l       [0:NUM_PAIR-1];
+    logic [    OP_WIDTH-1:0] ctr_h       [0:NUM_PAIR-1];
+    logic [ A_DP8_WIDTH-1:0] a_dp8       [ 0:NUM_DP8-1];
+    logic [ B_DP8_WIDTH-1:0] b_dp8       [ 0:NUM_DP8-1];
+    logic                    is_signed_a [ 0:NUM_DP8-1];
+    logic                    is_signed_b [ 0:NUM_DP8-1];
+    logic [   NUM_SHIFT-1:0] sel_shift;
+    logic [             2:0] en_level;
+    logic [L0_TAP_WIDTH-1:0] l0_sum      [  0:NUM_L0-1];
+    logic [L0_TAP_WIDTH-1:0] l0_carry    [  0:NUM_L0-1];
+    logic [L1_TAP_WIDTH-1:0] l1_sum      [  0:NUM_L1-1];
+    logic [L1_TAP_WIDTH-1:0] l1_carry    [  0:NUM_L1-1];
+    logic [L2_TAP_WIDTH-1:0] l2_sum      [  0:NUM_L2-1];
+    logic [L2_TAP_WIDTH-1:0] l2_carry    [  0:NUM_L2-1];
     logic [L3_TAP_WIDTH-1:0] l3_sum;
     logic [L3_TAP_WIDTH-1:0] l3_carry;
 
     localparam int NUM_LANE = 8;
     localparam int ACC_W    = 20;
-    logic [ACC_W-1:0] acc_word [0:NUM_LANE-1];
+
+    logic [ACC_W-1:0] acc_word   [0:NUM_LANE-1];
     logic [      1:0] sel_out;
     logic             sel_acc;
     logic             prop_carry;
-    logic [ACC_W-1:0] pe_out   [0:NUM_LANE-1];
+    logic [ACC_W-1:0] pe_out     [0:NUM_LANE-1];
 
     logic signed [15:0] A_re [0:MAXM-1][0:MAXK-1];
     logic signed [15:0] A_im [0:MAXM-1][0:MAXK-1];
@@ -234,6 +236,7 @@ module tb_acc_array #(
         .is_signed_a_i(is_signed_a),
         .is_signed_b_i(is_signed_b),
         .sel_shift_i  (sel_shift),
+        .en_level_i   (en_level),
         .l0_sum_o     (l0_sum),
         .l0_carry_o   (l0_carry),
         .l1_sum_o     (l1_sum),
@@ -295,6 +298,7 @@ module tb_acc_array #(
             is_signed_b[i] = IS_SIGNED_B[mi][i];
         end
         sel_shift  = SEL_SHIFT[mi];
+        en_level   = {TAP_LEVEL[mi] >= 3, TAP_LEVEL[mi] >= 2, TAP_LEVEL[mi] >= 1};
         sel_out    = 2'(TAP_LEVEL[mi]);
         prop_carry = (TAP_LEVEL[mi] >= 1);
     endtask
@@ -461,7 +465,7 @@ module tb_acc_array #(
         for (int i = 0; i < NUM_DP8; i++) begin
             is_signed_a[i] = 1'b0; is_signed_b[i] = 1'b0;
         end
-        sel_shift = '0; sel_out = '0; sel_acc = 1'b0; prop_carry = 1'b0;
+        sel_shift = '0; en_level = '1; sel_out = '0; sel_acc = 1'b0; prop_carry = 1'b0;
         clear_acc();
         err = 0; npass = 0;
         repeat (3) @(posedge clk_i);

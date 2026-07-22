@@ -18,6 +18,7 @@
 | `a_dp8_i` / `b_dp8_i`                                | in  | 64 / 32 | Dispatched operands (16 DP8s), from `disp_array_*_sqr`.        |
 | `en_i`                                               | in  | 1       | Operand + tap isolation mask (and external clock-gate enable). |
 | `neg_i` / `sel_shift_i`                              | in  | 6 / 3   | `pe_array_sqr` controls (block-negate, tree shifts).           |
+| `en_level_i`                                         | in  | 3       | Tree operand-isolation enables — masks levels below the tap.   |
 | `a_l0..l3_{sum,carry}_i`                             | in  | 19…39   | `−α` taps, from `pe_array_alpha_sqr` (row).                    |
 | `b_l0..l3_{sum,carry}_i`                             | in  | 19…39   | `−β` taps, from `pe_array_beta_sqr` (column).                  |
 | `c_i` / `c_neg_i`                                    | in  | 32 / 8  | Per-mode constant, from `const_sqr`.                           |
@@ -31,7 +32,7 @@
 pe_sqr pe_sqr_i (
     .clk_i(clk_pe), .rst_ni(rst_ni),
     .a_dp8_i(a_dp8_row), .b_dp8_i(b_dp8_col), .en_i(en_pe),
-    .neg_i(neg), .sel_shift_i(sel_shift),
+    .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
     .a_l0_sum_i(arow_l0_sum), /* … row −α taps … */
     .b_l0_sum_i(bcol_l0_sum), /* … col −β taps … */
     .c_i(c_q2), .c_neg_i(cn_q2), .acc_i(acc_word),

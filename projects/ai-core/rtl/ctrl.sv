@@ -9,7 +9,8 @@
 //     - disp_array_b : B block selects sel_b and B-gate controls ctr_l/ctr_h
 //     - pe           : per-DP8 signedness is_signed_a/is_signed_b, the tree shift
 //                      enables sel_shift, the tap select sel_out and the lane-
-//                      fusion carry enable prop_carry
+//                      fusion carry enable prop_carry, and the tree operand-
+//                      isolation enables en_level
 //   Built as a lookup table indexed by the registered mode. mode_i is registered
 //   once on input (mode_q1), and the decode is combinational from mode_q1: the
 //   disp selects/gates, the signedness and the L0 shift (sel_shift[0]) act in the
@@ -28,6 +29,7 @@ module ctrl #(
     localparam int SEL_WIDTH  = 2,
     localparam int OP_WIDTH   = 2,
     localparam int NUM_SHIFT  = 3,
+    localparam int NUM_LEVEL  = 3,
     localparam int SHIFT_HI   = 2,
     localparam int MODE_WIDTH = 4,
     localparam int NUM_ENTRY  = 16
@@ -43,6 +45,7 @@ module ctrl #(
     output logic                  is_signed_b_o [ 0:NUM_DP8-1],
     output logic [ NUM_SHIFT-1:0] sel_shift_o,
     output logic [ SEL_WIDTH-1:0] sel_out_o,
+    output logic [ NUM_LEVEL-1:0] en_level_o,
     output logic                  prop_carry_o
 );
 
@@ -224,6 +227,7 @@ module ctrl #(
 
     assign sel_shift_o  = {shifthi_q[0], sel_shift_c[0]};
     assign sel_out_o    = selout_q[0];
+    assign en_level_o   = {&selout_q[0], selout_q[0][1], |selout_q[0]};
     assign prop_carry_o = propc_q[0];
 
 endmodule

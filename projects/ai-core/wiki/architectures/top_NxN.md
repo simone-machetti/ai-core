@@ -47,7 +47,7 @@ top_NxN #(.N(8)) grid_i (
 
 The grid is built from one shared decode, per-row/per-column dispatch, and the N² PE array:
 
-- **Shared control** — one `ctrl` decodes `mode_i` into every datapath control (`sel_a`/`sel_b`/`ctr_l`/`ctr_h`, per-DP8 signedness, `sel_shift`, `sel_out`, `prop_carry`) and holds the stage-2 control-pipeline registers. It runs **ungated**.
+- **Shared control** — one `ctrl` decodes `mode_i` into every datapath control (`sel_a`/`sel_b`/`ctr_l`/`ctr_h`, per-DP8 signedness, `sel_shift`, `sel_out`, `en_level`, `prop_carry`) and holds the stage-2 control-pipeline registers. It runs **ungated**.
 - **Shared sel_acc pipeline** — two `reg_n` stages delay `sel_acc_i` so it meets the accumulate stage in the same issue time-base as the operands. Also **ungated**.
 - **Per-row A dispatch** — one `disp_array_a` per row registers `in_a_i[r]` and broadcasts the dispatched A to that row's PEs.
 - **Per-column B dispatch** — one `disp_array_b` per column registers `in_b_i[c]`, applies the B gating, and broadcasts the dispatched B to that column's PEs.
@@ -59,7 +59,7 @@ icg icg_pe_i (.clk_i(clk_i), .en_i(en_pe), .clk_o(clk_pe));
 pe  pe_i     (.clk_i(clk_pe), .rst_ni(rst_ni),
               .a_dp8_i(a_dp8_row[r]), .b_dp8_i(b_dp8_col[c]), .en_i(en_pe),
               .is_signed_a_i(is_signed_a), .is_signed_b_i(is_signed_b),
-              .sel_shift_i(sel_shift), .acc_i(acc_i[r][c]),
+              .sel_shift_i(sel_shift), .en_level_i(en_level), .acc_i(acc_i[r][c]),
               .sel_out_i(sel_out), .sel_acc_i(selacc_q2[0]), .prop_carry_i(prop_carry),
               .out_o(out_q_o[r][c]) );
 ```

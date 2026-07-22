@@ -42,6 +42,7 @@ module top_NxN_sqr #(
     localparam int NUM_PAIR    = 8,
     localparam int NUM_DP8     = 16,
     localparam int SEL_WIDTH   = 2,
+    localparam int NUM_LEVEL   = 3,
     localparam int NUM_SHIFT   = 3,
     localparam int NUM_NEG     = 6,
     localparam int A_DP8_WIDTH = 64,
@@ -72,11 +73,12 @@ module top_NxN_sqr #(
 
     logic [SEL_WIDTH-1:0] sel_a       [0:NUM_PAIR-1];
     logic [SEL_WIDTH-1:0] sel_b       [0:NUM_PAIR-1];
-    logic                 is_signed_a [0:NUM_DP8-1];
-    logic                 is_signed_b [0:NUM_DP8-1];
-    logic                 zero        [0:NUM_DP8-1];
+    logic                 is_signed_a [ 0:NUM_DP8-1];
+    logic                 is_signed_b [ 0:NUM_DP8-1];
+    logic                 zero        [ 0:NUM_DP8-1];
     logic [  NUM_NEG-1:0] neg;
     logic [NUM_SHIFT-1:0] sel_shift;
+    logic [NUM_LEVEL-1:0] en_level;
     logic [SEL_WIDTH-1:0] sel_out;
     logic [SEL_WIDTH-1:0] sel_const;
     logic                 prop_carry;
@@ -86,7 +88,8 @@ module top_NxN_sqr #(
         .sel_a_o(sel_a), .sel_b_o(sel_b),
         .is_signed_a_o(is_signed_a), .is_signed_b_o(is_signed_b),
         .zero_o(zero), .neg_o(neg), .sel_shift_o(sel_shift),
-        .sel_out_o(sel_out), .sel_const_o(sel_const), .prop_carry_o(prop_carry)
+        .sel_out_o(sel_out), .sel_const_o(sel_const), .prop_carry_o(prop_carry),
+        .en_level_o(en_level)
     );
 
     logic [MODE_WIDTH-1:0] mode_d [0:0], mode_q [0:0];
@@ -145,7 +148,7 @@ module top_NxN_sqr #(
             pe_array_alpha_sqr pe_array_alpha_sqr_i (
                 .clk_i(clk_a), .rst_ni(rst_ni),
                 .a_dp8_i(a_dp8_row[r]), .is_signed_b_i(is_signed_b),
-                .neg_i(neg), .sel_shift_i(sel_shift),
+                .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
                 .l0_sum_o(arow_l0_sum[r]), .l0_carry_o(arow_l0_carry[r]),
                 .l1_sum_o(arow_l1_sum[r]), .l1_carry_o(arow_l1_carry[r]),
                 .l2_sum_o(arow_l2_sum[r]), .l2_carry_o(arow_l2_carry[r]),
@@ -166,7 +169,7 @@ module top_NxN_sqr #(
             pe_array_beta_sqr pe_array_beta_sqr_i (
                 .clk_i(clk_b), .rst_ni(rst_ni),
                 .b_dp8_i(b_dp8_col[c]), .is_signed_a_i(is_signed_a), .zero_i(zero),
-                .neg_i(neg), .sel_shift_i(sel_shift),
+                .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
                 .l0_sum_o(bcol_l0_sum[c]), .l0_carry_o(bcol_l0_carry[c]),
                 .l1_sum_o(bcol_l1_sum[c]), .l1_carry_o(bcol_l1_carry[c]),
                 .l2_sum_o(bcol_l2_sum[c]), .l2_carry_o(bcol_l2_carry[c]),
@@ -185,7 +188,7 @@ module top_NxN_sqr #(
                 pe_sqr pe_sqr_i (
                     .clk_i(clk_pe), .rst_ni(rst_ni),
                     .a_dp8_i(a_dp8_row[r]), .b_dp8_i(b_dp8_col[c]),
-                    .en_i(en_pe), .neg_i(neg), .sel_shift_i(sel_shift),
+                    .en_i(en_pe), .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
                     .a_l0_sum_i(arow_l0_sum[r]), .a_l0_carry_i(arow_l0_carry[r]),
                     .a_l1_sum_i(arow_l1_sum[r]), .a_l1_carry_i(arow_l1_carry[r]),
                     .a_l2_sum_i(arow_l2_sum[r]), .a_l2_carry_i(arow_l2_carry[r]),

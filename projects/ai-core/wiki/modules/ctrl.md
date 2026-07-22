@@ -14,20 +14,21 @@ None — fixed to the PE configuration. The key `localparam`s: `NUM_PAIR = 8`, `
 
 ## Interface
 
-| Signal                | Dir | Width  | Description                                                    |
-| --------------------- | --- | ------ | -------------------------------------------------------------- |
-| `clk_i`               | in  | 1      | Clock.                                                         |
-| `rst_ni`              | in  | 1      | Asynchronous active-low reset.                                 |
-| `mode_i`              | in  | 4      | Operating-mode select (registered once on input).              |
-| `sel_a_o[0:7]`        | out | 2 each | Per-pair A block select → `disp_array_a`.                      |
-| `sel_b_o[0:7]`        | out | 2 each | Per-pair B block select → `disp_array_b`.                      |
-| `ctr_l_o[0:7]`        | out | 2 each | B-gate (pass / zero / negate) for the L half.                  |
-| `ctr_h_o[0:7]`        | out | 2 each | B-gate for the H half.                                         |
-| `is_signed_a_o[0:15]` | out | 1 each | Per-DP8 A signedness → `pe`.                                   |
-| `is_signed_b_o[0:15]` | out | 1 each | Per-DP8 B signedness → `pe`.                                   |
-| `sel_shift_o`         | out | 3      | Tree shift enables — bit 0 combinational, bits 2:1 registered. |
-| `sel_out_o`           | out | 2      | Tap-level select (registered) → `pe`.                          |
-| `prop_carry_o`        | out | 1      | Lane-fusion carry enable (registered) → `pe`.                  |
+| Signal                | Dir | Width  | Description                                                          |
+| --------------------- | --- | ------ | -------------------------------------------------------------------- |
+| `clk_i`               | in  | 1      | Clock.                                                               |
+| `rst_ni`              | in  | 1      | Asynchronous active-low reset.                                       |
+| `mode_i`              | in  | 4      | Operating-mode select (registered once on input).                    |
+| `sel_a_o[0:7]`        | out | 2 each | Per-pair A block select → `disp_array_a`.                            |
+| `sel_b_o[0:7]`        | out | 2 each | Per-pair B block select → `disp_array_b`.                            |
+| `ctr_l_o[0:7]`        | out | 2 each | B-gate (pass / zero / negate) for the L half.                        |
+| `ctr_h_o[0:7]`        | out | 2 each | B-gate for the H half.                                               |
+| `is_signed_a_o[0:15]` | out | 1 each | Per-DP8 A signedness → `pe`.                                         |
+| `is_signed_b_o[0:15]` | out | 1 each | Per-DP8 B signedness → `pe`.                                         |
+| `sel_shift_o`         | out | 3      | Tree shift enables — bit 0 combinational, bits 2:1 registered.       |
+| `sel_out_o`           | out | 2      | Tap-level select (registered) → `pe`.                                |
+| `en_level_o`          | out | 3      | Tree operand-isolation enables (registered), decoded from `sel_out`. |
+| `prop_carry_o`        | out | 1      | Lane-fusion carry enable (registered) → `pe`.                        |
 
 ## Instantiation
 
@@ -39,7 +40,8 @@ ctrl ctrl_i (
     .ctr_l_o(ctr_l), .ctr_h_o(ctr_h),
     .is_signed_a_o(is_signed_a), .is_signed_b_o(is_signed_b),
     .sel_shift_o(sel_shift),
-    .sel_out_o(sel_out), .prop_carry_o(prop_carry)
+    .sel_out_o(sel_out), .prop_carry_o(prop_carry),
+    .en_level_o(en_level)
 );
 ```
 
@@ -102,6 +104,7 @@ reg_n #(.WIDTH(1),         .SIZE(1)) reg_propc_i   (...);  // prop_carry
 
 ```systemverilog
 assign sel_shift_o = {shifthi_q[0], sel_shift_c[0]};
+assign en_level_o  = {&selout_q[0], selout_q[0][1], |selout_q[0]};
 ```
 
 Source: [ctrl.sv](../../rtl/ctrl.sv)

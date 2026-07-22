@@ -20,17 +20,18 @@ None — fixed to the PE configuration. Key `localparam`s: `NUM_PAIR = 8`, `NUM_
 
 ## Interface
 
-| Signal                          | Dir | Width | Description                                    |
-| ------------------------------- | --- | ----- | ---------------------------------------------- |
-| `clk_i` / `rst_ni`              | in  | 1     | Clock / async reset.                           |
-| `mode_i`                        | in  | 4     | Grid-wide mode.                                |
-| `sel_a_o`/`sel_b_o`             | out | 2×8   | A / B block selects (dispatch routing).        |
-| `is_signed_a_o`/`is_signed_b_o` | out | 1×16  | Per-DP8 centering / generator-bias signedness. |
-| `zero_o`                        | out | 1×16  | Per-DP8 idle-zero.                             |
-| `neg_o`                         | out | 6     | Complex block-negate.                          |
-| `sel_shift_o`                   | out | 3     | Tree shift enables.                            |
-| `sel_out_o`                     | out | 2     | Tap-level select.                              |
-| `sel_const_o`                   | out | 2     | Const-mux pattern.                             |
-| `prop_carry_o`                  | out | 1     | Lane-fusion carry enable.                      |
+| Signal                          | Dir | Width | Description                                     |
+| ------------------------------- | --- | ----- | ----------------------------------------------- |
+| `clk_i` / `rst_ni`              | in  | 1     | Clock / async reset.                            |
+| `mode_i`                        | in  | 4     | Grid-wide mode.                                 |
+| `sel_a_o`/`sel_b_o`             | out | 2×8   | A / B block selects (dispatch routing).         |
+| `is_signed_a_o`/`is_signed_b_o` | out | 1×16  | Per-DP8 centering / generator-bias signedness.  |
+| `zero_o`                        | out | 1×16  | Per-DP8 idle-zero.                              |
+| `neg_o`                         | out | 6     | Complex block-negate.                           |
+| `sel_shift_o`                   | out | 3     | Tree shift enables.                             |
+| `sel_out_o`                     | out | 2     | Tap-level select.                               |
+| `en_level_o`                    | out | 3     | Tree operand-isolation enables, from `sel_out`. |
+| `sel_const_o`                   | out | 2     | Const-mux pattern.                              |
+| `prop_carry_o`                  | out | 1     | Lane-fusion carry enable.                       |
 
 Source: [ctrl_sqr.sv](../../rtl/ctrl_sqr.sv)

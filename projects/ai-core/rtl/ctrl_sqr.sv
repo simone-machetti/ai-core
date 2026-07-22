@@ -11,7 +11,8 @@
 //     - pe_array_sqr / alpha / beta : complex block-negate neg, tree shift enables
 //                      sel_shift; alpha uses is_signed_b, beta uses is_signed_a/zero
 //     - acc_array_sqr   : tap select sel_out, const-mux pattern sel_const, lane-
-//                      fusion carry enable prop_carry
+//                      fusion carry enable prop_carry, and the tree operand-
+//                      isolation enables en_level
 //   It drops ctr_l/ctr_h (the square B dispatcher has no shift) and adds zero,
 //   neg and sel_const. Like ctrl, mode_i is registered once (mode_q1) and the
 //   decode is combinational from it: the first-stage controls (dispatch, signed,
@@ -28,6 +29,7 @@ module ctrl_sqr #(
     localparam int NUM_DP8    = 16,
     localparam int SEL_WIDTH  = 2,
     localparam int NUM_SHIFT  = 3,
+    localparam int NUM_LEVEL  = 3,
     localparam int NUM_NEG    = 6,
     localparam int SHIFT_HI   = 2,
     localparam int MODE_WIDTH = 4,
@@ -44,6 +46,7 @@ module ctrl_sqr #(
     output logic [   NUM_NEG-1:0] neg_o,
     output logic [ NUM_SHIFT-1:0] sel_shift_o,
     output logic [ SEL_WIDTH-1:0] sel_out_o,
+    output logic [ NUM_LEVEL-1:0] en_level_o,
     output logic [ SEL_WIDTH-1:0] sel_const_o,
     output logic                  prop_carry_o
 );
@@ -226,6 +229,7 @@ module ctrl_sqr #(
 
     assign sel_shift_o  = {shifthi_q[0], sel_shift_c[0]};
     assign sel_out_o    = selout_q[0];
+    assign en_level_o   = {&selout_q[0], selout_q[0][1], |selout_q[0]};
     assign sel_const_o  = selconst_q[0];
     assign prop_carry_o = propc_q[0];
 

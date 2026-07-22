@@ -33,6 +33,7 @@ None — fixed to the PE configuration; the shape is baked in as `localparam`s. 
 | `is_signed_a_i[0:15]` | in  | 1 each  | Per-DP8 A signedness, from `ctrl`.                                                |
 | `is_signed_b_i[0:15]` | in  | 1 each  | Per-DP8 B signedness, from `ctrl`.                                                |
 | `sel_shift_i`         | in  | 3       | Tree shift enables, from `ctrl`.                                                  |
+| `en_level_i`          | in  | 3       | Tree operand-isolation enables, from `ctrl` — masks levels below the tap.         |
 | `acc_i[0:7]`          | in  | 20 each | External accumulator word (per PE) — pipelined here.                              |
 | `sel_out_i`           | in  | 2       | Tap-level select (already registered in `ctrl`).                                  |
 | `sel_acc_i`           | in  | 1       | Accumulate select (already pipelined in the grid).                                |
@@ -47,7 +48,7 @@ pe pe_i (
     .a_dp8_i(a_dp8_row[r]), .b_dp8_i(b_dp8_col[c]),
     .en_i(en_pe),
     .is_signed_a_i(is_signed_a), .is_signed_b_i(is_signed_b),
-    .sel_shift_i(sel_shift),
+    .sel_shift_i(sel_shift), .en_level_i(en_level),
     .acc_i(acc_i[r][c]),
     .sel_out_i(sel_out), .sel_acc_i(selacc_q2[0]), .prop_carry_i(prop_carry),
     .out_o(out_q_o[r][c])

@@ -20,19 +20,19 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
 UNIT_BASELINE = {
-    "PE":         {"pe":          0.64075, "icg_pe": 0.02080},
-    "Dispatch":   {"disp_a":      0.09485, "disp_b": 0.10500},
+    "PE":         {"pe":          0.63350, "icg_pe": 0.02080},
+    "Dispatch":   {"disp_a":      0.09425, "disp_b": 0.10500},
     "Alpha-Beta": {},
     "Clock":      {"icg_rowcol":  0.00591},
-    "Others":     {"ctrl":        0.00120, "glue":   0.00000},
+    "Others":     {"ctrl":        0.00123, "glue":   0.00000},
 }
 
 UNIT_SQUARE = {
-    "PE":         {"pe_sqr":      0.50200, "icg_pe": 0.01970},
-    "Dispatch":   {"disp_a_sqr":  0.12400, "disp_b_sqr": 0.10300},
-    "Alpha-Beta": {"alpha":       0.36950, "beta":   0.34600},
+    "PE":         {"pe_sqr":      0.50900, "icg_pe": 0.01970},
+    "Dispatch":   {"disp_a_sqr":  0.12600, "disp_b_sqr": 0.10400},
+    "Alpha-Beta": {"alpha":       0.40100, "beta":   0.36400},
     "Clock":      {"icg_rowcol":  0.01490},
-    "Others":     {"ctrl_sqr":    0.00167, "const_sqr": 0.00001, "glue": 0.00129},
+    "Others":     {"ctrl_sqr":    0.00172, "const_sqr": 0.00001, "glue": 0.00129},
 }
 
 COUNT = {

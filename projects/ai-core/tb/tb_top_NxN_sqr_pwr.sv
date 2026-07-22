@@ -78,6 +78,7 @@ module tb_top_NxN_sqr_pwr #(
 
     localparam real CLK_PERIOD = `CLK_PERIOD_NS;
     localparam real CLK_HALF   = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
 
     localparam int MODE_WIDTH = 4;
     localparam int NUM_LANE   = 8;
@@ -282,9 +283,9 @@ module tb_top_NxN_sqr_pwr #(
         sel_acc = 1'b0;
         rst_ni  = 1'b0;
         repeat (3) @(posedge clk_i);
-        #1;
+        #(T_SETTLE);
         rst_ni  = 1'b1;
-        #1;
+        #(T_SETTLE);
     endtask
 
     task automatic gen_operands(input int mi);
@@ -347,7 +348,7 @@ module tb_top_NxN_sqr_pwr #(
                 gen_operands(mi);
                 sel_acc = 1'b0;
                 @(posedge clk_i);
-                #1;
+                #(T_SETTLE);
             end
             nrun = nrun + 1;
         end

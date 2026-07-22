@@ -23,19 +23,20 @@ Every `cpr_w_n` in the tree runs with `EXT = 0` — the DP8's 4 guard bits are h
 
 ## Interface
 
-| Signal                       | Dir | Width   | Description                                                             |
-| ---------------------------- | --- | ------- | ----------------------------------------------------------------------- |
-| `clk_i`                      | in  | 1       | Clock.                                                                  |
-| `rst_ni`                     | in  | 1       | Asynchronous active-low reset.                                          |
-| `a_dp8_i[0:15]`              | in  | 64 each | A operand per DP8 (8 × int8), from `disp_array`.                        |
-| `b_dp8_i[0:15]`              | in  | 32 each | B operand per DP8 (8 × int4), from `disp_array`.                        |
-| `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 multiplicand signedness, from `ctrl`.                           |
-| `is_signed_b_i[0:15]`        | in  | 1 each  | Per-DP8 multiplier signedness, from `ctrl`.                             |
-| `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`. |
-| `l0_sum_o`/`l0_carry_o[0:7]` | out | 18 each | L0 taps (carry-save).                                                   |
-| `l1_sum_o`/`l1_carry_o[0:3]` | out | 29 each | L1 taps.                                                                |
-| `l2_sum_o`/`l2_carry_o[0:1]` | out | 37 each | L2 taps.                                                                |
-| `l3_sum_o`/`l3_carry_o`      | out | 38      | L3 tap.                                                                 |
+| Signal                       | Dir | Width   | Description                                                                                                                                                       |
+| ---------------------------- | --- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `clk_i`                      | in  | 1       | Clock.                                                                                                                                                            |
+| `rst_ni`                     | in  | 1       | Asynchronous active-low reset.                                                                                                                                    |
+| `a_dp8_i[0:15]`              | in  | 64 each | A operand per DP8 (8 × int8), from `disp_array`.                                                                                                                  |
+| `b_dp8_i[0:15]`              | in  | 32 each | B operand per DP8 (8 × int4), from `disp_array`.                                                                                                                  |
+| `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 multiplicand signedness, from `ctrl`.                                                                                                                     |
+| `is_signed_b_i[0:15]`        | in  | 1 each  | Per-DP8 multiplier signedness, from `ctrl`.                                                                                                                       |
+| `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`.                                                                                           |
+| `en_level_i[2:0]`            | in  | 1 each  | Operand-isolation enable per tree branch: `[0]`=L0→L1, `[1]`=L1→L2, `[2]`=L2→L3. Low masks the branch off (see [Operand isolation](#operand-isolation-en_level)). |
+| `l0_sum_o`/`l0_carry_o[0:7]` | out | 18 each | L0 taps (carry-save).                                                                                                                                             |
+| `l1_sum_o`/`l1_carry_o[0:3]` | out | 29 each | L1 taps.                                                                                                                                                          |
+| `l2_sum_o`/`l2_carry_o[0:1]` | out | 37 each | L2 taps.                                                                                                                                                          |
+| `l3_sum_o`/`l3_carry_o`      | out | 38      | L3 tap.                                                                                                                                                           |
 
 Every tap is a carry-save pair (`sum + carry`); the tree never resolves — the accumulator does, splitting each tap into its lanes.
 
@@ -46,7 +47,7 @@ pe_array pe_array_i (
     .clk_i(clk_i), .rst_ni(rst_ni),
     .a_dp8_i(a_dp8), .b_dp8_i(b_dp8),
     .is_signed_a_i(is_signed_a), .is_signed_b_i(is_signed_b),
-    .sel_shift_i(sel_shift),
+    .sel_shift_i(sel_shift), .en_level_i(en_level),
     .l0_sum_o(l0_sum), .l0_carry_o(l0_carry),
     .l1_sum_o(l1_sum), .l1_carry_o(l1_carry),
     .l2_sum_o(l2_sum), .l2_carry_o(l2_carry),
@@ -142,12 +143,12 @@ assign lo_in[1] = dp8_carry[CX1];
 
 `CX0`/`CX1` step by 2, so a node mixes DP8s from two different dispatch 2×DP8 pairs (equivalently `l0[2g] = dp8[4g] + dp8[4g+2]`, `l0[2g+1] = dp8[4g+1] + dp8[4g+3]`):
 
-| L0 node | DP8s combined |     | L0 node | DP8s combined   |
+| L0 node | DP8s combined |  | L0 node | DP8s combined   |
 | ------- | ------------- | --- | ------- | --------------- |
-| `l0[0]` | dp8 0 + dp8 2 |     | `l0[4]` | dp8 8 + dp8 10  |
-| `l0[1]` | dp8 1 + dp8 3 |     | `l0[5]` | dp8 9 + dp8 11  |
-| `l0[2]` | dp8 4 + dp8 6 |     | `l0[6]` | dp8 12 + dp8 14 |
-| `l0[3]` | dp8 5 + dp8 7 |     | `l0[7]` | dp8 13 + dp8 15 |
+| `l0[0]` | dp8 0 + dp8 2 |  | `l0[4]` | dp8 8 + dp8 10  |
+| `l0[1]` | dp8 1 + dp8 3 |  | `l0[5]` | dp8 9 + dp8 11  |
+| `l0[2]` | dp8 4 + dp8 6 |  | `l0[6]` | dp8 12 + dp8 14 |
+| `l0[3]` | dp8 5 + dp8 7 |  | `l0[7]` | dp8 13 + dp8 15 |
 
 The lower DP8 index (`CX0`) is the higher-weight field, so it is the shifted operand. Wire this crossed, not adjacent — it is the cross-boundary connection between dispatch pairs.
 
@@ -261,6 +262,28 @@ reg_n #(.WIDTH(L0_WIDTH), .SIZE(NUM_L0)) reg_n_l0_carry_i (
 ```
 
 Registering at full 28-bit width matters: the R16 modes' `<<8` intermediate must reach L1 without truncation, so `l0_sum_q`/`l0_carry_q` feed L1 at full precision while only their low 18 bits leave as the L0 tap. L1, L2, and L3 are all combinational — one clock through the whole tree.
+
+### Operand isolation (`en_level`)
+
+Every mode reads its result at one tap, but the tree is combinational below that tap and keeps toggling on levels the mode never reads. `en_level_i` AND-masks the branch from each level into the next so nothing below the tap switches:
+
+```systemverilog
+assign l0_sum_g[n]   = l0_sum_q[n]   & {L0_WIDTH{en_level_i[0]}};   // L0 → L1
+assign l1_sum_g[j]   = l1_sum[j]     & {L1_WIDTH{en_level_i[1]}};   // L1 → L2
+assign l2_sum_g[k]   = l2_sum[k]     & {L2_WIDTH{en_level_i[2]}};   // L2 → L3
+```
+
+The **tap outputs are driven from the ungated signals** (`l0_sum_q`, `l1_sum`, `l2_sum`), so the level a mode reads is untouched — only the operands *feeding the next level* are masked. `ctrl` derives the three enables from the tap level `sel_out` (0=L0 … 3=L3), so `en_level[i]` is high exactly when the mode taps deeper than level `i`:
+
+| bit           | gates branch | high when | dead for                     |
+| ------------- | ------------ | --------- | ---------------------------- |
+| `en_level[0]` | L0 → L1      | tap ≥ L1  | mode 1 (taps L0)             |
+| `en_level[1]` | L1 → L2      | tap ≥ L2  | modes 1, 2, 3, 10 (tap ≤ L1) |
+| `en_level[2]` | L2 → L3      | tap = L3  | every mode except 6, 8       |
+
+The masks are static within a mode (mode-derived enable), so they add no switching of their own; nothing is gated below L3, since there is nothing downstream of it. This is [operand isolation](../modules/pe.md) applied one level down — the same AND-mask idiom `pe`/`pe_sqr` use on their operands. Same change lives in `pe_array_sqr` and the α/β generators.
+
+The saving scales with how much tree is dead: largest for the L0-tap mode (three levels masked), zero for the L3-tap modes (masks present, nothing below to gate). The power figures in [Synthesis Power](../experiments/syn_pwr.md) and [Per-Mode Synthesis Power](../experiments/syn_mode_pwr.md) are measured with this isolation in place.
 
 ### Reading a mode's result (which level / tap)
 

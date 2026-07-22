@@ -28,18 +28,19 @@ Signedness: everything runs signed (`IS_SIGNED = 1'b1`) **except the L0 `shift_n
 
 ## Interface
 
-| Signal                       | Dir | Width   | Description                                                             |
-| ---------------------------- | --- | ------- | ----------------------------------------------------------------------- |
-| `clk_i`                      | in  | 1       | Clock.                                                                  |
-| `rst_ni`                     | in  | 1       | Asynchronous active-low reset.                                          |
-| `a_dp8_i[0:15]`              | in  | 64 each | A operand per DP8 (8 × pre-centered int8), from `disp_array_a_sqr`.     |
-| `b_dp8_i[0:15]`              | in  | 32 each | B operand per DP8 (8 × pre-centered int4), from `disp_array_b_sqr`.     |
-| `neg_i[5:0]`                 | in  | 6       | **NEW** — per-block negate: `neg_i[n]` complements L0 node `n`'s lo.    |
-| `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`. |
-| `l0_sum_o`/`l0_carry_o[0:7]` | out | 19 each | L0 taps (carry-save).                                                   |
-| `l1_sum_o`/`l1_carry_o[0:3]` | out | 30 each | L1 taps.                                                                |
-| `l2_sum_o`/`l2_carry_o[0:1]` | out | 38 each | L2 taps.                                                                |
-| `l3_sum_o`/`l3_carry_o`      | out | 39      | L3 tap.                                                                 |
+| Signal                       | Dir | Width   | Description                                                                                            |
+| ---------------------------- | --- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `clk_i`                      | in  | 1       | Clock.                                                                                                 |
+| `rst_ni`                     | in  | 1       | Asynchronous active-low reset.                                                                         |
+| `a_dp8_i[0:15]`              | in  | 64 each | A operand per DP8 (8 × pre-centered int8), from `disp_array_a_sqr`.                                    |
+| `b_dp8_i[0:15]`              | in  | 32 each | B operand per DP8 (8 × pre-centered int4), from `disp_array_b_sqr`.                                    |
+| `neg_i[5:0]`                 | in  | 6       | **NEW** — per-block negate: `neg_i[n]` complements L0 node `n`'s lo.                                   |
+| `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`.                                |
+| `en_level_i[2:0]`            | in  | 1 each  | Operand-isolation enable per tree branch (`[0]`=L0→L1, `[1]`=L1→L2, `[2]`=L2→L3); masks below the tap. |
+| `l0_sum_o`/`l0_carry_o[0:7]` | out | 19 each | L0 taps (carry-save).                                                                                  |
+| `l1_sum_o`/`l1_carry_o[0:3]` | out | 30 each | L1 taps.                                                                                               |
+| `l2_sum_o`/`l2_carry_o[0:1]` | out | 38 each | L2 taps.                                                                                               |
+| `l3_sum_o`/`l3_carry_o`      | out | 39      | L3 tap.                                                                                                |
 
 `is_signed_a_i`/`is_signed_b_i` are **gone** (the dispatcher already centered the operands); `neg_i[5:0]` is **added**. Every tap is a carry-save pair (`sum + carry`); the tree never resolves.
 
@@ -49,7 +50,7 @@ Signedness: everything runs signed (`IS_SIGNED = 1'b1`) **except the L0 `shift_n
 pe_array_sqr pe_array_sqr_i (
     .clk_i(clk_i), .rst_ni(rst_ni),
     .a_dp8_i(a_dp8), .b_dp8_i(b_dp8),
-    .neg_i(neg), .sel_shift_i(sel_shift),
+    .neg_i(neg), .sel_shift_i(sel_shift), .en_level_i(en_level),
     .l0_sum_o(l0_sum), .l0_carry_o(l0_carry),
     .l1_sum_o(l1_sum), .l1_carry_o(l1_carry),
     .l2_sum_o(l2_sum), .l2_carry_o(l2_carry),

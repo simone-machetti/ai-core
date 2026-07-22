@@ -41,6 +41,7 @@ module top_NxN #(
     localparam int NUM_DP8     = 16,
     localparam int SEL_WIDTH   = 2,
     localparam int OP_WIDTH    = 2,
+    localparam int NUM_LEVEL   = 3,
     localparam int NUM_SHIFT   = 3,
     localparam int A_DP8_WIDTH = 64,
     localparam int B_DP8_WIDTH = 32,
@@ -63,9 +64,10 @@ module top_NxN #(
     logic [SEL_WIDTH-1:0] sel_b       [0:NUM_PAIR-1];
     logic [ OP_WIDTH-1:0] ctr_l       [0:NUM_PAIR-1];
     logic [ OP_WIDTH-1:0] ctr_h       [0:NUM_PAIR-1];
-    logic                 is_signed_a [0:NUM_DP8-1];
-    logic                 is_signed_b [0:NUM_DP8-1];
+    logic                 is_signed_a [ 0:NUM_DP8-1];
+    logic                 is_signed_b [ 0:NUM_DP8-1];
     logic [NUM_SHIFT-1:0] sel_shift;
+    logic [NUM_LEVEL-1:0] en_level;
     logic [SEL_WIDTH-1:0] sel_out;
     logic                 prop_carry;
 
@@ -80,6 +82,7 @@ module top_NxN #(
         .is_signed_a_o(is_signed_a),
         .is_signed_b_o(is_signed_b),
         .sel_shift_o  (sel_shift),
+        .en_level_o   (en_level),
         .sel_out_o    (sel_out),
         .prop_carry_o (prop_carry)
     );
@@ -157,6 +160,7 @@ module top_NxN #(
                     .is_signed_a_i(is_signed_a),
                     .is_signed_b_i(is_signed_b),
                     .sel_shift_i  (sel_shift),
+                    .en_level_i   (en_level),
                     .acc_i        (acc_i[r][c]),
                     .sel_out_i    (sel_out),
                     .sel_acc_i    (selacc_q2[0]),

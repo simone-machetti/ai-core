@@ -25,6 +25,11 @@
 //     compressor's own headroom): 18 / 29 / 37 / 38; the acc splits/sign-extends
 //     them into its lanes. Everything is signed carry-save (IS_SIGNED = 1 on all
 //     shifts/exts/CPRs).
+//   Operand isolation: en_level_i AND-masks the branch from each level into the
+//   next, so nothing below the tap the mode reads toggles. en_level_i[0] gates
+//   L0 into L1, [1] gates L1 into L2, [2] gates L2 into L3; the taps themselves
+//   are driven from the ungated signals, so the level being read is unaffected.
+//   Nothing is gated below L3 - there is nothing downstream of it.
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
@@ -38,6 +43,7 @@ module pe_array #(
     localparam int IN_WIDTH_B   = 4,
     localparam int DP8_WIDTH    = 20,
     localparam int NUM_SHIFT    = 3,
+    localparam int NUM_LEVEL    = 3,
     localparam int NUM_L0       = 8,
     localparam int NUM_L1       = 4,
     localparam int NUM_L2       = 2,
@@ -53,21 +59,22 @@ module pe_array #(
     localparam int L2_TAP_WIDTH = 37,
     localparam int L3_TAP_WIDTH = 38
 )(
-    input  logic                     clk_i,
-    input  logic                     rst_ni,
-    input  logic [ A_DP8_WIDTH-1:0]  a_dp8_i       [0:NUM_DP8-1],
-    input  logic [ B_DP8_WIDTH-1:0]  b_dp8_i       [0:NUM_DP8-1],
-    input  logic                     is_signed_a_i [0:NUM_DP8-1],
-    input  logic                     is_signed_b_i [0:NUM_DP8-1],
-    input  logic [   NUM_SHIFT-1:0]  sel_shift_i,
-    output logic [L0_TAP_WIDTH-1:0]  l0_sum_o      [0:NUM_L0-1],
-    output logic [L0_TAP_WIDTH-1:0]  l0_carry_o    [0:NUM_L0-1],
-    output logic [L1_TAP_WIDTH-1:0]  l1_sum_o      [0:NUM_L1-1],
-    output logic [L1_TAP_WIDTH-1:0]  l1_carry_o    [0:NUM_L1-1],
-    output logic [L2_TAP_WIDTH-1:0]  l2_sum_o      [0:NUM_L2-1],
-    output logic [L2_TAP_WIDTH-1:0]  l2_carry_o    [0:NUM_L2-1],
-    output logic [L3_TAP_WIDTH-1:0]  l3_sum_o,
-    output logic [L3_TAP_WIDTH-1:0]  l3_carry_o
+    input  logic                    clk_i,
+    input  logic                    rst_ni,
+    input  logic [ A_DP8_WIDTH-1:0] a_dp8_i       [0:NUM_DP8-1],
+    input  logic [ B_DP8_WIDTH-1:0] b_dp8_i       [0:NUM_DP8-1],
+    input  logic                    is_signed_a_i [0:NUM_DP8-1],
+    input  logic                    is_signed_b_i [0:NUM_DP8-1],
+    input  logic [   NUM_SHIFT-1:0] sel_shift_i,
+    input  logic [   NUM_LEVEL-1:0] en_level_i,
+    output logic [L0_TAP_WIDTH-1:0] l0_sum_o      [ 0:NUM_L0-1],
+    output logic [L0_TAP_WIDTH-1:0] l0_carry_o    [ 0:NUM_L0-1],
+    output logic [L1_TAP_WIDTH-1:0] l1_sum_o      [ 0:NUM_L1-1],
+    output logic [L1_TAP_WIDTH-1:0] l1_carry_o    [ 0:NUM_L1-1],
+    output logic [L2_TAP_WIDTH-1:0] l2_sum_o      [ 0:NUM_L2-1],
+    output logic [L2_TAP_WIDTH-1:0] l2_carry_o    [ 0:NUM_L2-1],
+    output logic [L3_TAP_WIDTH-1:0] l3_sum_o,
+    output logic [L3_TAP_WIDTH-1:0] l3_carry_o
 );
 
     logic [DP8_WIDTH-1:0] dp8_sum   [0:NUM_DP8-1];
@@ -81,6 +88,12 @@ module pe_array #(
     logic [ L1_WIDTH-1:0] l1_carry   [0:NUM_L1-1];
     logic [ L2_WIDTH-1:0] l2_sum     [0:NUM_L2-1];
     logic [ L2_WIDTH-1:0] l2_carry   [0:NUM_L2-1];
+    logic [ L0_WIDTH-1:0] l0_sum_g   [0:NUM_L0-1];
+    logic [ L0_WIDTH-1:0] l0_carry_g [0:NUM_L0-1];
+    logic [ L1_WIDTH-1:0] l1_sum_g   [0:NUM_L1-1];
+    logic [ L1_WIDTH-1:0] l1_carry_g [0:NUM_L1-1];
+    logic [ L2_WIDTH-1:0] l2_sum_g   [0:NUM_L2-1];
+    logic [ L2_WIDTH-1:0] l2_carry_g [0:NUM_L2-1];
     /* verilator lint_off UNUSEDSIGNAL */
     logic [ L3_WIDTH-1:0] l3_sum_w;
     logic [ L3_WIDTH-1:0] l3_carry_w;
@@ -148,6 +161,21 @@ module pe_array #(
     );
 
     generate
+        for (n = 0; n < NUM_L0; n++) begin : gen_l0_iso
+            assign l0_sum_g[n]   = l0_sum_q[n]   & {L0_WIDTH{en_level_i[0]}};
+            assign l0_carry_g[n] = l0_carry_q[n] & {L0_WIDTH{en_level_i[0]}};
+        end
+        for (j = 0; j < NUM_L1; j++) begin : gen_l1_iso
+            assign l1_sum_g[j]   = l1_sum[j]   & {L1_WIDTH{en_level_i[1]}};
+            assign l1_carry_g[j] = l1_carry[j] & {L1_WIDTH{en_level_i[1]}};
+        end
+        for (k = 0; k < NUM_L2; k++) begin : gen_l2_iso
+            assign l2_sum_g[k]   = l2_sum[k]   & {L2_WIDTH{en_level_i[2]}};
+            assign l2_carry_g[k] = l2_carry[k] & {L2_WIDTH{en_level_i[2]}};
+        end
+    endgenerate
+
+    generate
         for (j = 0; j < NUM_L1; j++) begin : gen_l1
             logic [       L0_WIDTH-1:0] hi_in  [0:1];
             logic [       L0_WIDTH-1:0] lo_in  [0:1];
@@ -155,10 +183,10 @@ module pe_array #(
             logic [(L0_WIDTH+SH1)-1:0]  lo_ext [0:1];
             logic [(L0_WIDTH+SH1)-1:0]  cpr_in [0:3];
 
-            assign hi_in[0] = l0_sum_q[2*j];
-            assign hi_in[1] = l0_carry_q[2*j];
-            assign lo_in[0] = l0_sum_q[2*j+1];
-            assign lo_in[1] = l0_carry_q[2*j+1];
+            assign hi_in[0] = l0_sum_g[2*j];
+            assign hi_in[1] = l0_carry_g[2*j];
+            assign lo_in[0] = l0_sum_g[2*j+1];
+            assign lo_in[1] = l0_carry_g[2*j+1];
 
             shift_n #(.WIDTH(L0_WIDTH), .SIZE(2), .SHIFT(SH1), .IS_SIGNED(1'b1)) shift_n_i (
                 .in_i(hi_in), .sel_i(sel_shift_i[1]), .out_o(hi_sh)
@@ -186,10 +214,10 @@ module pe_array #(
             logic [(L1_WIDTH+SH2)-1:0]  lo_ext [0:1];
             logic [(L1_WIDTH+SH2)-1:0]  cpr_in [0:3];
 
-            assign hi_in[0] = l1_sum[2*k];
-            assign hi_in[1] = l1_carry[2*k];
-            assign lo_in[0] = l1_sum[2*k+1];
-            assign lo_in[1] = l1_carry[2*k+1];
+            assign hi_in[0] = l1_sum_g[2*k];
+            assign hi_in[1] = l1_carry_g[2*k];
+            assign lo_in[0] = l1_sum_g[2*k+1];
+            assign lo_in[1] = l1_carry_g[2*k+1];
 
             shift_n #(.WIDTH(L1_WIDTH), .SIZE(2), .SHIFT(SH2), .IS_SIGNED(1'b1)) shift_n_i (
                 .in_i(hi_in), .sel_i(sel_shift_i[2]), .out_o(hi_sh)
@@ -210,10 +238,10 @@ module pe_array #(
     endgenerate
 
     logic [L2_WIDTH-1:0] l3_cpr_in [0:3];
-    assign l3_cpr_in[0] = l2_sum[0];
-    assign l3_cpr_in[1] = l2_carry[0];
-    assign l3_cpr_in[2] = l2_sum[1];
-    assign l3_cpr_in[3] = l2_carry[1];
+    assign l3_cpr_in[0] = l2_sum_g[0];
+    assign l3_cpr_in[1] = l2_carry_g[0];
+    assign l3_cpr_in[2] = l2_sum_g[1];
+    assign l3_cpr_in[3] = l2_carry_g[1];
 
     cpr_w_n #(.IN_WIDTH(L2_WIDTH), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_l3_i (
         .in_i(l3_cpr_in), .sum_o(l3_sum_w), .carry_o(l3_carry_w)
