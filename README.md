@@ -289,7 +289,7 @@ The per-instance report needs a netlist with module boundaries, so pass the same
 ```bash
 make pnr TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> NETLIST_DIR=<netlist_dir> \
     [CORE_UTIL=<pct>] [ASPECT_RATIO=<val>] [CORE_MARGIN=<um>] [PLACE_DENSITY=<val>] \
-    [CLK_UNCERTAINTY_PS=<val>] [PNR_STEP=<stage>]
+    [CLK_UNCERTAINTY_PS=<val>] [PNR_STEP=<stage>] [PNR_THREADS=<n>]
 ```
 
 | Parameter            | Required           | Description                                                                          |
@@ -304,6 +304,7 @@ make pnr TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> NETLIST_DIR=<n
 | `PLACE_DENSITY`      | no (default: 0.60) | Global placement target density                                                      |
 | `CLK_UNCERTAINTY_PS` | no (default: 0)    | Clock uncertainty in picoseconds (0 = none)                                          |
 | `PNR_STEP`           | no (default: all)  | `all` runs the full flow from a clean `OUT_DIR`; a single stage name re-runs just it |
+| `PNR_THREADS`        | no (default: 0)    | Thread count for OpenROAD; `0` = all cores. Fewer routing threads lower the peak memory at the cost of runtime |
 
 The flow is six stages, each an independent `openroad` process chained through ODB checkpoints in `output/`: `1_floorplan` (floorplan, tracks, pin placement, tie/tap cells, power grid), `2_place` (global + detailed placement, buffering/sizing repair), `3_cts` (clock tree synthesis + setup repair), `4_route` (global + detailed routing, setup/hold repair), `5_final` (filler cells, SPEF extraction, final reports and products), `6_gds` (DEF-to-GDS merge via KLayout). With `PNR_STEP=<stage>` a single stage re-runs from the previous stage's checkpoint in the same `OUT_DIR` (no clean), e.g. `PNR_STEP=3_cts` after tweaking the CTS script.
 
@@ -384,3 +385,4 @@ make clean-all                # remove all sim/ and imp/ directories
 | `PLACE_DENSITY`      | pnr                                                    | 0–1 (default: `0.60`)           | Global placement target density                                                            |
 | `CLK_UNCERTAINTY_PS` | pnr                                                    | ps (default: `0`)               | Clock uncertainty applied to the clock (0 = none)                                          |
 | `PNR_STEP`           | pnr                                                    | `all` (default) or a stage name | `all` = full clean run; a stage name re-runs that stage from the previous checkpoint       |
+| `PNR_THREADS`        | pnr                                                    | `0` (default) or thread count   | OpenROAD thread count; `0` = all cores. Fewer routing threads trade runtime for lower peak memory |

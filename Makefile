@@ -20,6 +20,7 @@ CORE_MARGIN        ?= 2
 PLACE_DENSITY      ?= 0.60
 CLK_UNCERTAINTY_PS ?= 0
 PNR_STEP           ?= all
+PNR_THREADS        ?= 0
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
@@ -41,6 +42,7 @@ export SEL_CORE_MARGIN        := $(CORE_MARGIN)
 export SEL_PLACE_DENSITY      := $(PLACE_DENSITY)
 export SEL_CLK_UNCERTAINTY_PS := $(CLK_UNCERTAINTY_PS)
 export SEL_PNR_STEP           := $(PNR_STEP)
+export SEL_PNR_THREADS        := $(PNR_THREADS)
 
 .PHONY: init sim syn pnr post-syn-sta post-syn-sim post-syn-dpa post-pnr-sta post-pnr-sim post-pnr-dpa clean-all clean-sim clean-imp
 

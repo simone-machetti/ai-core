@@ -98,7 +98,7 @@ Place-and-route from the synthesized netlist to the final layout (`make pnr`), s
 - Standard-cell layout `.gds` (for the final merge)
 - Constraints, generated inline from `CLK_PERIOD_NS` (same scheme as the STA steps)
 - ASAP7 platform physical setup (routing tracks, PDN grid strategy, wire RC, RC extraction rules)
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `CLK_UNCERTAINTY_PS`, `PNR_STEP` (optional)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `CLK_UNCERTAINTY_PS`, `PNR_STEP`, `PNR_THREADS` (optional)
 
 **Outputs**
 

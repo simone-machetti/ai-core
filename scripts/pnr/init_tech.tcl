@@ -36,4 +36,8 @@ set FILL_CELLS      {FILLERxp5_ASAP7_75t_R FILLER_ASAP7_75t_R DECAPx1_ASAP7_75t_
 set DONT_USE        {*x1p*_ASAP7* *xp*_ASAP7* SDF* ICG*}
 set PDN_CFG         $::env(ASAP7_HOME)/openRoad/pdn/grid_strategy-M1-M2-M5-M6.tcl
 
-set_thread_count [exec nproc]
+if {$::env(SEL_PNR_THREADS) > 0} {
+    set_thread_count $::env(SEL_PNR_THREADS)
+} else {
+    set_thread_count [exec nproc]
+}
