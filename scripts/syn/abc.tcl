@@ -4,7 +4,7 @@
 
 strash
 dc2
-map -B 0.9
+map {D} -B 0.9
 topo
 stime -c
 buffer -c

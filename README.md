@@ -24,7 +24,7 @@ source sourceme.sh
 make sim PROJECT=<project> TOP_LEVEL=<top_level> CLK_PERIOD_NS=1.0 OUT_DIR=<name>
 
 # Logic synthesis
-make syn PROJECT=<project> TOP_LEVEL=<top_level> OUT_DIR=<name>
+make syn PROJECT=<project> TOP_LEVEL=<top_level> CLK_PERIOD_NS=1.0 OUT_DIR=<name>
 
 # Post-synthesis gate-level simulation
 make post-syn-sim PROJECT=<project> TOP_LEVEL=<top_level> CLK_PERIOD_NS=1.0 OUT_DIR=<name> NETLIST_DIR=<name>
@@ -198,15 +198,16 @@ Outputs go to `projects/<PROJECT>/sim/<OUT_DIR>/`. Pass `VCD=1` to also dump an 
 ### Logic synthesis (Yosys + ABC, ASAP7 target)
 
 ```bash
-make syn TOP_LEVEL=<top_level> OUT_DIR=<name> [PARAMS="KEY=VAL ..."] [KEEP_HIERARCHY=1] \
-    [KEEP_MODULES="mod ..."] [BLACKBOX_MODULES="mod ..."]
+make syn TOP_LEVEL=<top_level> OUT_DIR=<name> [CLK_PERIOD_NS=<val>] [PARAMS="KEY=VAL ..."] \
+    [KEEP_HIERARCHY=1] [KEEP_MODULES="mod ..."] [BLACKBOX_MODULES="mod ..."]
 ```
 
-| Parameter          | Required        | Description                                                                  |
-| ------------------ | --------------- | ---------------------------------------------------------------------------- |
-| `TOP_LEVEL`        | yes             | RTL module to synthesize; can be any module in the hierarchy                 |
-| `OUT_DIR`          | yes             | Output subdirectory under `imp/`                                             |
-| `PARAMS`           | no              | Project-specific RTL elaboration parameters                                  |
+| Parameter          | Required          | Description                                                                  |
+| ------------------ | ----------------- | ---------------------------------------------------------------------------- |
+| `TOP_LEVEL`        | yes               | RTL module to synthesize; can be any module in the hierarchy                 |
+| `OUT_DIR`          | yes               | Output subdirectory under `imp/`                                             |
+| `CLK_PERIOD_NS`    | no (default: 1.0) | Delay target for the ABC mapper (the resolved script is saved as `output/abc.script`) |
+| `PARAMS`           | no                | Project-specific RTL elaboration parameters                                  |
 | `KEEP_HIERARCHY`   | no (default: 0) | Preserve every module boundary in the netlist (skips `flatten`)              |
 | `KEEP_MODULES`     | no              | Preserve only the listed module boundaries and flatten below them            |
 | `BLACKBOX_MODULES` | no              | Do not elaborate the listed modules; link their netlists from an earlier run |
@@ -368,7 +369,7 @@ make clean-all                # remove all sim/ and imp/ directories
 | `PROJECT`            | all                                                    | project name                    | Required. Project under `projects/` to operate on (no default)                             |
 | `TOP_LEVEL`          | all except init and clean-*                            | module name                     | RTL module to build/simulate; can be any module in the hierarchy                           |
 | `TB`                 | sim, post-syn-sim, post-syn-dpa, post-pnr-sim, post-pnr-dpa | testbench module name      | Testbench to run (default `tb_$(TOP_LEVEL)`); set it to use an alternative bench           |
-| `CLK_PERIOD_NS`      | all except syn, init and clean-*                       | e.g. `1.0`                      | Clock period in nanoseconds                                                                |
+| `CLK_PERIOD_NS`      | all except init and clean-*                            | e.g. `1.0`                      | Clock period in nanoseconds (for `syn`: the ABC delay target, default `1.0`)               |
 | `OUT_DIR`            | all except clean-all                                   | directory name                  | Output subdirectory under `sim/` or `imp/`                                                 |
 | `NETLIST_DIR`        | pnr, post-syn-*, post-pnr-*                            | e.g. `top_2x2`                  | Directory containing the netlist to consume (`make syn` for pnr/post-syn-*, `make pnr` for post-pnr-*) |
 | `VCD_DIR`            | post-syn-dpa, post-pnr-dpa                             | e.g. `pwr_2x2`                  | Directory containing `activity.vcd` from the matching gate-level simulation                |

@@ -28,7 +28,8 @@ Logic synthesis to the ASAP7 standard-cell library (`make syn`).
 - Library of cells `.lib` (Liberty, five ASAP7 NLDM RVT TT groups: SEQ, SIMPLE, INVBUF, AO, OA)
 - Latch technology map `.v` (`$ASAP7_HOME/yoSys/cells_latch_R.v`)
 - Previously synthesized netlists `imp/<mod>/output/netlist.v` (blackbox linking)
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `OUT_DIR` (required); `PARAMS`, `KEEP_HIERARCHY`, `KEEP_MODULES`, `BLACKBOX_MODULES` (optional)
+- Delay target for the ABC mapper, derived from `CLK_PERIOD_NS` (the resolved ABC script is archived as `output/abc.script`)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `OUT_DIR` (required); `CLK_PERIOD_NS`, `PARAMS`, `KEEP_HIERARCHY`, `KEEP_MODULES`, `BLACKBOX_MODULES` (optional)
 
 **Outputs**
 
@@ -36,7 +37,7 @@ Logic synthesis to the ASAP7 standard-cell library (`make syn`).
 - Synthesis log (`output/yosys.log`)
 - Area report (`report/area.rpt`)
 
-Note: synthesis is untimed — no constraints input, no timing/power reports (they come from POST-SYN-STA/DPA).
+Note: the clock period enters synthesis only as the ABC delay target (ABC's mapper is delay-oriented by default, so the target mainly documents intent); timing/power reports come from POST-SYN-STA/DPA.
 
 ## POST-SYN-SIM — Verilator
 

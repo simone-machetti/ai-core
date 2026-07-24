@@ -103,14 +103,25 @@ yosys "techmap -map $env(ASAP7_HOME)/yoSys/cells_latch_R.v"
 yosys "opt"
 
 # -----------------------------------------------------------------------------
-# Technology mapping Combinational Logic
+# Technology mapping Combinational Logic (delay target from CLK_PERIOD_NS)
 # -----------------------------------------------------------------------------
+set CLK_PERIOD_PS [expr {int($env(SEL_CLK_PERIOD_NS) * 1000)}]
+
+set fh [open $env(REPO_HOME)/scripts/syn/abc.tcl r]
+set abc_script [read $fh]
+close $fh
+set abc_script [string map [list "\{D\}" "-D $CLK_PERIOD_PS"] $abc_script]
+set abc_file "$env(REPO_HOME)/projects/$env(SEL_PROJECT)/imp/$env(SEL_OUT_DIR)/output/abc.script"
+set fh [open $abc_file w]
+puts -nonewline $fh $abc_script
+close $fh
+
 yosys "abc \
     -liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib \
     -liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib \
     -liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib \
     -liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib \
-    -script  $env(REPO_HOME)/scripts/syn/abc.tcl"
+    -script  $abc_file"
 
 yosys "opt"
 yosys "clean"
