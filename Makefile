@@ -2,35 +2,47 @@
 # Author: Simone Machetti
 # -----------------------------------------------------------------------------
 
-PROJECT          ?=
-TOP_LEVEL        ?=
-TB               ?= tb_$(TOP_LEVEL)
-OUT_DIR          ?= no_name
-NETLIST_DIR      ?= no_name
-VCD_DIR          ?= no_name
-CLK_PERIOD_NS    ?= 1
-PARAMS           ?= none
-KEEP_HIERARCHY   ?= 0
-KEEP_MODULES     ?= none
-BLACKBOX_MODULES ?= none
-VCD              ?= 0
+PROJECT            ?=
+TOP_LEVEL          ?=
+TB                 ?= tb_$(TOP_LEVEL)
+OUT_DIR            ?= no_name
+NETLIST_DIR        ?= no_name
+VCD_DIR            ?= no_name
+CLK_PERIOD_NS      ?= 1
+PARAMS             ?= none
+KEEP_HIERARCHY     ?= 0
+KEEP_MODULES       ?= none
+BLACKBOX_MODULES   ?= none
+VCD                ?= 0
+CORE_UTIL          ?= 40
+ASPECT_RATIO       ?= 1.0
+CORE_MARGIN        ?= 2
+PLACE_DENSITY      ?= 0.60
+CLK_UNCERTAINTY_PS ?= 0
+PNR_STEP           ?= all
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
-export SEL_PROJECT          := $(PROJECT)
-export SEL_TOP_LEVEL        := $(TOP_LEVEL)
-export SEL_TB               := $(TB)
-export SEL_OUT_DIR          := $(OUT_DIR)
-export SEL_NETLIST_DIR      := $(NETLIST_DIR)
-export SEL_VCD_DIR          := $(VCD_DIR)
-export SEL_CLK_PERIOD_NS    := $(CLK_PERIOD_NS)
-export SEL_PARAMS           := $(PARAMS)
-export SEL_KEEP_HIERARCHY   := $(KEEP_HIERARCHY)
-export SEL_KEEP_MODULES     := $(KEEP_MODULES)
-export SEL_BLACKBOX_MODULES := $(BLACKBOX_MODULES)
-export SEL_VCD              := $(VCD)
+export SEL_PROJECT            := $(PROJECT)
+export SEL_TOP_LEVEL          := $(TOP_LEVEL)
+export SEL_TB                 := $(TB)
+export SEL_OUT_DIR            := $(OUT_DIR)
+export SEL_NETLIST_DIR        := $(NETLIST_DIR)
+export SEL_VCD_DIR            := $(VCD_DIR)
+export SEL_CLK_PERIOD_NS      := $(CLK_PERIOD_NS)
+export SEL_PARAMS             := $(PARAMS)
+export SEL_KEEP_HIERARCHY     := $(KEEP_HIERARCHY)
+export SEL_KEEP_MODULES       := $(KEEP_MODULES)
+export SEL_BLACKBOX_MODULES   := $(BLACKBOX_MODULES)
+export SEL_VCD                := $(VCD)
+export SEL_CORE_UTIL          := $(CORE_UTIL)
+export SEL_ASPECT_RATIO       := $(ASPECT_RATIO)
+export SEL_CORE_MARGIN        := $(CORE_MARGIN)
+export SEL_PLACE_DENSITY      := $(PLACE_DENSITY)
+export SEL_CLK_UNCERTAINTY_PS := $(CLK_UNCERTAINTY_PS)
+export SEL_PNR_STEP           := $(PNR_STEP)
 
-.PHONY: init sim syn post-syn-sta post-syn-sim post-syn-dpa clean-all clean-sim clean-imp
+.PHONY: init sim syn pnr post-syn-sta post-syn-sim post-syn-dpa post-pnr-sta post-pnr-sim post-pnr-dpa clean-all clean-sim clean-imp
 
 init:
 	mkdir -p $(PROJ_DIR)/sim
@@ -52,6 +64,13 @@ syn: clean-imp
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
 	yosys -l $(PROJ_DIR)/imp/$(OUT_DIR)/output/yosys.log -c $(REPO_HOME)/scripts/syn/run.tcl
+
+pnr: $(if $(filter all,$(PNR_STEP)),clean-imp)
+	cd $(REPO_HOME)/scripts/pnr && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR) && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
+	./run.sh
 
 post-syn-sta: clean-imp
 	cd $(REPO_HOME)/scripts/post-syn-sta && \
@@ -76,6 +95,30 @@ post-syn-dpa: clean-imp
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
 	sta -no_splash -exit $(REPO_HOME)/scripts/post-syn-dpa/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
+
+post-pnr-sta: clean-imp
+	cd $(REPO_HOME)/scripts/post-pnr-sta && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR) && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
+	sta -no_splash -exit $(REPO_HOME)/scripts/post-pnr-sta/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
+
+post-pnr-sim: clean-sim
+	cd $(REPO_HOME)/scripts/post-pnr-sim && \
+	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR) && \
+	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR)/build && \
+	mkdir -p $(PROJ_DIR)/sim/$(OUT_DIR)/output && \
+	./run.sh && \
+	if [ -f $(REPO_HOME)/scripts/post-pnr-sim/activity.vcd ]; then \
+	mv $(REPO_HOME)/scripts/post-pnr-sim/activity.vcd $(PROJ_DIR)/sim/$(OUT_DIR)/output; \
+	fi
+
+post-pnr-dpa: clean-imp
+	cd $(REPO_HOME)/scripts/post-pnr-dpa && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR) && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
+	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
+	sta -no_splash -exit $(REPO_HOME)/scripts/post-pnr-dpa/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
 
 clean-all:
 	rm -rf $(PROJ_DIR)/sim

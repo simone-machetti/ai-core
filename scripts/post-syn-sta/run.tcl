@@ -21,10 +21,29 @@ read_verilog $env(REPO_HOME)/projects/$env(SEL_PROJECT)/imp/$env(SEL_NETLIST_DIR
 link_design  $env(SEL_TOP_LEVEL)
 
 # -----------------------------------------------------------------------------
-# Clock definition
+# Clock & I/O constraints (ideal wires & clocks)
 # -----------------------------------------------------------------------------
 set CLK_PERIOD_PS [expr {$env(SEL_CLK_PERIOD_NS) * 1000}]
-create_clock -name clk_i -period $CLK_PERIOD_PS [get_ports clk_i]
+
+if {[llength [get_ports -quiet clk_i]] > 0} {
+    create_clock -name clk_i -period $CLK_PERIOD_PS [get_ports clk_i]
+}
+create_clock -name vclk -period $CLK_PERIOD_PS
+
+set data_in {}
+foreach port [all_inputs] {
+    if {[lsearch -exact {clk_i rst_ni} [get_property $port full_name]] < 0} {
+        lappend data_in $port
+    }
+}
+if {[llength $data_in] > 0} {
+    set_input_delay 0 -clock vclk $data_in
+    set_false_path -hold -from $data_in
+}
+if {[llength [all_outputs]] > 0} {
+    set_output_delay 0 -clock vclk [all_outputs]
+    set_false_path -hold -to [all_outputs]
+}
 
 # -----------------------------------------------------------------------------
 # Reports generation
@@ -34,7 +53,7 @@ report_checks \
     -path_delay max \
     -fields {slew cap input_pins} \
     -digits 4 \
-    -group_count 10 \
+    -group_path_count 10 \
     > $REPORT_DIR/critical_paths.rpt
 report_wns > $REPORT_DIR/wns.rpt
 report_tns > $REPORT_DIR/tns.rpt

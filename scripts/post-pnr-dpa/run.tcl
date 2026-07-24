@@ -45,6 +45,12 @@ if {[llength [all_outputs]] > 0} {
 }
 
 # -----------------------------------------------------------------------------
+# Post-route parasitics
+# -----------------------------------------------------------------------------
+read_spef $env(REPO_HOME)/projects/$env(SEL_PROJECT)/imp/$env(SEL_NETLIST_DIR)/output/netlist.spef
+set_propagated_clock [all_clocks]
+
+# -----------------------------------------------------------------------------
 # VCD-based switching activity
 # -----------------------------------------------------------------------------
 set vcd_verilator "$env(REPO_HOME)/projects/$env(SEL_PROJECT)/sim/$env(SEL_VCD_DIR)/output/activity.vcd"
@@ -57,9 +63,3 @@ report_activity_annotation -report_unannotated > $REPORT_DIR/vcd_unannotated.rpt
 # Power reports
 # -----------------------------------------------------------------------------
 report_power > $REPORT_DIR/power_summary.rpt
-
-if {$env(SEL_KEEP_HIERARCHY) eq "1" ||
-    $env(SEL_KEEP_MODULES) ne "none" ||
-    $env(SEL_BLACKBOX_MODULES) ne "none"} {
-    report_power -instances [get_cells -hierarchical *] > $REPORT_DIR/power_hierarchy.rpt
-}

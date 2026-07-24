@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a multi-project RTL sandbox.
 
-- `scripts/` — project-agnostic EDA flow wrappers (`sim`, `syn`, `post-syn-{sta,sim,dpa}`).
+- `scripts/` — project-agnostic EDA flow wrappers (`sim`, `syn`, `pnr`, `post-syn-{sta,sim,dpa}`, `post-pnr-{sta,sim,dpa}`).
 - `projects/<name>/` — one RTL project; contains `rtl/`, `tb/`, `sim/`, `imp/`, `doc/`, `wiki/`, and `scripts/` (project-specific automation, run directly).
 - Select a project with `make <target> PROJECT=<name>`; `PROJECT` is required (no default) and so is `TOP_LEVEL`. The available projects are listed in [README.md](README.md).
 
