@@ -14,6 +14,12 @@ read_liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib
 read_liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib
 read_liberty $env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib
 
+if {$env(SEL_MACRO_DIRS) ne "none"} {
+    foreach dir $env(SEL_MACRO_DIRS) {
+        read_liberty $env(REPO_HOME)/projects/$env(SEL_PROJECT)/imp/$dir/output/timing_model.lib
+    }
+}
+
 # -----------------------------------------------------------------------------
 # Netlist + top-level linking
 # -----------------------------------------------------------------------------

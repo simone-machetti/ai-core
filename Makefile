@@ -21,6 +21,10 @@ PLACE_DENSITY      ?= 0.60
 CLK_UNCERTAINTY_PS ?= 0
 PNR_STEP           ?= all
 PNR_THREADS        ?= 0
+LINK_BLACKBOXES    ?= 1
+MACRO_DIRS         ?= none
+FLOORPLAN          ?= none
+PDN                ?= none
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
@@ -43,6 +47,10 @@ export SEL_PLACE_DENSITY      := $(PLACE_DENSITY)
 export SEL_CLK_UNCERTAINTY_PS := $(CLK_UNCERTAINTY_PS)
 export SEL_PNR_STEP           := $(PNR_STEP)
 export SEL_PNR_THREADS        := $(PNR_THREADS)
+export SEL_LINK_BLACKBOXES    := $(LINK_BLACKBOXES)
+export SEL_MACRO_DIRS         := $(MACRO_DIRS)
+export SEL_FLOORPLAN          := $(FLOORPLAN)
+export SEL_PDN                := $(PDN)
 
 .PHONY: init sim syn pnr post-syn-sta post-syn-sim post-syn-dpa post-pnr-sta post-pnr-sim post-pnr-dpa clean-all clean-sim clean-imp
 

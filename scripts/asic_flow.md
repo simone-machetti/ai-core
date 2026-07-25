@@ -29,7 +29,7 @@ Logic synthesis to the ASAP7 standard-cell library (`make syn`).
 - Latch technology map `.v` (`$ASAP7_HOME/yoSys/cells_latch_R.v`)
 - Previously synthesized netlists `imp/<mod>/output/netlist.v` (blackbox linking)
 - Delay target for the ABC mapper, derived from `CLK_PERIOD_NS` (the resolved ABC script is archived as `output/abc.script`)
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `OUT_DIR` (required); `CLK_PERIOD_NS`, `PARAMS`, `KEEP_HIERARCHY`, `KEEP_MODULES`, `BLACKBOX_MODULES` (optional)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `OUT_DIR` (required); `CLK_PERIOD_NS`, `PARAMS`, `KEEP_HIERARCHY`, `KEEP_MODULES`, `BLACKBOX_MODULES`, `LINK_BLACKBOXES` (optional)
 
 **Outputs**
 
@@ -98,7 +98,8 @@ Place-and-route from the synthesized netlist to the final layout (`make pnr`), s
 - Standard-cell layout `.gds` (for the final merge)
 - Constraints, generated inline from `CLK_PERIOD_NS` (same scheme as the STA steps)
 - ASAP7 platform physical setup (routing tracks, PDN grid strategy, wire RC, RC extraction rules)
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `CLK_UNCERTAINTY_PS`, `PNR_STEP`, `PNR_THREADS` (optional)
+- Hierarchical mode: hardened-block abstracts `.lef`/`.lib`/`.gds` (`MACRO_DIRS`) + project-owned macro-placement TCL (`FLOORPLAN`)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `CLK_UNCERTAINTY_PS`, `PNR_STEP`, `PNR_THREADS`, `MACRO_DIRS`, `FLOORPLAN`, `PDN` (optional)
 
 **Outputs**
 
@@ -119,7 +120,8 @@ Gate-level functional simulation of the routed netlist (`make post-pnr-sim`). Sa
 - Post-pnr netlist `.v`
 - Functional models of cells `.v`
 - Testbench `.sv` (compiled with `POST_SYN_SIM`)
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `TB`, `PARAMS`, `VCD` (optional)
+- Hardened-block routed netlists `.v` (`MACRO_DIRS`, hierarchical results)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `TB`, `PARAMS`, `VCD`, `MACRO_DIRS` (optional)
 
 **Outputs**
 
@@ -136,7 +138,8 @@ Parasitics-accurate static timing analysis of the routed design (`make post-pnr-
 - Library of cells `.lib` (Liberty)
 - Post-pnr parasitics `.spef`
 - Constraints, generated inline (as in POST-SYN-STA), clocks propagated
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required)
+- Hardened-block timing models `.lib` (`MACRO_DIRS`, hierarchical results)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `MACRO_DIRS` (optional)
 
 **Outputs**
 
@@ -153,8 +156,9 @@ Parasitics-accurate dynamic power analysis of the routed design (`make post-pnr-
 - Post-pnr parasitics `.spef`
 - Post-pnr switching activity `.vcd` (from POST-PNR-SIM)
 - Constraints, generated inline, clocks propagated
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR`, `VCD_DIR` (required); `TB` (optional)
+- Hardened-block routed netlists `.v` + parasitics `.spef` (`MACRO_DIRS`, hierarchical results: the blocks are linked in full and annotated per instance, so macro internals are analyzed with real power tables)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR`, `VCD_DIR` (required); `TB`, `MACRO_DIRS` (optional)
 
 **Outputs**
 
-- Power reports (`power_summary.rpt`, VCD annotation reports)
+- Power reports (`power_summary.rpt`, `power_macros.rpt` with per-macro breakdown in hierarchical runs, VCD annotation reports)

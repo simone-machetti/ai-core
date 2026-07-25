@@ -16,6 +16,12 @@ read_liberty $::env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.l
 read_liberty $::env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib
 read_liberty $::env(ASAP7_HOME)/lib/NLDM/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib
 
+if {$::env(SEL_MACRO_DIRS) ne "none"} {
+    foreach dir $::env(SEL_MACRO_DIRS) {
+        read_liberty $::env(REPO_HOME)/projects/$::env(SEL_PROJECT)/imp/$dir/output/timing_model.lib
+    }
+}
+
 # -----------------------------------------------------------------------------
 # Technology settings (ASAP7, RVT)
 # -----------------------------------------------------------------------------
@@ -34,7 +40,14 @@ set FILL_CELLS      {FILLERxp5_ASAP7_75t_R FILLER_ASAP7_75t_R DECAPx1_ASAP7_75t_
                      DECAPx2_ASAP7_75t_R DECAPx4_ASAP7_75t_R DECAPx6_ASAP7_75t_R \
                      DECAPx10_ASAP7_75t_R}
 set DONT_USE        {*x1p*_ASAP7* *xp*_ASAP7* SDF* ICG*}
-set PDN_CFG         $::env(ASAP7_HOME)/openRoad/pdn/grid_strategy-M1-M2-M5-M6.tcl
+
+if {$::env(SEL_PDN) ne "none"} {
+    set PDN_CFG $::env(SEL_PDN)
+} elseif {$::env(SEL_MACRO_DIRS) ne "none"} {
+    set PDN_CFG $::env(REPO_HOME)/scripts/pnr/pdn_macro.tcl
+} else {
+    set PDN_CFG $::env(ASAP7_HOME)/openRoad/pdn/grid_strategy-M1-M2-M5-M6.tcl
+}
 
 if {$::env(SEL_PNR_THREADS) > 0} {
     set_thread_count $::env(SEL_PNR_THREADS)

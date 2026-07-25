@@ -26,6 +26,13 @@ if [ "${SEL_VCD:-0}" = "1" ]; then
     trace_flags=(--trace --trace-underscore --trace-max-array 0 --trace-max-width 0 -DVCD)
 fi
 
+macro_files=()
+if [ "${SEL_MACRO_DIRS}" != "none" ]; then
+    for dir in ${SEL_MACRO_DIRS}; do
+        macro_files+=("${PROJ}/imp/${dir}/output/netlist.v")
+    done
+fi
+
 verilator \
     -sv \
     --build-jobs 0 \
@@ -47,6 +54,7 @@ verilator \
     --x-assign fast \
     --top-module "${SEL_TB}" \
     -f "${REPO_HOME}/scripts/post-pnr-sim/filelist.f" \
+       "${macro_files[@]}" \
        "${PROJ}/tb/${SEL_TB}.sv" \
     -Mdir "${SIM}/build/obj_dir" \
     -o "${SIM}/build/simv" \

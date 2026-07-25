@@ -129,8 +129,10 @@ yosys "clean"
 # -----------------------------------------------------------------------------
 # Swap blackbox stubs with their synthesized netlists
 # -----------------------------------------------------------------------------
-foreach mod $blackbox_modules {
-    yosys "read_verilog $imp_dir/$mod/output/netlist.v"
+if {$env(SEL_LINK_BLACKBOXES) ne "0"} {
+    foreach mod $blackbox_modules {
+        yosys "read_verilog $imp_dir/$mod/output/netlist.v"
+    }
 }
 
 # -----------------------------------------------------------------------------

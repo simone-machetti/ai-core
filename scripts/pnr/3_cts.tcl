@@ -9,13 +9,13 @@ source $::env(REPO_HOME)/scripts/pnr/reports.tcl
 load_checkpoint 2_place
 
 # -----------------------------------------------------------------------------
-# Clock tree synthesis
+# Clock tree synthesis (skipped for clockless designs)
 # -----------------------------------------------------------------------------
-repair_clock_inverters
-
-clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
-
-set_propagated_clock [all_clocks]
+if {[llength [get_ports -quiet clk_i]] > 0} {
+    repair_clock_inverters
+    clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+    set_propagated_clock [all_clocks]
+}
 
 # -----------------------------------------------------------------------------
 # Post-CTS timing repair

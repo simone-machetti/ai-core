@@ -23,6 +23,7 @@ global_placement \
     -routability_driven \
     -timing_driven
 
+set_pin_length -hor_length 0.24 -ver_length 0.24
 place_pins -hor_layers $PIN_LAYER_HOR -ver_layers $PIN_LAYER_VER
 
 # -----------------------------------------------------------------------------
