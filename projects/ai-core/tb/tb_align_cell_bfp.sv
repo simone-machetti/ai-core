@@ -31,7 +31,8 @@ module tb_align_cell_bfp #(
     parameter  int SIZE_1    = 2,
     parameter  int EXP_WIDTH = 8,
     parameter  int NUM_RAND  = 2000,
-    localparam int E_TOP     = 2 ** EXP_WIDTH - 1
+    localparam int E_TOP     = 2 ** EXP_WIDTH - 1,
+    localparam int SIZE_OUT  = SIZE_0 + SIZE_1
 );
 
     localparam logic [    WIDTH-1:0] ZERO     = '0;
@@ -53,20 +54,17 @@ module tb_align_cell_bfp #(
     logic [    WIDTH-1:0] zero_0  [0:SIZE_0-1];
     logic [    WIDTH-1:0] zero_1  [0:SIZE_1-1];
 
-    logic [    WIDTH-1:0] h_out_0 [0:SIZE_0-1];
-    logic [    WIDTH-1:0] h_out_1 [0:SIZE_1-1];
+    logic [    WIDTH-1:0] h_out   [0:SIZE_OUT-1];
     logic [    WIDTH-1:0] h_ch_0  [0:SIZE_0-1];
     logic [    WIDTH-1:0] h_ch_1  [0:SIZE_1-1];
     logic [EXP_WIDTH-1:0] h_exp;
 
-    logic [    WIDTH-1:0] l_out_0 [0:SIZE_0-1];
-    logic [    WIDTH-1:0] l_out_1 [0:SIZE_1-1];
+    logic [    WIDTH-1:0] l_out   [0:SIZE_OUT-1];
     logic [    WIDTH-1:0] l_ch_0  [0:SIZE_0-1];
     logic [    WIDTH-1:0] l_ch_1  [0:SIZE_1-1];
     logic [EXP_WIDTH-1:0] l_exp;
 
-    logic [    WIDTH-1:0] u_out_0 [0:SIZE_0-1];
-    logic [    WIDTH-1:0] u_out_1 [0:SIZE_1-1];
+    logic [    WIDTH-1:0] u_out   [0:SIZE_OUT-1];
     logic [    WIDTH-1:0] u_ch_0  [0:SIZE_0-1];
     logic [    WIDTH-1:0] u_ch_1  [0:SIZE_1-1];
     logic [EXP_WIDTH-1:0] u_exp;
@@ -97,8 +95,7 @@ module tb_align_cell_bfp #(
         .chain_1_i (zero_1),
         .chain_0_o (h_ch_0),
         .chain_1_o (h_ch_1),
-        .out_0_o   (h_out_0),
-        .out_1_o   (h_out_1),
+        .out_o     (h_out),
         .exp_o     (h_exp)
     );
 
@@ -118,8 +115,7 @@ module tb_align_cell_bfp #(
         .chain_1_i (h_ch_1),
         .chain_0_o (l_ch_0),
         .chain_1_o (l_ch_1),
-        .out_0_o   (l_out_0),
-        .out_1_o   (l_out_1),
+        .out_o     (l_out),
         .exp_o     (l_exp)
     );
 
@@ -139,8 +135,7 @@ module tb_align_cell_bfp #(
         .chain_1_i (zero_1),
         .chain_0_o (u_ch_0),
         .chain_1_o (u_ch_1),
-        .out_0_o   (u_out_0),
-        .out_1_o   (u_out_1),
+        .out_o     (u_out),
         .exp_o     (u_exp)
     );
 
@@ -175,16 +170,16 @@ module tb_align_cell_bfp #(
             $fatal(1);
         end
         for (int r = 0; r < SIZE_0; r++) begin
-            check_row("H bundle 0", r, h_out_0[r], WIDTH'($signed(in_h0[r]) >>> amt0));
-            check_row("U bundle 0", r, u_out_0[r], WIDTH'(in_h0[r] >> amt0));
-            check_row("L bundle 0", r, l_out_0[r],
+            check_row("H bundle 0", r, h_out[r], WIDTH'($signed(in_h0[r]) >>> amt0));
+            check_row("U bundle 0", r, u_out[r], WIDTH'(in_h0[r] >> amt0));
+            check_row("L bundle 0", r, l_out[r],
                       chain_en_t ? WIDTH'($signed({in_h0[r], in_l0[r]}) >>> amt0)
                                  : WIDTH'($signed(in_l0[r]) >>> amt0));
         end
         for (int r = 0; r < SIZE_1; r++) begin
-            check_row("H bundle 1", r, h_out_1[r], WIDTH'($signed(in_h1[r]) >>> amt1));
-            check_row("U bundle 1", r, u_out_1[r], WIDTH'(in_h1[r] >> amt1));
-            check_row("L bundle 1", r, l_out_1[r],
+            check_row("H bundle 1", r, h_out[SIZE_0+r], WIDTH'($signed(in_h1[r]) >>> amt1));
+            check_row("U bundle 1", r, u_out[SIZE_0+r], WIDTH'(in_h1[r] >> amt1));
+            check_row("L bundle 1", r, l_out[SIZE_0+r],
                       chain_en_t ? WIDTH'($signed({in_h1[r], in_l1[r]}) >>> amt1)
                                  : WIDTH'($signed(in_l1[r]) >>> amt1));
         end
