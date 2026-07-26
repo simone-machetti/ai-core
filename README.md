@@ -291,26 +291,28 @@ The per-instance report needs a netlist with module boundaries, so pass the same
 ```bash
 make pnr TOP_LEVEL=<top_level> CLK_PERIOD_NS=<val> OUT_DIR=<name> NETLIST_DIR=<netlist_dir> \
     [CORE_UTIL=<pct>] [ASPECT_RATIO=<val>] [CORE_MARGIN=<um>] [PLACE_DENSITY=<val>] \
-    [CLK_UNCERTAINTY_PS=<val>] [PNR_STEP=<stage>] [PNR_THREADS=<n>] \
-    [MACRO_DIRS="dir ..."] [FLOORPLAN=<file>] [PDN=<file>]
+    [MAX_ROUTE_LAYER=<layer>] [CLK_UNCERTAINTY_PS=<val>] [PNR_STEP=<stage>] [PNR_THREADS=<n>] \
+    [MACRO_DIRS="dir ..."] [FLOORPLAN=<file>] [MACRO_CHANNEL=<um>] [PDN=<file>]
 ```
 
-| Parameter            | Required           | Description                                                   |
-| -------------------- | ------------------ | ------------------------------------------------------------- |
-| `TOP_LEVEL`          | yes                | Module to place-and-route (must match the netlist top)        |
-| `CLK_PERIOD_NS`      | yes                | Clock period in nanoseconds                                   |
-| `OUT_DIR`            | yes                | Output subdirectory under `imp/`                              |
-| `NETLIST_DIR`        | yes                | Directory containing the flat netlist from `make syn`         |
-| `CORE_UTIL`          | no (default: 40)   | Core utilization percentage; the die area derives from it     |
-| `ASPECT_RATIO`       | no (default: 1.0)  | Core height/width ratio                                       |
-| `CORE_MARGIN`        | no (default: 2)    | Core-to-die margin in µm                                      |
-| `PLACE_DENSITY`      | no (default: 0.60) | Global placement target density                               |
-| `CLK_UNCERTAINTY_PS` | no (default: 0)    | Clock uncertainty in picoseconds                              |
-| `PNR_STEP`           | no (default: all)  | `all` = full clean run; a stage name re-runs only that stage  |
-| `PNR_THREADS`        | no (default: 0)    | OpenROAD thread count; `0` = all cores                        |
-| `MACRO_DIRS`         | no                 | Run dirs of hardened blocks to bind as hard macros            |
-| `FLOORPLAN`          | no                 | Project TCL placing the macros (`place_macro` per instance)   |
-| `PDN`                | no                 | PDN strategy override (macro runs default to `pdn_macro.tcl`) |
+| Parameter            | Required           | Description                                                                                                |
+| -------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `TOP_LEVEL`          | yes                | Module to place-and-route (must match the netlist top)                                                     |
+| `CLK_PERIOD_NS`      | yes                | Clock period in nanoseconds                                                                                |
+| `OUT_DIR`            | yes                | Output subdirectory under `imp/`                                                                           |
+| `NETLIST_DIR`        | yes                | Directory containing the flat netlist from `make syn`                                                      |
+| `CORE_UTIL`          | no (default: 40)   | Core utilization percentage; the die area derives from it                                                  |
+| `ASPECT_RATIO`       | no (default: 1.0)  | Core height/width ratio                                                                                    |
+| `CORE_MARGIN`        | no (default: 2)    | Core-to-die margin in µm                                                                                   |
+| `PLACE_DENSITY`      | no (default: 0.60) | Global placement target density                                                                            |
+| `MAX_ROUTE_LAYER`    | no (default: M7)   | Top signal-routing layer; use `M6` when hardening a tile so M7 stays free for the parent PDN               |
+| `CLK_UNCERTAINTY_PS` | no (default: 0)    | Clock uncertainty in picoseconds                                                                           |
+| `PNR_STEP`           | no (default: all)  | `all` = full clean run; a stage name re-runs only that stage                                               |
+| `PNR_THREADS`        | no (default: 0)    | OpenROAD thread count; `0` = all cores                                                                     |
+| `MACRO_DIRS`         | no                 | Run dirs of hardened blocks to bind as hard macros                                                         |
+| `MACRO_CHANNEL`      | no                 | Gap in µm between adjacent macros; read by the project floorplan file (wider = easier routing, larger die) |
+| `FLOORPLAN`          | no                 | Project TCL placing the macros (`place_macro` per instance)                                                |
+| `PDN`                | no                 | PDN strategy override (macro runs default to `pdn_macro.tcl`)                                              |
 
 The flow is six stages, each an independent `openroad` process chained through ODB checkpoints: `1_floorplan`, `2_place`, `3_cts`, `4_route`, `5_final`, `6_gds` (KLayout merge). ICG clock gates from synthesis are placed, routed and balanced by CTS.
 
@@ -318,7 +320,7 @@ Outputs go to `projects/<PROJECT>/imp/<OUT_DIR>/`: the layout (`output/design.de
 
 #### Hierarchical place-and-route (hard macros)
 
-1. Harden each block: `make pnr TOP_LEVEL=<block> ...` (combinational blocks are fine — CTS skips itself).
+1. Harden each block: `make pnr TOP_LEVEL=<block> ... MAX_ROUTE_LAYER=M6` (reserve M7 for the parent's power over the macros; combinational blocks are fine — CTS skips itself).
 2. Synthesize the parent with empty stubs: `make syn TOP_LEVEL=<top> BLACKBOX_MODULES="<block> ..." LINK_BLACKBOXES=0 ...`.
 3. Implement the parent: `make pnr ... MACRO_DIRS="<block_dir> ..." FLOORPLAN=<file>`, where the file places each macro (`place_macro -macro_name <inst> -location {x y} -orientation R0`).
 
@@ -390,9 +392,11 @@ make clean-all                # remove all sim/ and imp/ directories
 | `ASPECT_RATIO`       | pnr                         | ratio (default: `1.0`)          | Core height/width ratio                                                              |
 | `CORE_MARGIN`        | pnr                         | µm (default: `2`)               | Margin between core area and die edge                                                |
 | `PLACE_DENSITY`      | pnr                         | 0–1 (default: `0.60`)           | Global placement target density                                                      |
+| `MAX_ROUTE_LAYER`    | pnr                         | layer (default: `M7`)           | Top signal-routing layer; `M6` when hardening a tile reserves M7 for the parent PDN  |
 | `CLK_UNCERTAINTY_PS` | pnr                         | ps (default: `0`)               | Clock uncertainty applied to the clocks                                              |
 | `PNR_STEP`           | pnr                         | `all` (default) or a stage name | `all` = full clean run; a stage name re-runs that stage from the previous checkpoint |
 | `PNR_THREADS`        | pnr                         | `0` (default) or thread count   | OpenROAD thread count; `0` = all cores. Fewer route threads lower the memory peak    |
 | `MACRO_DIRS`         | pnr, post-pnr-*             | `"dir ..."` (default: `none`)   | Hardened-block run dirs to bind as hard macros                                       |
+| `MACRO_CHANNEL`      | pnr                         | µm (default: `10`)              | Gap between adjacent macros, used by the project floorplan file                      |
 | `FLOORPLAN`          | pnr                         | path (default: `none`)          | Project-owned macro-placement TCL sourced after the floorplan                        |
 | `PDN`                | pnr                         | path (default: `none`)          | PDN strategy override (macro runs default to `scripts/pnr/pdn_macro.tcl`)            |

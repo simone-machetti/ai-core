@@ -25,6 +25,7 @@ PNR_THREADS        ?= 0
 LINK_BLACKBOXES    ?= 1
 MACRO_DIRS         ?= none
 FLOORPLAN          ?= none
+MACRO_CHANNEL      ?= 10
 PDN                ?= none
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
@@ -52,6 +53,7 @@ export SEL_PNR_THREADS        := $(PNR_THREADS)
 export SEL_LINK_BLACKBOXES    := $(LINK_BLACKBOXES)
 export SEL_MACRO_DIRS         := $(MACRO_DIRS)
 export SEL_FLOORPLAN          := $(FLOORPLAN)
+export SEL_MACRO_CHANNEL      := $(MACRO_CHANNEL)
 export SEL_PDN                := $(PDN)
 
 .PHONY: init sim syn pnr post-syn-sta post-syn-sim post-syn-dpa post-pnr-sta post-pnr-sim post-pnr-dpa clean-all clean-sim clean-imp

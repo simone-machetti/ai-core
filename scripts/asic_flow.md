@@ -99,7 +99,7 @@ Place-and-route from the synthesized netlist to the final layout (`make pnr`), s
 - Constraints, generated inline from `CLK_PERIOD_NS` (same scheme as the STA steps)
 - ASAP7 platform physical setup (routing tracks, PDN grid strategy, wire RC, RC extraction rules)
 - Hierarchical mode: hardened-block abstracts `.lef`/`.lib`/`.gds` (`MACRO_DIRS`) + project-owned macro-placement TCL (`FLOORPLAN`)
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `CLK_UNCERTAINTY_PS`, `PNR_STEP`, `PNR_THREADS`, `MACRO_DIRS`, `FLOORPLAN`, `PDN` (optional)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `MAX_ROUTE_LAYER`, `CLK_UNCERTAINTY_PS`, `PNR_STEP`, `PNR_THREADS`, `MACRO_DIRS`, `FLOORPLAN`, `MACRO_CHANNEL`, `PDN` (optional)
 
 **Outputs**
 

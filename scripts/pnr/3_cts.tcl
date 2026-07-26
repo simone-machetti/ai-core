@@ -9,11 +9,15 @@ source $::env(REPO_HOME)/scripts/pnr/reports.tcl
 load_checkpoint 2_place
 
 # -----------------------------------------------------------------------------
-# Clock tree synthesis (skipped for clockless designs)
+# Clock tree synthesis
 # -----------------------------------------------------------------------------
 if {[llength [get_ports -quiet clk_i]] > 0} {
     repair_clock_inverters
-    clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+    if {$::env(SEL_MACRO_DIRS) ne "none"} {
+        clock_tree_synthesis -repair_clock_nets
+    } else {
+        clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+    }
     set_propagated_clock [all_clocks]
 }
 
