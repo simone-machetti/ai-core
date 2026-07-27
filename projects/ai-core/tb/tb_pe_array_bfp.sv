@@ -2,8 +2,9 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Self-checking testbench for pe_array_bfp wired downstream of disp_array,
-//   with the baseline pe_array alongside as the integer reference. Each of the
+//   Self-checking testbench for pe_array_bfp wired downstream of disp_array
+//   and of the BFP exponent dispatchers, with the baseline pe_array alongside
+//   as the integer reference. Each of the
 //   11 modes is verified as a plain matrix multiply plus the BFP contract:
 //
 //     1. Define the A, B and X matrices for the mode (shapes from modes.xlsx).
@@ -26,9 +27,14 @@
 //   must sit inside the truncation window [ideal - BLO, ideal + BHI] of the
 //   flat-aligned ideal computed from the per-DP8 golden dot products (each
 //   align cell can lose at most 2 LSBs of its node scale, so BLO scales with
-//   the number of cells in the subtree). The exponent sideband is modelled
-//   here (select by SEL_A/SEL_B, H/L parity, idle-min from the CTR zero
-//   codes, 7-bit sums) - the executable spec of the future sideband block.
+//   the number of cells in the subtree). The exponent path runs the real RTL
+//   end to end: the tb packs the per-block source exponents (4 x 6-bit A
+//   word, 4 x 12-bit B word) and disp_array_exp_a_bfp / disp_array_exp_b_bfp
+//   dispatch them to the two 6-bit per-DP8 inputs of pe_array_bfp, which
+//   forms the 7-bit scales. The sideband model (select by SEL_A/SEL_B, H/L
+//   parity, per-side idle zeroing from the CTR zero codes) runs alongside as
+//   the golden: the dispatcher outputs are checked against it every vector,
+//   and its 7-bit sums feed the exponent/window goldens of the tree.
 //
 // Parameters:
 //   NUM_RAND - number of random A,B matrix pairs per mode
@@ -72,7 +78,11 @@ module tb_pe_array_bfp #(
     localparam int MAXK         = 32;
     localparam int MAXN         = 4;
     localparam int MAXO         = 8;
+    localparam int EXP_IN_WIDTH = 6;
     localparam int EXP_WIDTH    = 7;
+    localparam int CHK_WIDTH    = 2 * EXP_IN_WIDTH;
+    localparam int EXP_A_WIDTH  = NUM_BLK * EXP_IN_WIDTH;
+    localparam int EXP_B_WIDTH  = NUM_BLK * CHK_WIDTH;
 
     localparam int MODE_NUM  [0:NUM_MODE-1] = '{1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12};
     localparam int TAP_LEVEL [0:NUM_MODE-1] = '{0, 1, 1, 2, 3, 2, 3, 2, 1, 2, 2};
@@ -219,6 +229,12 @@ module tb_pe_array_bfp #(
     logic [L2_TAP_WIDTH-1:0] l2_carry    [  0:NUM_L2-1];
     logic [L3_TAP_WIDTH-1:0] l3_sum;
     logic [L3_TAP_WIDTH-1:0] l3_carry;
+    logic [ EXP_A_WIDTH-1:0] pe_exp_a;
+    logic [ EXP_B_WIDTH-1:0] pe_exp_b;
+    logic [EXP_IN_WIDTH-1:0] exp_a_dp8   [ 0:NUM_DP8-1];
+    logic [EXP_IN_WIDTH-1:0] exp_b_dp8   [ 0:NUM_DP8-1];
+    logic [EXP_IN_WIDTH-1:0] gold_exp_a  [ 0:NUM_DP8-1];
+    logic [EXP_IN_WIDTH-1:0] gold_exp_b  [ 0:NUM_DP8-1];
     logic [   EXP_WIDTH-1:0] exp_dp8     [ 0:NUM_DP8-1];
     logic [L0_TAP_WIDTH-1:0] b_l0_sum    [  0:NUM_L0-1];
     logic [L0_TAP_WIDTH-1:0] b_l0_carry  [  0:NUM_L0-1];
@@ -261,6 +277,26 @@ module tb_pe_array_bfp #(
         .b_dp8_o  (b_dp8)
     );
 
+    disp_array_exp_a_bfp disp_array_exp_a_bfp_i (
+        .clk_i      (clk_i),
+        .rst_ni     (rst_ni),
+        .pe_exp_a_i (pe_exp_a),
+        .sel_a_i    (sel_a),
+        .ctr_l_i    (ctr_l),
+        .ctr_h_i    (ctr_h),
+        .exp_a_dp8_o(exp_a_dp8)
+    );
+
+    disp_array_exp_b_bfp disp_array_exp_b_bfp_i (
+        .clk_i      (clk_i),
+        .rst_ni     (rst_ni),
+        .pe_exp_b_i (pe_exp_b),
+        .sel_b_i    (sel_b),
+        .ctr_l_i    (ctr_l),
+        .ctr_h_i    (ctr_h),
+        .exp_b_dp8_o(exp_b_dp8)
+    );
+
     pe_array pe_array_i (
         .clk_i        (clk_i),
         .rst_ni       (rst_ni),
@@ -287,7 +323,8 @@ module tb_pe_array_bfp #(
         .b_dp8_i      (b_dp8),
         .is_signed_a_i(is_signed_a),
         .is_signed_b_i(is_signed_b),
-        .exp_dp8_i    (exp_dp8),
+        .exp_a_dp8_i  (exp_a_dp8),
+        .exp_b_dp8_i  (exp_b_dp8),
         .sel_shift_i  (sel_shift),
         .en_level_i   (en_level),
         .l0_sum_o     (b_l0_sum),
@@ -478,12 +515,19 @@ module tb_pe_array_bfp #(
         for (int g = 0; g < 8; g++) gb[g] = equal ? base : ebias(base);
         for (int blk = 0; blk < 4; blk++) ea[blk] = 6'(ga[EGRP_A[mi][blk]]);
         for (int h = 0; h < 8; h++)      eb[h]   = 6'(gb[EGRP_B[mi][h]]);
-        for (int p = 0; p < NUM_PAIR; p++) begin
-            exp_dp8[2*p]   = (CTR_H[mi][p] == 2'd1) ? '0
-                           : EXP_WIDTH'(ea[SEL_A[mi][p]]) + EXP_WIDTH'(eb[int'(SEL_B[mi][p])*2]);
-            exp_dp8[2*p+1] = (CTR_L[mi][p] == 2'd1) ? '0
-                           : EXP_WIDTH'(ea[SEL_A[mi][p]]) + EXP_WIDTH'(eb[int'(SEL_B[mi][p])*2+1]);
+        for (int blk = 0; blk < NUM_BLK; blk++) begin
+            pe_exp_a[blk*EXP_IN_WIDTH +: EXP_IN_WIDTH]           = ea[blk];
+            pe_exp_b[blk*CHK_WIDTH+EXP_IN_WIDTH +: EXP_IN_WIDTH] = eb[2*blk];
+            pe_exp_b[blk*CHK_WIDTH +: EXP_IN_WIDTH]              = eb[2*blk+1];
         end
+        for (int p = 0; p < NUM_PAIR; p++) begin
+            gold_exp_a[2*p]   = (CTR_H[mi][p] == 2'd1) ? '0 : ea[SEL_A[mi][p]];
+            gold_exp_b[2*p]   = (CTR_H[mi][p] == 2'd1) ? '0 : eb[int'(SEL_B[mi][p])*2];
+            gold_exp_a[2*p+1] = (CTR_L[mi][p] == 2'd1) ? '0 : ea[SEL_A[mi][p]];
+            gold_exp_b[2*p+1] = (CTR_L[mi][p] == 2'd1) ? '0 : eb[int'(SEL_B[mi][p])*2+1];
+        end
+        for (int i = 0; i < NUM_DP8; i++)
+            exp_dp8[i] = EXP_WIDTH'(gold_exp_a[i]) + EXP_WIDTH'(gold_exp_b[i]);
     endtask
 
     task automatic check_equal(input int mi);
@@ -528,6 +572,15 @@ module tb_pe_array_bfp #(
             err = err + 1;
             $display("mode %0d L3 exp: dut %0d gold %0d", MODE_NUM[mi], b_l3_exp, egold(3, 0));
         end
+    endtask
+
+    task automatic check_disp_exps(input int mi);
+        for (int i = 0; i < NUM_DP8; i++)
+            if (exp_a_dp8[i] !== gold_exp_a[i] || exp_b_dp8[i] !== gold_exp_b[i]) begin
+                err = err + 1;
+                $display("mode %0d disp exp dp8=%0d: a dut %0d gold %0d, b dut %0d gold %0d",
+                         MODE_NUM[mi], i, exp_a_dp8[i], gold_exp_a[i], exp_b_dp8[i], gold_exp_b[i]);
+            end
     endtask
 
     task automatic check_bounds(input int mi);
@@ -698,7 +751,11 @@ module tb_pe_array_bfp #(
             is_signed_a[i] = 1'b0; is_signed_b[i] = 1'b0;
         end
         sel_shift = '0; en_level = '1;
-        for (int i = 0; i < NUM_DP8; i++) exp_dp8[i] = '0;
+        pe_exp_a = '0;
+        pe_exp_b = '0;
+        for (int i = 0; i < NUM_DP8; i++) begin
+            gold_exp_a[i] = '0; gold_exp_b[i] = '0; exp_dp8[i] = '0;
+        end
         err = 0; npass = 0;
         repeat (3) @(posedge clk_i);
         rst_ni = 1'b1;
@@ -716,11 +773,13 @@ module tb_pe_array_bfp #(
                 #(T_SETTLE);
                 compare(mi);
                 check_equal(mi);
+                check_disp_exps(mi);
                 check_exps(mi);
                 set_exps(mi, 1'b0);
                 @(posedge clk_i);
                 @(posedge clk_i);
                 #(T_SETTLE);
+                check_disp_exps(mi);
                 check_exps(mi);
                 check_bounds(mi);
             end

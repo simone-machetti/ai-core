@@ -14,9 +14,12 @@
 //   aligned addend is a right-shifted (smaller) version of its integer worst
 //   case.
 //
-//   Exponent path: exp_dp8_i carries the per-DP8 scales (e_A + e_B, formed by
-//   the exponent sideband; an idle DP8 must present the minimum scale so it
-//   never wins a max). The L0 cells consume the crossed pair (CX0, CX1) and
+//   Exponent path: exp_a_dp8_i and exp_b_dp8_i carry the dispatched per-DP8
+//   6-bit format exponents (from disp_array_exp_a_bfp / disp_array_exp_b_bfp,
+//   which meet only here: A is dispatched per grid row, B per grid column).
+//   One add_n per DP8 forms the scale e_A + e_B (6 + 6 -> 7, exact). An idle
+//   DP8 must arrive with BOTH sides gated to zero so its scale is the minimum
+//   and never wins a max. The L0 cells consume the crossed pair (CX0, CX1) and
 //   emit the L0 node exponents, registered alongside the L0 mantissa
 //   registers; per L1 node the max of its two L0 exponents is forwarded
 //   (sub_n_bfp + mux_n, no shifter); the L2 and L3 cells continue the max
@@ -24,8 +27,8 @@
 //   tap reads as mantissa pair + scale.
 //
 // Parameters:
-//   None - fixed to the PE configuration (EXP_WIDTH = 7 covers e_A + e_B of
-//   two 6-bit format exponents).
+//   None - fixed to the PE configuration (EXP_WIDTH = EXP_IN_WIDTH + 1 = 7
+//   holds e_A + e_B of two 6-bit format exponents exactly).
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
@@ -54,7 +57,8 @@ module pe_array_bfp #(
     localparam int L1_TAP_WIDTH = 29,
     localparam int L2_TAP_WIDTH = 37,
     localparam int L3_TAP_WIDTH = 38,
-    localparam int EXP_WIDTH    = 7
+    localparam int EXP_IN_WIDTH = 6,
+    localparam int EXP_WIDTH    = EXP_IN_WIDTH + 1
 )(
     input  logic                    clk_i,
     input  logic                    rst_ni,
@@ -62,7 +66,8 @@ module pe_array_bfp #(
     input  logic [ B_DP8_WIDTH-1:0] b_dp8_i       [0:NUM_DP8-1],
     input  logic                    is_signed_a_i [0:NUM_DP8-1],
     input  logic                    is_signed_b_i [0:NUM_DP8-1],
-    input  logic [   EXP_WIDTH-1:0] exp_dp8_i     [0:NUM_DP8-1],
+    input  logic [EXP_IN_WIDTH-1:0] exp_a_dp8_i   [0:NUM_DP8-1],
+    input  logic [EXP_IN_WIDTH-1:0] exp_b_dp8_i   [0:NUM_DP8-1],
     input  logic [   NUM_SHIFT-1:0] sel_shift_i,
     input  logic [   NUM_LEVEL-1:0] en_level_i,
     output logic [L0_TAP_WIDTH-1:0] l0_sum_o      [ 0:NUM_L0-1],
@@ -101,6 +106,7 @@ module pe_array_bfp #(
     logic [ L3_WIDTH-1:0] l3_carry_w;
     /* verilator lint_on UNUSEDSIGNAL */
 
+    logic [EXP_WIDTH-1:0] exp_dp8    [0:NUM_DP8-1];
     logic [EXP_WIDTH-1:0] l0_exp     [ 0:NUM_L0-1];
     logic [EXP_WIDTH-1:0] l0_exp_q   [ 0:NUM_L0-1];
     logic [EXP_WIDTH-1:0] l1_exp     [ 0:NUM_L1-1];
@@ -123,6 +129,15 @@ module pe_array_bfp #(
                 .is_signed_b_i(is_signed_b_i[i]),
                 .sum_o        (dp8_sum[i]),
                 .carry_o      (dp8_carry[i])
+            );
+        end
+    endgenerate
+
+    generate
+        for (i = 0; i < NUM_DP8; i++) begin : gen_exp_dp8
+            add_n #(.WIDTH(EXP_IN_WIDTH), .CARRY(1)) add_n_exp_i (
+                .in_0_i({1'b0, exp_a_dp8_i[i]}), .in_1_i({1'b0, exp_b_dp8_i[i]}), .cin_i(1'b0),
+                .out_o(exp_dp8[i][EXP_IN_WIDTH-1:0]), .cout_o(exp_dp8[i][EXP_IN_WIDTH])
             );
         end
     endgenerate
@@ -162,9 +177,9 @@ module pe_array_bfp #(
                 .IS_SIGNED(1'b1)
             ) align_cell_bfp_i (
                 .in_0_i    (hi_sh),
-                .exp_0_i   (exp_dp8_i[CX0]),
+                .exp_0_i   (exp_dp8[CX0]),
                 .in_1_i    (lo_ext),
-                .exp_1_i   (exp_dp8_i[CX1]),
+                .exp_1_i   (exp_dp8[CX1]),
                 .chain_en_i(1'b0),
                 .chain_0_i (zero_ch),
                 .chain_1_i (zero_ch),
