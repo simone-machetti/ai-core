@@ -25,11 +25,7 @@ make syn PROJECT=ai-core TOP_LEVEL=pe OUT_DIR=pe_syn CLK_PERIOD_NS=$CLK \
     PARAMS=none KEEP_HIERARCHY=0 KEEP_MODULES=none BLACKBOX_MODULES=none LINK_BLACKBOXES=1
 
 # -----------------------------------------------------------------------------
-# Step 2 - harden the pe tile as a macro (routed M2-M5, M6+M7 left free so the
-#          parent can route over the macros; power pins exposed on M5). Dropping
-#          M6 costs a routing layer, so utilization is pushed to 20% and place
-#          density lowered to 0.40 to spread the cells and give the 4-layer stack
-#          enough routing room.
+# Step 2 - harden the pe tile as a macro
 # -----------------------------------------------------------------------------
 make pnr PROJECT=ai-core TOP_LEVEL=pe OUT_DIR=pe_pnr NETLIST_DIR=pe_syn CLK_PERIOD_NS=$CLK \
     CORE_UTIL=20 ASPECT_RATIO=1.0 CORE_MARGIN=2 PLACE_DENSITY=0.40 MAX_ROUTE_LAYER=M5 \
@@ -45,14 +41,6 @@ make syn PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=top_2x2_syn CLK_PERIOD_NS=$CL
 # -----------------------------------------------------------------------------
 # Step 4 - assemble: place-and-route the parent with the N*N macros
 # -----------------------------------------------------------------------------
-# Utilization is 50%: the design routes with huge headroom (~4% track usage), so a
-# low util just inflates the die - at 20% the ~648 um die OOMs detailed route on
-# this 30 GB machine. PLACE_DENSITY must be >= CORE_UTIL, and spreading is not
-# needed here, so it tracks up to 0.60. PNR_THREADS is capped at 4 to keep the
-# detailed-route peak (one worker per core) within RAM. DROUTE_END_ITER=0 stops
-# detailed routing after the initial pass: a complete routed layout with residual
-# DRC, enough for a layout view and coarse area/timing/power comparison, since
-# full DRC closure grinds for many hours on this design. Set -1 to close DRC.
 make pnr PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=top_2x2_pnr NETLIST_DIR=top_2x2_syn CLK_PERIOD_NS=$CLK \
     CORE_UTIL=50 ASPECT_RATIO=1.0 CORE_MARGIN=2 PLACE_DENSITY=0.60 MAX_ROUTE_LAYER=M7 \
     CLK_UNCERTAINTY_PS=0 PNR_STEP=all PNR_THREADS=4 MACRO_DIRS="pe_pnr" \
