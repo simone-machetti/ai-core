@@ -32,9 +32,16 @@ global_route -congestion_iterations 30 -verbose
 # -----------------------------------------------------------------------------
 # Detailed routing
 # -----------------------------------------------------------------------------
-detailed_route \
-    -output_drc $REPORT_DIR/route_drc.rpt \
-    -verbose 1
+if {$::env(SEL_DROUTE_END_ITER) >= 0} {
+    detailed_route \
+        -output_drc $REPORT_DIR/route_drc.rpt \
+        -droute_end_iter $::env(SEL_DROUTE_END_ITER) \
+        -verbose 1
+} else {
+    detailed_route \
+        -output_drc $REPORT_DIR/route_drc.rpt \
+        -verbose 1
+}
 
 report_stage 4_route
 save_checkpoint 4_route

@@ -27,6 +27,8 @@ MACRO_DIRS         ?= none
 FLOORPLAN          ?= none
 MACRO_CHANNEL      ?= 10
 PDN                ?= none
+DROUTE_END_ITER    ?= -1
+ODB                ?= design
 
 PROJ_DIR := $(REPO_HOME)/projects/$(PROJECT)
 
@@ -55,8 +57,9 @@ export SEL_MACRO_DIRS         := $(MACRO_DIRS)
 export SEL_FLOORPLAN          := $(FLOORPLAN)
 export SEL_MACRO_CHANNEL      := $(MACRO_CHANNEL)
 export SEL_PDN                := $(PDN)
+export SEL_DROUTE_END_ITER    := $(DROUTE_END_ITER)
 
-.PHONY: init sim syn pnr post-syn-sta post-syn-sim post-syn-dpa post-pnr-sta post-pnr-sim post-pnr-dpa clean-all clean-sim clean-imp
+.PHONY: init sim syn pnr post-syn-sta post-syn-sim post-syn-dpa post-pnr-sta post-pnr-sim post-pnr-dpa open-odb clean-all clean-sim clean-imp
 
 init:
 	mkdir -p $(PROJ_DIR)/sim
@@ -133,6 +136,14 @@ post-pnr-dpa: clean-imp
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/report && \
 	mkdir -p $(PROJ_DIR)/imp/$(OUT_DIR)/output && \
 	sta -no_splash -exit $(REPO_HOME)/scripts/post-pnr-dpa/run.tcl | tee $(PROJ_DIR)/imp/$(OUT_DIR)/output/opensta.log
+
+open-odb:
+	@odb=$(PROJ_DIR)/imp/$(OUT_DIR)/output/$(ODB).odb; \
+	if [ ! -f $$odb ]; then echo "open-odb: ODB not found: $$odb"; exit 1; fi; \
+	tcl=$$(mktemp); \
+	echo "read_db $$odb" > $$tcl; \
+	openroad -gui $$tcl; \
+	rm -f $$tcl
 
 clean-all:
 	rm -rf $(PROJ_DIR)/sim

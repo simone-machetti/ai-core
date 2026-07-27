@@ -2,12 +2,13 @@
 # Author: Simone Machetti
 # -----------------------------------------------------------------------------
 #
-# Macro-aware PDN. Blocks hardened by this flow are routed up to M5 (M6+M7 left
-# free, see MAX_ROUTE_LAYER + pdn_tile.tcl) and expose their power straps as M5
-# pins. The standard-cell grid runs M1/M2 rails + an M5 mesh in the loose-logic
-# areas; an M6 mesh runs over the whole core - including the macros, since M6 is
-# free - and drops onto each macro's M5 power pins. M7 carries no power and is
-# left entirely for the parent to route over the macros.
+# Power grid for a block hardened as a hard macro that will be assembled under a
+# parent reserving the upper layers for over-macro routing. Rails on M1/M2 plus a
+# single M5 mesh, exposed as M5 power pins; nothing is placed on M6/M7, so the
+# hardened block obstructs only M1-M5 and leaves M6+M7 free for the parent to
+# route over the macro. Pair with MAX_ROUTE_LAYER=M5 when hardening the block,
+# and with pdn_macro.tcl (which drops the parent M6 straps onto these M5 pins) in
+# the assembly. Mirrors the ASAP7 grid-strategy stripe geometry, topped at M5.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -26,19 +27,11 @@ global_connect
 set_voltage_domain -name {CORE} -power {VDD} -ground {VSS}
 
 # -----------------------------------------------------------------------------
-# Standard cell grid (M1/M2 rails, M5 mesh, M6 top mesh over the whole core)
+# Standard cell grid (M1/M2 rails, M5 mesh exposed as the block power pins)
 # -----------------------------------------------------------------------------
-define_pdn_grid -name {top} -voltage_domains {CORE} -pins {M6}
+define_pdn_grid -name {top} -voltage_domains {CORE} -pins {M5}
 add_pdn_stripe -grid {top} -layer {M1} -width {0.018} -pitch {0.54} -offset {0} -followpins
 add_pdn_stripe -grid {top} -layer {M2} -width {0.018} -pitch {0.54} -offset {0} -followpins
-add_pdn_stripe -grid {top} -layer {M5} -width {0.12}  -spacing {0.072} -pitch {5.4} -offset {0.300}
-add_pdn_stripe -grid {top} -layer {M6} -width {0.288} -spacing {0.096} -pitch {5.4} -offset {0.513}
+add_pdn_stripe -grid {top} -layer {M5} -width {0.12} -spacing {0.072} -pitch {5.4} -offset {0.300}
 add_pdn_connect -grid {top} -layers {M1 M2}
 add_pdn_connect -grid {top} -layers {M2 M5}
-add_pdn_connect -grid {top} -layers {M5 M6}
-
-# -----------------------------------------------------------------------------
-# Macro grid (drop the parent M6 straps onto each macro's M5 power pins)
-# -----------------------------------------------------------------------------
-define_pdn_grid -name {MacroGrid} -voltage_domains {CORE} -macro -default -halo {2.0 2.0 2.0 2.0}
-add_pdn_connect -grid {MacroGrid} -layers {M5 M6}

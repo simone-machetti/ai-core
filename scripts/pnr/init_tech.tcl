@@ -43,6 +43,9 @@ set DONT_USE        {*x1p*_ASAP7* *xp*_ASAP7* SDF* ICG*}
 
 if {$::env(SEL_PDN) ne "none"} {
     set PDN_CFG $::env(SEL_PDN)
+    if {[file pathtype $PDN_CFG] ne "absolute"} {
+        set PDN_CFG $::env(REPO_HOME)/$PDN_CFG
+    }
 } elseif {$::env(SEL_MACRO_DIRS) ne "none"} {
     set PDN_CFG $::env(REPO_HOME)/scripts/pnr/pdn_macro.tcl
 } else {
