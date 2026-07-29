@@ -1,0 +1,72 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=0.9cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+\allowdisplaybreaks
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 1 --- Square-BFP (centered / opt)}}\\[4pt]
+{\large DP16 (8$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ block exponents $\rightarrow$ DP8 (4$\times$4) $\rightarrow$ centered aligned add-and-square}
+\end{center}
+
+\vspace{0.2em}
+
+\textbf{Step 1 --- DP16 (8$\times$4)}
+\[ \DPop{16}{8}{4} = \sum_{i=0}^{15} a_i \, b_i \]
+
+\textbf{Step 2 --- DP8 (8$\times$4)}
+\[
+\DPop{16}{8}{4} = \underbrace{\sum_{i=0}^{7} a_i b_i}_{\DPop{8}{8}{4}} + \underbrace{\sum_{i=8}^{15} a_i b_i}_{\DPop{8}{8}{4}}
+\]
+
+\textbf{Step 3 --- Block exponents}\quad
+{\small(one exponent block per DP8 (8$\times$4))}
+\[
+\Big(\underbrace{\sum_{i=0}^{7} a_i b_i}_{\DPop{8}{8}{4}},\; E_0\Big) \;,\;
+\Big(\underbrace{\sum_{i=8}^{15} a_i b_i}_{\DPop{8}{8}{4}},\; E_1\Big)
+\;\longrightarrow\;
+\Big(\; \underbrace{2^{-\delta_0}\sum_{i=0}^{7} a_i b_i + 2^{-\delta_1}\sum_{i=8}^{15} a_i b_i}_{M},\; E \;\Big)
+\]
+$E_0=E_{a,0}+E_b$, \ $E_1=E_{a,1}+E_b$; \quad $E=\max(E_0,E_1)$, \ $\delta_k=E-E_k$; \quad truncating shifts, on block sums only; \quad $\DPop{16}{8}{4}=M\cdot2^{E}$.
+
+\textbf{Step 4 --- DP8 (4$\times$4)}
+\begin{align*}
+M =
+  2^{-\delta_0}\Big( 2^{4}\underbrace{\sum_{i=0}^{7} a_{H,i} b_i}_{\DPop{8}{4}{4}}
+   + \underbrace{\sum_{i=0}^{7} a_{L,i} b_i}_{\DPop{8}{4}{4}} \Big)
+ + 2^{-\delta_1}\Big( 2^{4}\underbrace{\sum_{i=8}^{15} a_{H,i} b_i}_{\DPop{8}{4}{4}}
+   + \underbrace{\sum_{i=8}^{15} a_{L,i} b_i}_{\DPop{8}{4}{4}} \Big)
+\end{align*}
+
+\textbf{Step 5 --- Centered aligned add-and-square}\quad
+{\small(subtract $8$ from $a_L$; each DP8 (4$\times$4) $=\tfrac12\big[\sum(x{+}b)^2-\sum x^2-\sum b^2\,(+512\text{ for }a_L)\big]$)}
+\begin{align*}
+M = {}
+  & 2^{-\delta_0}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 - \sum_{i=0}^{7}a_{H,i}^2 - \sum_{i=0}^{7}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=0}^{7}(a_{L,i}{-}8)^2 - \sum_{i=0}^{7}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 - \sum_{i=8}^{15}a_{H,i}^2 - \sum_{i=8}^{15}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=8}^{15}(a_{L,i}{-}8)^2 - \sum_{i=8}^{15}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}}
+\end{align*}
+
+\textbf{Step 6 --- All components}
+\[
+\boxed{\;
+\begin{aligned}
+\mathrm{PE} ={}& 2^{-\delta_0}\Big(2^{4}\!\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 + \sum_{i=0}^{7}\!\big((a_{L,i}{-}8){+}b_i\big)^2\Big) + 2^{-\delta_1}\Big(2^{4}\!\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 + \sum_{i=8}^{15}\!\big((a_{L,i}{-}8){+}b_i\big)^2\Big) \\[0.15em]
+\alpha ={}& 2^{-\delta_0}\Big(2^{4}\!\sum_{i=0}^{7} a_{H,i}^2 + \sum_{i=0}^{7}(a_{L,i}{-}8)^2\Big) + 2^{-\delta_1}\Big(2^{4}\!\sum_{i=8}^{15} a_{H,i}^2 + \sum_{i=8}^{15}(a_{L,i}{-}8)^2\Big) \\[0.15em]
+\beta ={}& 2^{-\delta_0}\Big(2^{4}\!\sum_{i=0}^{7} b_i^2 + \sum_{i=0}^{7}(b_i{-}8)^2\Big) + 2^{-\delta_1}\Big(2^{4}\!\sum_{i=8}^{15} b_i^2 + \sum_{i=8}^{15}(b_i{-}8)^2\Big) \\[0.15em]
+C ={}& 2^{-\delta_0}\big(0 + 512\big) + 2^{-\delta_1}\big(0 + 512\big) \\[0.15em]
+M ={}& \tfrac12\big(\mathrm{PE} - \alpha - \beta + C\big), \qquad E = \max(E_0,E_1)
+\end{aligned}
+\;}
+\]
+
+\end{document}

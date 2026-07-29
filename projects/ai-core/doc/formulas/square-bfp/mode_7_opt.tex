@@ -1,0 +1,135 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=0.9cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+\allowdisplaybreaks
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 7 --- Square-BFP (centered / opt)}}\\[4pt]
+{\large DP16 (16$\times$8) $\rightarrow$ DP8 (16$\times$8) $\rightarrow$ DP8 (16$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ block exponents $\rightarrow$ DP8 (4$\times$4) $\rightarrow$ centered aligned add-and-square}
+\end{center}
+
+\textbf{Step 1 --- DP16 (16$\times$8)}
+\[
+\DPop{16}{16}{8} = \sum_{i=0}^{15} a_i \, b_i
+\]
+
+\textbf{Step 2 --- DP8 (16$\times$8)}
+\[
+\DPop{16}{16}{8}
+  = \underbrace{\sum_{i=0}^{7} a_i \, b_i}_{\DPop{8}{16}{8}}
+  \; + \; \underbrace{\sum_{i=8}^{15} a_i \, b_i}_{\DPop{8}{16}{8}}
+\]
+
+\textbf{Step 3 --- DP8 (16$\times$4)}
+\begin{align*}
+\DPop{16}{16}{8} = {}
+  & 2^{4}\underbrace{\sum_{i=0}^{7} a_i \, b_i^{hi}}_{\DPop{8}{16}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_i \, b_i^{lo}}_{\DPop{8}{16}{4}}
+  + 2^{4}\underbrace{\sum_{i=8}^{15} a_i \, b_i^{hi}}_{\DPop{8}{16}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i^{lo}}_{\DPop{8}{16}{4}}
+\end{align*}
+
+\textbf{Step 4 --- DP8 (8$\times$4)}
+\begin{align*}
+\DPop{16}{16}{8} = {}
+  & 2^{12}\underbrace{\sum_{i=0}^{7} a_i^{hi} \, b_i^{hi}}_{\DPop{8}{8}{4}}
+  + 2^{8}\underbrace{\sum_{i=0}^{7} a_i^{hi} \, b_i^{lo}}_{\DPop{8}{8}{4}}
+  + 2^{4}\underbrace{\sum_{i=0}^{7} a_i^{lo} \, b_i^{hi}}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_i^{lo} \, b_i^{lo}}_{\DPop{8}{8}{4}} \\[0.3em]
+  & + 2^{12}\underbrace{\sum_{i=8}^{15} a_i^{hi} \, b_i^{hi}}_{\DPop{8}{8}{4}}
+  + 2^{8}\underbrace{\sum_{i=8}^{15} a_i^{hi} \, b_i^{lo}}_{\DPop{8}{8}{4}}
+  + 2^{4}\underbrace{\sum_{i=8}^{15} a_i^{lo} \, b_i^{hi}}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i^{lo} \, b_i^{lo}}_{\DPop{8}{8}{4}}
+\end{align*}
+
+\textbf{Step 5 --- Block exponents}\quad
+{\small(one exponent block per DP8 (8$\times$4))}
+\begin{align*}
+M &= 2^{-\delta_0}\Big( 2^{12}\!\sum_{i=0}^{7} a_i^{hi} b_i^{hi}
+  + 2^{8}\!\sum_{i=0}^{7} a_i^{hi} b_i^{lo}
+  + 2^{4}\!\sum_{i=0}^{7} a_i^{lo} b_i^{hi}
+  + \sum_{i=0}^{7} a_i^{lo} b_i^{lo} \Big)
+  + 2^{-\delta_1}\Big(\cdots\ i\!\in\![8,15]\ \cdots\Big)
+\end{align*}
+$E_k=E_{a,k}+E_{b,k}$; \quad $E=\max(E_0,E_1)$, \ $\delta_k=E-E_k$; \quad truncating shifts, on block sums only; \quad $\DPop{16}{16}{8}=M\cdot2^{E}$.
+
+\textbf{Step 6 --- DP8 (4$\times$4)}
+\begin{align*}
+M = {}
+  & 2^{-\delta_0}\Big( 2^{16}\underbrace{\sum_{i=0}^{7} a_{H,i}^{hi}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{12}\underbrace{\sum_{i=0}^{7} a_{L,i}^{hi}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{12}\underbrace{\sum_{i=0}^{7} a_{H,i}^{hi}\, b_i^{lo}}_{\DPop{8}{4}{4}}
+  + 2^{8}\underbrace{\sum_{i=0}^{7} a_{L,i}^{hi}\, b_i^{lo}}_{\DPop{8}{4}{4}} \\[0.15em]
+  & \qquad + 2^{8}\underbrace{\sum_{i=0}^{7} a_{H,i}^{lo}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=0}^{7} a_{L,i}^{lo}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=0}^{7} a_{H,i}^{lo}\, b_i^{lo}}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_{L,i}^{lo}\, b_i^{lo}}_{\DPop{8}{4}{4}} \Big) \\[0.3em]
+  & + 2^{-\delta_1}\Big( 2^{16}\underbrace{\sum_{i=8}^{15} a_{H,i}^{hi}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{12}\underbrace{\sum_{i=8}^{15} a_{L,i}^{hi}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{12}\underbrace{\sum_{i=8}^{15} a_{H,i}^{hi}\, b_i^{lo}}_{\DPop{8}{4}{4}}
+  + 2^{8}\underbrace{\sum_{i=8}^{15} a_{L,i}^{hi}\, b_i^{lo}}_{\DPop{8}{4}{4}} \\[0.15em]
+  & \qquad + 2^{8}\underbrace{\sum_{i=8}^{15} a_{H,i}^{lo}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=8}^{15} a_{L,i}^{lo}\, b_i^{hi}}_{\DPop{8}{4}{4}}
+  + 2^{4}\underbrace{\sum_{i=8}^{15} a_{H,i}^{lo}\, b_i^{lo}}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_{L,i}^{lo}\, b_i^{lo}}_{\DPop{8}{4}{4}} \Big)
+\end{align*}
+
+\textbf{Step 7 --- Centered aligned add-and-square}\quad
+{\small(subtract $8$ from unsigned nibbles; per DP8 (4$\times$4) add $c=0/512/2048$ for 0/1/2 unsigned nibbles; eight rows per K-half $k$, each weighted $2^{-\delta_k}$)}
+{\small
+\begin{align*}
+M = {}
+  & 2^{-\delta_0}\,2^{16}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}(a_{H,i}^{hi}{+}b_i^{hi})^2 - \sum_{i=0}^{7}(a_{H,i}^{hi})^2 - \sum_{i=0}^{7}(b_i^{hi})^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\,2^{12}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{L,i}^{hi}{-}8){+}b_i^{hi}\big)^2 - \sum_{i=0}^{7}(a_{L,i}^{hi}{-}8)^2 - \sum_{i=0}^{7}(b_i^{hi}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\,2^{12}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big(a_{H,i}^{hi}{+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=0}^{7}(a_{H,i}^{hi}{-}8)^2 - \sum_{i=0}^{7}(b_i^{lo}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\,2^{8}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{L,i}^{hi}{-}8){+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=0}^{7}(a_{L,i}^{hi}{-}16)^2 - \sum_{i=0}^{7}(b_i^{lo}{-}16)^2 + 2048\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\,2^{8}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{H,i}^{lo}{-}8){+}b_i^{hi}\big)^2 - \sum_{i=0}^{7}(a_{H,i}^{lo}{-}8)^2 - \sum_{i=0}^{7}(b_i^{hi}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{L,i}^{lo}{-}8){+}b_i^{hi}\big)^2 - \sum_{i=0}^{7}(a_{L,i}^{lo}{-}8)^2 - \sum_{i=0}^{7}(b_i^{hi}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{H,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=0}^{7}(a_{H,i}^{lo}{-}16)^2 - \sum_{i=0}^{7}(b_i^{lo}{-}16)^2 + 2048\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{L,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=0}^{7}(a_{L,i}^{lo}{-}16)^2 - \sum_{i=0}^{7}(b_i^{lo}{-}16)^2 + 2048\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{16}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}(a_{H,i}^{hi}{+}b_i^{hi})^2 - \sum_{i=8}^{15}(a_{H,i}^{hi})^2 - \sum_{i=8}^{15}(b_i^{hi})^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{12}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{L,i}^{hi}{-}8){+}b_i^{hi}\big)^2 - \sum_{i=8}^{15}(a_{L,i}^{hi}{-}8)^2 - \sum_{i=8}^{15}(b_i^{hi}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{12}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big(a_{H,i}^{hi}{+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=8}^{15}(a_{H,i}^{hi}{-}8)^2 - \sum_{i=8}^{15}(b_i^{lo}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{8}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{L,i}^{hi}{-}8){+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=8}^{15}(a_{L,i}^{hi}{-}16)^2 - \sum_{i=8}^{15}(b_i^{lo}{-}16)^2 + 2048\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{8}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{H,i}^{lo}{-}8){+}b_i^{hi}\big)^2 - \sum_{i=8}^{15}(a_{H,i}^{lo}{-}8)^2 - \sum_{i=8}^{15}(b_i^{hi}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{L,i}^{lo}{-}8){+}b_i^{hi}\big)^2 - \sum_{i=8}^{15}(a_{L,i}^{lo}{-}8)^2 - \sum_{i=8}^{15}(b_i^{hi}{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{H,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=8}^{15}(a_{H,i}^{lo}{-}16)^2 - \sum_{i=8}^{15}(b_i^{lo}{-}16)^2 + 2048\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{L,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2 - \sum_{i=8}^{15}(a_{L,i}^{lo}{-}16)^2 - \sum_{i=8}^{15}(b_i^{lo}{-}16)^2 + 2048\Big)}_{\DPop{8}{4}{4}}
+\end{align*}
+}
+
+\textbf{Step 8 --- All components}
+{\setlength{\mathindent}{0em}
+\[
+\small
+\boxed{\;
+\begin{aligned}
+\mathrm{PE} ={}& 2^{-\delta_0}\Big(2^{16}\!\sum_{i=0}^{7}(a_{H,i}^{hi}{+}b_i^{hi})^2 + 2^{12}\!\sum_{i=0}^{7}\big((a_{L,i}^{hi}{-}8){+}b_i^{hi}\big)^2 + 2^{12}\!\sum_{i=0}^{7}\big(a_{H,i}^{hi}{+}(b_i^{lo}{-}8)\big)^2 + 2^{8}\!\sum_{i=0}^{7}\big((a_{L,i}^{hi}{-}8){+}(b_i^{lo}{-}8)\big)^2 \\
+  & \qquad + 2^{8}\!\sum_{i=0}^{7}\big((a_{H,i}^{lo}{-}8){+}b_i^{hi}\big)^2 + 2^{4}\!\sum_{i=0}^{7}\big((a_{L,i}^{lo}{-}8){+}b_i^{hi}\big)^2 + 2^{4}\!\sum_{i=0}^{7}\big((a_{H,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2 + \sum_{i=0}^{7}\big((a_{L,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2\Big) \\
+  & + 2^{-\delta_1}\Big(2^{16}\!\sum_{i=8}^{15}(a_{H,i}^{hi}{+}b_i^{hi})^2 + 2^{12}\!\sum_{i=8}^{15}\big((a_{L,i}^{hi}{-}8){+}b_i^{hi}\big)^2 + 2^{12}\!\sum_{i=8}^{15}\big(a_{H,i}^{hi}{+}(b_i^{lo}{-}8)\big)^2 + 2^{8}\!\sum_{i=8}^{15}\big((a_{L,i}^{hi}{-}8){+}(b_i^{lo}{-}8)\big)^2 \\
+  & \qquad + 2^{8}\!\sum_{i=8}^{15}\big((a_{H,i}^{lo}{-}8){+}b_i^{hi}\big)^2 + 2^{4}\!\sum_{i=8}^{15}\big((a_{L,i}^{lo}{-}8){+}b_i^{hi}\big)^2 + 2^{4}\!\sum_{i=8}^{15}\big((a_{H,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2 + \sum_{i=8}^{15}\big((a_{L,i}^{lo}{-}8){+}(b_i^{lo}{-}8)\big)^2\Big) \\[0.3em]
+\alpha ={}& 2^{-\delta_0}\Big(2^{16}\!\sum_{i=0}^{7}(a_{H,i}^{hi})^2 + 2^{12}\!\sum_{i=0}^{7}(a_{L,i}^{hi}{-}8)^2 + 2^{12}\!\sum_{i=0}^{7}(a_{H,i}^{hi}{-}8)^2 + 2^{8}\!\sum_{i=0}^{7}(a_{L,i}^{hi}{-}16)^2 \\
+  & \qquad + 2^{8}\!\sum_{i=0}^{7}(a_{H,i}^{lo}{-}8)^2 + 2^{4}\!\sum_{i=0}^{7}(a_{L,i}^{lo}{-}8)^2 + 2^{4}\!\sum_{i=0}^{7}(a_{H,i}^{lo}{-}16)^2 + \sum_{i=0}^{7}(a_{L,i}^{lo}{-}16)^2\Big) \\
+  & + 2^{-\delta_1}\Big(2^{16}\!\sum_{i=8}^{15}(a_{H,i}^{hi})^2 + 2^{12}\!\sum_{i=8}^{15}(a_{L,i}^{hi}{-}8)^2 + 2^{12}\!\sum_{i=8}^{15}(a_{H,i}^{hi}{-}8)^2 + 2^{8}\!\sum_{i=8}^{15}(a_{L,i}^{hi}{-}16)^2 \\
+  & \qquad + 2^{8}\!\sum_{i=8}^{15}(a_{H,i}^{lo}{-}8)^2 + 2^{4}\!\sum_{i=8}^{15}(a_{L,i}^{lo}{-}8)^2 + 2^{4}\!\sum_{i=8}^{15}(a_{H,i}^{lo}{-}16)^2 + \sum_{i=8}^{15}(a_{L,i}^{lo}{-}16)^2\Big) \\[0.3em]
+\beta ={}& 2^{-\delta_0}\Big(2^{16}\!\sum_{i=0}^{7}(b_i^{hi})^2 + 2^{12}\!\sum_{i=0}^{7}(b_i^{hi}{-}8)^2 + 2^{12}\!\sum_{i=0}^{7}(b_i^{lo}{-}8)^2 + 2^{8}\!\sum_{i=0}^{7}(b_i^{lo}{-}16)^2 \\
+  & \qquad + 2^{8}\!\sum_{i=0}^{7}(b_i^{hi}{-}8)^2 + 2^{4}\!\sum_{i=0}^{7}(b_i^{hi}{-}8)^2 + 2^{4}\!\sum_{i=0}^{7}(b_i^{lo}{-}16)^2 + \sum_{i=0}^{7}(b_i^{lo}{-}16)^2\Big) \\
+  & + 2^{-\delta_1}\Big(2^{16}\!\sum_{i=8}^{15}(b_i^{hi})^2 + 2^{12}\!\sum_{i=8}^{15}(b_i^{hi}{-}8)^2 + 2^{12}\!\sum_{i=8}^{15}(b_i^{lo}{-}8)^2 + 2^{8}\!\sum_{i=8}^{15}(b_i^{lo}{-}16)^2 \\
+  & \qquad + 2^{8}\!\sum_{i=8}^{15}(b_i^{hi}{-}8)^2 + 2^{4}\!\sum_{i=8}^{15}(b_i^{hi}{-}8)^2 + 2^{4}\!\sum_{i=8}^{15}(b_i^{lo}{-}16)^2 + \sum_{i=8}^{15}(b_i^{lo}{-}16)^2\Big) \\[0.3em]
+C ={}& \big(2^{-\delta_0} + 2^{-\delta_1}\big)\big(0 + 2097152 + 2097152 + 524288 + 131072 + 8192 + 32768 + 2048\big) = \big(2^{-\delta_0} + 2^{-\delta_1}\big)\cdot 4892672 \\[0.3em]
+M ={}& \tfrac12\big(\mathrm{PE} - \alpha - \beta + C\big), \qquad E = \max(E_0,E_1)
+\end{aligned}
+\;}
+\]
+}
+
+\end{document}

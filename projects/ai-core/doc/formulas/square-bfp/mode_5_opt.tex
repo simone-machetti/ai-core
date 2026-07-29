@@ -1,0 +1,100 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=0.9cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+\allowdisplaybreaks
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 5 --- Square-BFP (centered / opt)}}\\[4pt]
+{\large DP32 (8$\times$4) $\rightarrow$ DP16 (8$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ block exponents $\rightarrow$ DP8 (4$\times$4) $\rightarrow$ centered aligned add-and-square}
+\end{center}
+
+\textbf{Step 1 --- DP32 (8$\times$4)}
+\[
+\DPop{32}{8}{4} = \sum_{i=0}^{31} a_i \, b_i
+\]
+
+\textbf{Step 2 --- DP16 (8$\times$4)}
+\[
+\DPop{32}{8}{4}
+  = \underbrace{\sum_{i=0}^{15} a_i \, b_i}_{\DPop{16}{8}{4}}
+  \; + \; \underbrace{\sum_{i=16}^{31} a_i \, b_i}_{\DPop{16}{8}{4}}
+\]
+
+\textbf{Step 3 --- DP8 (8$\times$4)}
+\begin{align*}
+\DPop{32}{8}{4} = {}
+  & \underbrace{\sum_{i=0}^{7} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_i \, b_i}_{\DPop{8}{8}{4}}
+\end{align*}
+
+\textbf{Step 4 --- Block exponents}\quad
+{\small(one exponent block per DP8 (8$\times$4))}
+\[
+\Big(\sum_{i=8q}^{8q+7} a_i b_i,\; E_q\Big)_{q=0..3}
+\;\longrightarrow\;
+\Big(\; M = \sum_{q=0}^{3} 2^{-\delta_q}\!\!\sum_{i=8q}^{8q+7}\! a_i b_i \;,\;\; E \;\Big)
+\qquad
+E_q = E_{a,q} + E_{b,\lfloor q/2\rfloor}
+\]
+$E=\max(E_0,\dots,E_3)$, \ $\delta_q=E-E_q$ (staged in the tree, the stage shifts telescope); \quad truncating shifts, on block sums only; \quad $\DPop{32}{8}{4}=M\cdot2^{E}$.
+
+\textbf{Step 5 --- DP8 (4$\times$4)}
+\begin{align*}
+M = {}
+  & 2^{-\delta_0}\Big( 2^{4}\underbrace{\sum_{i=0}^{7} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_{L,i}\, b_i}_{\DPop{8}{4}{4}} \Big)
+  + 2^{-\delta_1}\Big( 2^{4}\underbrace{\sum_{i=8}^{15} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_{L,i}\, b_i}_{\DPop{8}{4}{4}} \Big) \\[0.15em]
+  & + 2^{-\delta_2}\Big( 2^{4}\underbrace{\sum_{i=16}^{23} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_{L,i}\, b_i}_{\DPop{8}{4}{4}} \Big)
+  + 2^{-\delta_3}\Big( 2^{4}\underbrace{\sum_{i=24}^{31} a_{H,i}\, b_i}_{\DPop{8}{4}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_{L,i}\, b_i}_{\DPop{8}{4}{4}} \Big)
+\end{align*}
+
+\textbf{Step 6 --- Centered aligned add-and-square}\quad
+{\small(subtract $8$ from unsigned nibbles; per DP8 (4$\times$4) add $c=0/512/2048$ for 0/1/2 unsigned nibbles)}
+{\small
+\begin{align*}
+M = {}
+  & 2^{-\delta_0}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 - \sum_{i=0}^{7}a_{H,i}^2 - \sum_{i=0}^{7}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_0}\underbrace{\tfrac12\Big(\sum_{i=0}^{7}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=0}^{7}(a_{L,i}{-}8)^2 - \sum_{i=0}^{7}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 - \sum_{i=8}^{15}a_{H,i}^2 - \sum_{i=8}^{15}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_1}\underbrace{\tfrac12\Big(\sum_{i=8}^{15}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=8}^{15}(a_{L,i}{-}8)^2 - \sum_{i=8}^{15}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_2}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=16}^{23}(a_{H,i}{+}b_i)^2 - \sum_{i=16}^{23}a_{H,i}^2 - \sum_{i=16}^{23}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_2}\underbrace{\tfrac12\Big(\sum_{i=16}^{23}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=16}^{23}(a_{L,i}{-}8)^2 - \sum_{i=16}^{23}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_3}\,2^{4}\underbrace{\tfrac12\Big(\sum_{i=24}^{31}(a_{H,i}{+}b_i)^2 - \sum_{i=24}^{31}a_{H,i}^2 - \sum_{i=24}^{31}b_i^2\Big)}_{\DPop{8}{4}{4}} \\[0.15em]
+  & + 2^{-\delta_3}\underbrace{\tfrac12\Big(\sum_{i=24}^{31}\big((a_{L,i}{-}8){+}b_i\big)^2 - \sum_{i=24}^{31}(a_{L,i}{-}8)^2 - \sum_{i=24}^{31}(b_i{-}8)^2 + 512\Big)}_{\DPop{8}{4}{4}}
+\end{align*}
+}
+
+\textbf{Step 7 --- All components}
+{\setlength{\mathindent}{0em}
+\[
+\small
+\boxed{\;
+\begin{aligned}
+\mathrm{PE} ={}& 2^{-\delta_0}\Big(2^{4}\!\sum_{i=0}^{7}(a_{H,i}{+}b_i)^2 + \sum_{i=0}^{7}\!\big((a_{L,i}{-}8){+}b_i\big)^2\Big) + 2^{-\delta_1}\Big(2^{4}\!\sum_{i=8}^{15}(a_{H,i}{+}b_i)^2 + \sum_{i=8}^{15}\!\big((a_{L,i}{-}8){+}b_i\big)^2\Big) \\
+  & + 2^{-\delta_2}\Big(2^{4}\!\sum_{i=16}^{23}(a_{H,i}{+}b_i)^2 + \sum_{i=16}^{23}\!\big((a_{L,i}{-}8){+}b_i\big)^2\Big) + 2^{-\delta_3}\Big(2^{4}\!\sum_{i=24}^{31}(a_{H,i}{+}b_i)^2 + \sum_{i=24}^{31}\!\big((a_{L,i}{-}8){+}b_i\big)^2\Big) \\[0.3em]
+\alpha ={}& 2^{-\delta_0}\Big(2^{4}\!\sum_{i=0}^{7} a_{H,i}^2 + \sum_{i=0}^{7}(a_{L,i}{-}8)^2\Big) + 2^{-\delta_1}\Big(2^{4}\!\sum_{i=8}^{15} a_{H,i}^2 + \sum_{i=8}^{15}(a_{L,i}{-}8)^2\Big) \\
+  & + 2^{-\delta_2}\Big(2^{4}\!\sum_{i=16}^{23} a_{H,i}^2 + \sum_{i=16}^{23}(a_{L,i}{-}8)^2\Big) + 2^{-\delta_3}\Big(2^{4}\!\sum_{i=24}^{31} a_{H,i}^2 + \sum_{i=24}^{31}(a_{L,i}{-}8)^2\Big) \\[0.3em]
+\beta ={}& 2^{-\delta_0}\Big(2^{4}\!\sum_{i=0}^{7} b_i^2 + \sum_{i=0}^{7}(b_i{-}8)^2\Big) + 2^{-\delta_1}\Big(2^{4}\!\sum_{i=8}^{15} b_i^2 + \sum_{i=8}^{15}(b_i{-}8)^2\Big) \\
+  & + 2^{-\delta_2}\Big(2^{4}\!\sum_{i=16}^{23} b_i^2 + \sum_{i=16}^{23}(b_i{-}8)^2\Big) + 2^{-\delta_3}\Big(2^{4}\!\sum_{i=24}^{31} b_i^2 + \sum_{i=24}^{31}(b_i{-}8)^2\Big) \\[0.3em]
+C ={}& 2^{-\delta_0}\big(0+512\big) + 2^{-\delta_1}\big(0+512\big) + 2^{-\delta_2}\big(0+512\big) + 2^{-\delta_3}\big(0+512\big) \\[0.3em]
+M ={}& \tfrac12\big(\mathrm{PE} - \alpha - \beta + C\big), \qquad E = \max(E_0,E_1,E_2,E_3)
+\end{aligned}
+\;}
+\]
+}
+
+\end{document}
