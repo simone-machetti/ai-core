@@ -1,0 +1,70 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1.4cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 5 --- Baseline-BFP}}\\[4pt]
+{\large DP32 (8$\times$4) $\rightarrow$ DP16 (8$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ block exponents}
+\end{center}
+
+\vspace{0.5em}
+
+\textbf{Step 1 --- DP32 (8$\times$4)}
+\[ \DPop{32}{8}{4} = \sum_{i=0}^{31} a_i \, b_i \]
+
+\vspace{0.5em}
+
+\textbf{Step 2 --- DP16 (8$\times$4)}
+\[
+\DPop{32}{8}{4}
+  = \underbrace{\sum_{i=0}^{15} a_i \, b_i}_{\DPop{16}{8}{4}}
+  \; + \; \underbrace{\sum_{i=16}^{31} a_i \, b_i}_{\DPop{16}{8}{4}}
+\]
+
+\vspace{0.5em}
+
+\textbf{Step 3 --- DP8 (8$\times$4)}
+\[
+\DPop{32}{8}{4}
+  = \underbrace{\sum_{i=0}^{7} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=16}^{23} a_i \, b_i}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=24}^{31} a_i \, b_i}_{\DPop{8}{8}{4}}
+\]
+
+\vspace{0.5em}
+
+\textbf{Step 4 --- Block exponents}\quad
+{\small(one exponent block per DP8 (8$\times$4))}
+\[
+\Big(\sum_{i=8q}^{8q+7} a_i b_i,\; E_q\Big)_{q=0..3}
+\;\longrightarrow\;
+\Big(\, M ,\; E \,\Big)
+\qquad
+E_q = E_{a,q} + E_{b,\lfloor q/2\rfloor}
+\]
+$E=\max(E_0,\dots,E_3)$, \ $\delta_q=E-E_q$ (staged in the tree, the stage shifts telescope); \quad truncating shifts, on block sums only; \quad $\DPop{32}{8}{4}=M\cdot2^{E}$.
+
+\vspace{0.5em}
+
+\textbf{Step 5 --- Result}
+\[
+\boxed{\;
+M = 2^{-\delta_0}\!\sum_{i=0}^{7} a_i b_i
+  + 2^{-\delta_1}\!\sum_{i=8}^{15} a_i b_i
+  + 2^{-\delta_2}\!\sum_{i=16}^{23} a_i b_i
+  + 2^{-\delta_3}\!\sum_{i=24}^{31} a_i b_i,
+\qquad E = \max(E_0,E_1,E_2,E_3)
+\;}
+\]
+
+\end{document}

@@ -1,0 +1,67 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1.4cm]{geometry}
+\setlength{\mathindent}{1.5em}
+\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+
+\newcommand{\DPop}[3]{\mathrm{DP#1}\,(#2\!\times\!#3)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Mode 2 --- Baseline-BFP}}\\[4pt]
+{\large DP16 (8$\times$8) $\rightarrow$ DP16 (8$\times$4) $\rightarrow$ DP8 (8$\times$4) $\rightarrow$ block exponents}
+\end{center}
+
+\vspace{0.5em}
+
+\textbf{Step 1 --- DP16 (8$\times$8)}
+\[ \DPop{16}{8}{8} = \sum_{i=0}^{15} a_i \, b_i \]
+
+\vspace{0.5em}
+
+\textbf{Step 2 --- DP16 (8$\times$4)}
+\[
+\DPop{16}{8}{8}
+  = 2^{4} \underbrace{\sum_{i=0}^{15} a_i \, b_i^{hi}}_{\DPop{16}{8}{4}}
+  \; + \; \underbrace{\sum_{i=0}^{15} a_i \, b_i^{lo}}_{\DPop{16}{8}{4}}
+\]
+
+\vspace{0.5em}
+
+\textbf{Step 3 --- DP8 (8$\times$4)}
+\[
+\DPop{16}{8}{8}
+  = 2^{4} \underbrace{\sum_{i=0}^{7} a_i \, b_i^{hi}}_{\DPop{8}{8}{4}}
+  + 2^{4} \underbrace{\sum_{i=8}^{15} a_i \, b_i^{hi}}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=0}^{7} a_i \, b_i^{lo}}_{\DPop{8}{8}{4}}
+  + \underbrace{\sum_{i=8}^{15} a_i \, b_i^{lo}}_{\DPop{8}{8}{4}}
+\]
+
+\vspace{0.5em}
+
+\textbf{Step 4 --- Block exponents}\quad
+{\small(one exponent block per DP8 (8$\times$4))}
+\[
+\Big(2^{4}\!\sum_{i=0}^{7} a_i b_i^{hi} + \sum_{i=0}^{7} a_i b_i^{lo},\; E_0\Big) ,\;
+\Big(2^{4}\!\sum_{i=8}^{15} a_i b_i^{hi} + \sum_{i=8}^{15} a_i b_i^{lo},\; E_1\Big)
+\;\longrightarrow\;
+\Big(\, M ,\; E \,\Big)
+\]
+$E_k=E_{a,k}+E_{b,k}$; \quad $E=\max(E_0,E_1)$, \ $\delta_k=E-E_k$; \quad truncating shifts, on block sums only; \quad $\DPop{16}{8}{8}=M\cdot2^{E}$.
+
+\vspace{0.5em}
+
+\textbf{Step 5 --- Result}
+\[
+\boxed{\;
+M = 2^{-\delta_0}\Big(2^{4}\!\sum_{i=0}^{7} a_i b_i^{hi} + \sum_{i=0}^{7} a_i b_i^{lo}\Big)
+  + 2^{-\delta_1}\Big(2^{4}\!\sum_{i=8}^{15} a_i b_i^{hi} + \sum_{i=8}^{15} a_i b_i^{lo}\Big),
+\qquad E = \max(E_0,E_1)
+\;}
+\]
+
+\end{document}
