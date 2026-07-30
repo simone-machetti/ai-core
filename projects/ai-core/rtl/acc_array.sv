@@ -78,6 +78,8 @@ module acc_array #(
     generate
         for (g = 0; g < NUM_LANE; g++) begin : gen_lane
 
+            localparam bit IS_EVEN = (g % 2 == 0);
+
             /* verilator lint_off UNUSEDSIGNAL */
             assign w_sum[g][0] = PE_WIDTH'($signed(l0_sum_i[g]));
             assign w_car[g][0] = PE_WIDTH'($signed(l0_carry_i[g]));
@@ -87,7 +89,7 @@ module acc_array #(
             assign l1s = FUSE'($signed(l1_sum_i[g/2]));
             assign l1c = FUSE'($signed(l1_carry_i[g/2]));
 
-            if (g % 2 == 0) begin : gen_l1_h
+            if (IS_EVEN) begin : gen_l1_h
                 assign w_sum[g][1] = l1s[FUSE-1:PE_WIDTH];
                 assign w_car[g][1] = l1c[FUSE-1:PE_WIDTH];
             end else begin : gen_l1_l
@@ -100,7 +102,7 @@ module acc_array #(
                 logic [FUSE-1:0] l2s, l2c;
                 assign l2s = FUSE'($signed(l2_sum_i[N2]));
                 assign l2c = FUSE'($signed(l2_carry_i[N2]));
-                if (g % 2 == 0) begin : gen_l2_h
+                if (IS_EVEN) begin : gen_l2_h
                     assign w_sum[g][2] = l2s[FUSE-1:PE_WIDTH];
                     assign w_car[g][2] = l2c[FUSE-1:PE_WIDTH];
                 end else begin : gen_l2_l
@@ -116,7 +118,7 @@ module acc_array #(
                 logic [FUSE-1:0] l3s, l3c;
                 assign l3s = FUSE'($signed(l3_sum_i));
                 assign l3c = FUSE'($signed(l3_carry_i));
-                if (g % 2 == 0) begin : gen_l3_h
+                if (IS_EVEN) begin : gen_l3_h
                     assign w_sum[g][3] = l3s[FUSE-1:PE_WIDTH];
                     assign w_car[g][3] = l3c[FUSE-1:PE_WIDTH];
                 end else begin : gen_l3_l
@@ -174,11 +176,11 @@ module acc_array #(
                 .out_o(rd[0]), .cout_o(lane_carry[g])
             );
 
-            if (g % 2 == 0) begin : gen_carry
+            if (IS_EVEN) begin : gen_carry
                 logic [CARRY-1:0] cin_in  [0:0];
                 logic [CARRY-1:0] cin_out [0:0];
                 assign cin_in[0] = lane_carry[g+1];
-                gate_n #(.WIDTH(CARRY), .SIZE(1)) gate_n_i (
+                gate_n #(.WIDTH(CARRY), .SIZE(1)) gate_n_add_i (
                     .in_i(cin_in), .sel_i(~prop_carry_i), .out_o(cin_out)
                 );
                 assign lane_cin[g] = cin_out[0];

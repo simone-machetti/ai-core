@@ -248,7 +248,7 @@ module tb_pe_array_sqr_bfp #(
         .a_dp8_i(a_dp8), .b_dp8_i(b_dp8),
         .alpha_sum_i(alpha_sum), .alpha_carry_i(alpha_carry),
         .beta_sum_i(beta_sum), .beta_carry_i(beta_carry),
-        .const_dp8_i(const_dp8), .neg_i(neg),
+        .const_dp8_i(const_dp8), .neg_i(neg), .zero_i(zero_dp8),
         .exp_a_dp8_i(exp_a_dp8), .exp_b_dp8_i(exp_b_dp8),
         .sel_shift_i(sel_shift), .en_level_i(en_level),
         .l0_sum_o(l0_sum), .l0_carry_o(l0_carry), .l0_exp_o(l0_exp),

@@ -62,30 +62,30 @@ module acc_array_sqr #(
     input  logic                  clk_i,
     input  logic                  rst_ni,
 
-    input  logic [    L0_TAP-1:0] pe_l0_sum_i   [0:NUM_L0-1],
-    input  logic [    L0_TAP-1:0] pe_l0_carry_i [0:NUM_L0-1],
-    input  logic [    L1_TAP-1:0] pe_l1_sum_i   [0:NUM_L1-1],
-    input  logic [    L1_TAP-1:0] pe_l1_carry_i [0:NUM_L1-1],
-    input  logic [    L2_TAP-1:0] pe_l2_sum_i   [0:NUM_L2-1],
-    input  logic [    L2_TAP-1:0] pe_l2_carry_i [0:NUM_L2-1],
+    input  logic [    L0_TAP-1:0] pe_l0_sum_i   [  0:NUM_L0-1],
+    input  logic [    L0_TAP-1:0] pe_l0_carry_i [  0:NUM_L0-1],
+    input  logic [    L1_TAP-1:0] pe_l1_sum_i   [  0:NUM_L1-1],
+    input  logic [    L1_TAP-1:0] pe_l1_carry_i [  0:NUM_L1-1],
+    input  logic [    L2_TAP-1:0] pe_l2_sum_i   [  0:NUM_L2-1],
+    input  logic [    L2_TAP-1:0] pe_l2_carry_i [  0:NUM_L2-1],
     input  logic [    L3_TAP-1:0] pe_l3_sum_i,
     input  logic [    L3_TAP-1:0] pe_l3_carry_i,
 
-    input  logic [    L0_TAP-1:0] a_l0_sum_i    [0:NUM_L0-1],
-    input  logic [    L0_TAP-1:0] a_l0_carry_i  [0:NUM_L0-1],
-    input  logic [    L1_TAP-1:0] a_l1_sum_i    [0:NUM_L1-1],
-    input  logic [    L1_TAP-1:0] a_l1_carry_i  [0:NUM_L1-1],
-    input  logic [    L2_TAP-1:0] a_l2_sum_i    [0:NUM_L2-1],
-    input  logic [    L2_TAP-1:0] a_l2_carry_i  [0:NUM_L2-1],
+    input  logic [    L0_TAP-1:0] a_l0_sum_i    [  0:NUM_L0-1],
+    input  logic [    L0_TAP-1:0] a_l0_carry_i  [  0:NUM_L0-1],
+    input  logic [    L1_TAP-1:0] a_l1_sum_i    [  0:NUM_L1-1],
+    input  logic [    L1_TAP-1:0] a_l1_carry_i  [  0:NUM_L1-1],
+    input  logic [    L2_TAP-1:0] a_l2_sum_i    [  0:NUM_L2-1],
+    input  logic [    L2_TAP-1:0] a_l2_carry_i  [  0:NUM_L2-1],
     input  logic [    L3_TAP-1:0] a_l3_sum_i,
     input  logic [    L3_TAP-1:0] a_l3_carry_i,
 
-    input  logic [    L0_TAP-1:0] b_l0_sum_i    [0:NUM_L0-1],
-    input  logic [    L0_TAP-1:0] b_l0_carry_i  [0:NUM_L0-1],
-    input  logic [    L1_TAP-1:0] b_l1_sum_i    [0:NUM_L1-1],
-    input  logic [    L1_TAP-1:0] b_l1_carry_i  [0:NUM_L1-1],
-    input  logic [    L2_TAP-1:0] b_l2_sum_i    [0:NUM_L2-1],
-    input  logic [    L2_TAP-1:0] b_l2_carry_i  [0:NUM_L2-1],
+    input  logic [    L0_TAP-1:0] b_l0_sum_i    [  0:NUM_L0-1],
+    input  logic [    L0_TAP-1:0] b_l0_carry_i  [  0:NUM_L0-1],
+    input  logic [    L1_TAP-1:0] b_l1_sum_i    [  0:NUM_L1-1],
+    input  logic [    L1_TAP-1:0] b_l1_carry_i  [  0:NUM_L1-1],
+    input  logic [    L2_TAP-1:0] b_l2_sum_i    [  0:NUM_L2-1],
+    input  logic [    L2_TAP-1:0] b_l2_carry_i  [  0:NUM_L2-1],
     input  logic [    L3_TAP-1:0] b_l3_sum_i,
     input  logic [    L3_TAP-1:0] b_l3_carry_i,
 
@@ -160,6 +160,8 @@ module acc_array_sqr #(
         for (op = 0; op < NUM_OP; op++) begin : gen_op
             for (g = 0; g < NUM_LANE; g++) begin : gen_win
 
+                localparam bit IS_EVEN = (g % 2 == 0);
+
                 /* verilator lint_off UNUSEDSIGNAL */
                 logic [FUSE-1:0] l1sf, l1cf;
                 assign w_sum[op][g][0] = PE_WIDTH'($signed(l0s[op][g]));
@@ -168,7 +170,7 @@ module acc_array_sqr #(
                 assign l1sf = FUSE'($signed(l1s[op][g/2]));
                 assign l1cf = FUSE'($signed(l1c[op][g/2]));
 
-                if (g % 2 == 0) begin : gen_l1_h
+                if (IS_EVEN) begin : gen_l1_h
                     assign w_sum[op][g][1] = l1sf[FUSE-1:PE_WIDTH];
                     assign w_car[op][g][1] = l1cf[FUSE-1:PE_WIDTH];
                 end else begin : gen_l1_l
@@ -181,7 +183,7 @@ module acc_array_sqr #(
                     logic [FUSE-1:0] l2sf, l2cf;
                     assign l2sf = FUSE'($signed(l2s[op][N2]));
                     assign l2cf = FUSE'($signed(l2c[op][N2]));
-                    if (g % 2 == 0) begin : gen_l2_h
+                    if (IS_EVEN) begin : gen_l2_h
                         assign w_sum[op][g][2] = l2sf[FUSE-1:PE_WIDTH];
                         assign w_car[op][g][2] = l2cf[FUSE-1:PE_WIDTH];
                     end else begin : gen_l2_l
@@ -197,7 +199,7 @@ module acc_array_sqr #(
                     logic [FUSE-1:0] l3sf, l3cf;
                     assign l3sf = FUSE'($signed(l3s[op]));
                     assign l3cf = FUSE'($signed(l3c[op]));
-                    if (g % 2 == 0) begin : gen_l3_h
+                    if (IS_EVEN) begin : gen_l3_h
                         assign w_sum[op][g][3] = l3sf[FUSE-1:PE_WIDTH];
                         assign w_car[op][g][3] = l3cf[FUSE-1:PE_WIDTH];
                     end else begin : gen_l3_l
@@ -247,7 +249,7 @@ module acc_array_sqr #(
                 logic [0:0] msb_in  [0:0];
                 logic [0:0] msb_out [0:0];
                 assign msb_in[0] = acc_sel[g+1][PE_WIDTH-1];
-                gate_n #(.WIDTH(1), .SIZE(1)) gate_n_msb_i (
+                gate_n #(.WIDTH(1), .SIZE(1)) gate_n_mul_2_i (
                     .in_i(msb_in), .sel_i(~fused), .out_o(msb_out)
                 );
                 assign acc_x2[g] = {acc_sel[g][PE_WIDTH-2:0], msb_out[0]};
@@ -297,7 +299,7 @@ module acc_array_sqr #(
                 logic [CARRY-1:0] cin_in  [0:0];
                 logic [CARRY-1:0] cin_out [0:0];
                 assign cin_in[0] = lane_carry[g+1];
-                gate_n #(.WIDTH(CARRY), .SIZE(1)) gate_n_i (
+                gate_n #(.WIDTH(CARRY), .SIZE(1)) gate_n_add_i (
                     .in_i(cin_in), .sel_i(~prop_carry_i), .out_o(cin_out)
                 );
                 assign lane_cin[g] = cin_out[0];

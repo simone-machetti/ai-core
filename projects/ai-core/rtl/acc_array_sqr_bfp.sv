@@ -2,79 +2,66 @@
 // Author: Simone Machetti
 //
 // Description:
-//   BFP-capable eight-lane accumulator - the acc_array variant with in-loop BFP
-//   alignment. Same lane structure as acc_array (window/sign-extend the selected
-//   tap, tap-level MUX, accumulate MUX, CPR 3:2, add_n, L->H adder-carry chain,
-//   output register), plus one align_cell_bfp per lane inserted between the
-//   accumulate MUX and the CPR: it brings the accumulator row and the tap
-//   sum/carry pair to the common scale max(acc_exp, tap_exp) before the fold,
-//   the smaller-exponent side arithmetic-right-shifted (truncating). With all
-//   exponents equal every aligner is bit-transparent and the array behaves
-//   exactly like acc_array (the pure-integer path); node and guard widths are
-//   unchanged because an aligned addend is a right-shifted (smaller) version of
-//   its integer worst case.
+//   Eight-lane accumulator, square + BFP variant - the final stage of the
+//   square-BFP PE. It is acc_array_bfp (per-lane align_cell_bfp bringing the acc
+//   row and the tap sum/carry pair to max(acc_exp, tap_exp), running-max exponent
+//   register, seed = feedback format, lane-fusion align chain, L->H adder carry)
+//   plus the square's /2, borrowed verbatim from acc_array_sqr:
+//     - acc_x2: a LEFT shift <<1 on the acc-mux output so the accumulated term
+//       enters the fold at 2x (fused pair: the low lane's shifted-out MSB fills
+//       the high lane's LSB). Keeps acc_i / pe_out in native units.
+//     - half:   an arithmetic >>1 on the resolved sum before the register - the
+//       /2 (fused pair: the high lane's shifted-out LSB fills the low lane's MSB).
+//   Because the tree already delivers 2*P as ONE tap pair, the combine
+//   PE - alpha - beta + C is not done here: there is a single tap set (no
+//   alpha/beta taps) and no C / c_neg ports (C is injected per-DP8 upstream at
+//   L0). The register holds P + acc at its running BFP scale;
+//   1/2*(2*acc + 2*P) = acc + P, exact when the resolved sum is even (equal
+//   exponents), so with all exponents equal the array is bit-identical to
+//   acc_array_sqr fed the same result.
 //
-//   Exponent path: a per-lane OUT MUX EXP (sel_out_i) picks the tap's scale from
-//   the pe_array_bfp tap exponents, mirroring the data window map (L0->[g],
-//   L1->[g/2], L2->[0/1] on lanes 2,3,6,7, L3 on lanes 6,7; idle levels tied to
-//   the minimum scale 0). A per-lane ACC MUX EXP (sel_acc_i) picks the seed
-//   exponent acc_exp_i (external) or the lane's own registered scale (feedback),
-//   matching the mantissa accumulate MUX. The aligner emits max(acc_exp,
-//   tap_exp); an exponent register per lane (loaded every cycle, reset to the
-//   minimum scale 0) holds it as the running accumulator scale and drives
-//   pe_exp_o. The seed and the feedback share one format (20-bit mantissa,
-//   40-bit split H/L over a lane pair, plus a 7-bit product-domain scale), so
-//   the two accumulate MUXes just select between same-shape operands.
-//
-//   Lane fusion (prop_carry_i, pairs (0,1)(2,3)(4,5)(6,7), even=H/odd=L): the
-//   pair's two aligners exchange shifted-out bits over an H->L fill chain - the
-//   even (H) lane sign-fills and feeds its three raw rows (acc, tap sum, tap
-//   carry), gated by prop_carry, into the odd (L) lane, whose fill comes from
-//   that chain instead of sign replication. Fused they form one distributed
-//   40-bit three-row shifter; ungated they align independently. This runs
-//   alongside the existing L->H adder-carry chain: one control, two crossing
-//   buses, opposite directions. A fused pair must receive equal exponents on
-//   both lanes (guaranteed: both read the same tap node and, seeded
-//   consistently, hold equal registered scales).
+//   Widths: tap inputs are the pe_array_sqr_bfp taps 19/30/38/39 (baseline-BFP
+//   + 1, they carry 2*P). CARRY = 3 (the <<1 adds a bit of inter-lane carry over
+//   acc_array_bfp's 2). Node/guard widths are otherwise acc_array_bfp's.
 //
 // Parameters:
-//   None - fixed to the PE configuration (EXP_WIDTH = 7 holds e_A + e_B of two
-//   6-bit format exponents).
+//   None - fixed to the PE configuration (EXP_WIDTH = 7 holds e_A + e_B).
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
 
-module acc_array_bfp #(
+module acc_array_sqr_bfp #(
     localparam int NUM_LANE  = 8,
     localparam int PE_WIDTH  = 20,
     localparam int FUSE      = 40,
-    localparam int CPR_WIDTH = PE_WIDTH + 2,
-    localparam int CARRY     = 2,
+    localparam int EXT       = 3,
+    localparam int CPR_WIDTH = PE_WIDTH + EXT,
+    localparam int CARRY     = 3,
     localparam int NUM_LVL   = 4,
     localparam int NUM_L0    = 8,
     localparam int NUM_L1    = 4,
     localparam int NUM_L2    = 2,
-    localparam int L0_WIDTH  = 18,
-    localparam int L1_WIDTH  = 29,
-    localparam int L2_WIDTH  = 37,
-    localparam int L3_WIDTH  = 38,
+    localparam int L0_WIDTH  = 19,
+    localparam int L1_WIDTH  = 30,
+    localparam int L2_WIDTH  = 38,
+    localparam int L3_WIDTH  = 39,
     localparam int SEL_WIDTH = 2,
     localparam int EXP_WIDTH = 7,
     localparam int ROWS      = 3
 )(
     input  logic                 clk_i,
     input  logic                 rst_ni,
-    input  logic [ L0_WIDTH-1:0] l0_sum_i   [0:NUM_L0-1],
-    input  logic [ L0_WIDTH-1:0] l0_carry_i [0:NUM_L0-1],
-    input  logic [ L1_WIDTH-1:0] l1_sum_i   [0:NUM_L1-1],
-    input  logic [ L1_WIDTH-1:0] l1_carry_i [0:NUM_L1-1],
-    input  logic [ L2_WIDTH-1:0] l2_sum_i   [0:NUM_L2-1],
-    input  logic [ L2_WIDTH-1:0] l2_carry_i [0:NUM_L2-1],
+    input  logic [ L0_WIDTH-1:0] l0_sum_i   [  0:NUM_L0-1],
+    input  logic [ L0_WIDTH-1:0] l0_carry_i [  0:NUM_L0-1],
+    input  logic [ L1_WIDTH-1:0] l1_sum_i   [  0:NUM_L1-1],
+    input  logic [ L1_WIDTH-1:0] l1_carry_i [  0:NUM_L1-1],
+    input  logic [ L2_WIDTH-1:0] l2_sum_i   [  0:NUM_L2-1],
+    input  logic [ L2_WIDTH-1:0] l2_carry_i [  0:NUM_L2-1],
     input  logic [ L3_WIDTH-1:0] l3_sum_i,
     input  logic [ L3_WIDTH-1:0] l3_carry_i,
-    input  logic [EXP_WIDTH-1:0] l0_exp_i   [0:NUM_L0-1],
-    input  logic [EXP_WIDTH-1:0] l1_exp_i   [0:NUM_L1-1],
-    input  logic [EXP_WIDTH-1:0] l2_exp_i   [0:NUM_L2-1],
+    input  logic [EXP_WIDTH-1:0] l0_exp_i   [  0:NUM_L0-1],
+    input  logic [EXP_WIDTH-1:0] l1_exp_i   [  0:NUM_L1-1],
+    input  logic [EXP_WIDTH-1:0] l2_exp_i   [  0:NUM_L2-1],
     input  logic [EXP_WIDTH-1:0] l3_exp_i,
     input  logic [ PE_WIDTH-1:0] acc_i      [0:NUM_LANE-1],
     input  logic [EXP_WIDTH-1:0] acc_exp_i  [0:NUM_LANE-1],
@@ -89,16 +76,20 @@ module acc_array_bfp #(
     logic [ PE_WIDTH-1:0] w_car      [0:NUM_LANE-1][0:NUM_LVL-1];
     logic [EXP_WIDTH-1:0] w_exp      [0:NUM_LANE-1][0:NUM_LVL-1];
 
+    logic [ PE_WIDTH-1:0] acc_sel    [0:NUM_LANE-1];
+    logic [ PE_WIDTH-1:0] acc_x2     [0:NUM_LANE-1];
+    logic [ PE_WIDTH-1:0] rd         [0:NUM_LANE-1];
+    logic [ PE_WIDTH-1:0] half       [0:NUM_LANE-1];
     logic [ PE_WIDTH-1:0] reg_q      [0:NUM_LANE-1];
     logic [EXP_WIDTH-1:0] reg_exp_q  [0:NUM_LANE-1];
     logic [    CARRY-1:0] lane_cin   [0:NUM_LANE-1];
     /* verilator lint_off UNUSEDSIGNAL */
     logic [    CARRY-1:0] lane_carry [0:NUM_LANE-1];
+    logic [ PE_WIDTH-1:0] chain_row  [0:NUM_LANE-1][   0:ROWS-1];
     /* verilator lint_on UNUSEDSIGNAL */
 
-    /* verilator lint_off UNUSEDSIGNAL */
-    logic [PE_WIDTH-1:0] chain_row   [0:NUM_LANE-1][   0:ROWS-1];
-    /* verilator lint_on UNUSEDSIGNAL */
+    logic fused;
+    assign fused = |sel_out_i;
 
     genvar g, l;
 
@@ -185,13 +176,12 @@ module acc_array_bfp #(
             assign tap_car = tapmux_out[2*PE_WIDTH-1:PE_WIDTH];
 
             logic [PE_WIDTH-1:0] accmux_in [0:1];
-            logic [PE_WIDTH-1:0] acc_sel;
 
             assign accmux_in[0] = acc_i[g];
             assign accmux_in[1] = reg_q[g];
 
             mux_n #(.WIDTH(PE_WIDTH), .SIZE(2)) acc_mux_i (
-                .in_i(accmux_in), .sel_i(sel_acc_i), .out_o(acc_sel)
+                .in_i(accmux_in), .sel_i(sel_acc_i), .out_o(acc_sel[g])
             );
 
             logic [EXP_WIDTH-1:0] accmux_exp_in [0:1];
@@ -204,12 +194,24 @@ module acc_array_bfp #(
                 .in_i(accmux_exp_in), .sel_i(sel_acc_i), .out_o(acc_exp_sel)
             );
 
+            if (IS_EVEN) begin : gen_accx2_h
+                logic [0:0] msb_in  [0:0];
+                logic [0:0] msb_out [0:0];
+                assign msb_in[0] = acc_sel[g+1][PE_WIDTH-1];
+                gate_n #(.WIDTH(1), .SIZE(1)) gate_n_mul_2_i (
+                    .in_i(msb_in), .sel_i(~fused), .out_o(msb_out)
+                );
+                assign acc_x2[g] = {acc_sel[g][PE_WIDTH-2:0], msb_out[0]};
+            end else begin : gen_accx2_l
+                assign acc_x2[g] = {acc_sel[g][PE_WIDTH-2:0], 1'b0};
+            end
+
             logic [ PE_WIDTH-1:0] acc_row   [     0:0];
             logic [ PE_WIDTH-1:0] tap_pair  [     0:1];
             logic [ PE_WIDTH-1:0] align_out [0:ROWS-1];
             logic [EXP_WIDTH-1:0] align_exp;
 
-            assign acc_row [0] = acc_sel;
+            assign acc_row [0] = acc_x2[g];
             assign tap_pair[0] = tap_sum;
             assign tap_pair[1] = tap_car;
 
@@ -268,17 +270,18 @@ module acc_array_bfp #(
             assign cpr_in[1] = align_out[1];
             assign cpr_in[2] = align_out[2];
 
-            cpr_w_n #(.IN_WIDTH(PE_WIDTH), .IN_SIZE(3), .EXT(2), .IS_SIGNED(1'b0)) cpr_w_n_i (
+            cpr_w_n #(.IN_WIDTH(PE_WIDTH), .IN_SIZE(3), .EXT(EXT), .IS_SIGNED(1'b0)) cpr_w_n_i (
                 .in_i(cpr_in), .sum_o(cpr_sum), .carry_o(cpr_car)
             );
 
-            logic [PE_WIDTH-1:0] rd [0:0];
-            logic [PE_WIDTH-1:0] rq [0:0];
+            logic [PE_WIDTH-1:0] rd_l [0:0];
 
             add_n #(.WIDTH(PE_WIDTH), .CARRY(CARRY)) add_n_i (
                 .in_0_i(cpr_sum), .in_1_i(cpr_car), .cin_i(lane_cin[g]),
-                .out_o(rd[0]), .cout_o(lane_carry[g])
+                .out_o(rd_l[0]), .cout_o(lane_carry[g])
             );
+
+            assign rd[g] = rd_l[0];
 
             if (IS_EVEN) begin : gen_carry
                 logic [CARRY-1:0] cin_in  [0:0];
@@ -292,8 +295,21 @@ module acc_array_bfp #(
                 assign lane_cin[g] = '0;
             end
 
+            logic [PE_WIDTH-1:0] half_l [0:0];
+
+            if (IS_EVEN) begin : gen_half_h
+                assign half[g] = {rd[g][PE_WIDTH-1], rd[g][PE_WIDTH-1:1]};
+            end else begin : gen_half_l
+                assign half[g] = {(fused ? rd[g-1][0] : rd[g][PE_WIDTH-1]),
+                                  rd[g][PE_WIDTH-1:1]};
+            end
+
+            assign half_l[0] = half[g];
+
+            logic [PE_WIDTH-1:0] rq [0:0];
+
             reg_n #(.WIDTH(PE_WIDTH), .SIZE(1)) reg_n_i (
-                .clk_i(clk_i), .rst_ni(rst_ni), .d_i(rd), .q_o(rq)
+                .clk_i(clk_i), .rst_ni(rst_ni), .d_i(half_l), .q_o(rq)
             );
 
             logic [EXP_WIDTH-1:0] red [0:0];

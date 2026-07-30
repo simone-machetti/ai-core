@@ -71,6 +71,7 @@ module pe_array_sqr_bfp #(
     input  logic [   DP8_WIDTH-1:0] beta_carry_i  [0:NUM_DP8-1],
     input  logic [   DP8_WIDTH-1:0] const_dp8_i   [0:NUM_DP8-1],
     input  logic [     NUM_NEG-1:0] neg_i,
+    input  logic                    zero_i        [0:NUM_DP8-1],
     input  logic [EXP_IN_WIDTH-1:0] exp_a_dp8_i   [0:NUM_DP8-1],
     input  logic [EXP_IN_WIDTH-1:0] exp_b_dp8_i   [0:NUM_DP8-1],
     input  logic [   NUM_SHIFT-1:0] sel_shift_i,
@@ -145,6 +146,22 @@ module pe_array_sqr_bfp #(
         end
     endgenerate
 
+    logic [DP8_WIDTH-1:0] alpha_g_sum   [0:NUM_DP8-1];
+    logic [DP8_WIDTH-1:0] alpha_g_carry [0:NUM_DP8-1];
+    logic [DP8_WIDTH-1:0] beta_g_sum    [0:NUM_DP8-1];
+    logic [DP8_WIDTH-1:0] beta_g_carry  [0:NUM_DP8-1];
+    logic [DP8_WIDTH-1:0] const_g       [0:NUM_DP8-1];
+
+    generate
+        for (i = 0; i < NUM_DP8; i++) begin : gen_idle_gate
+            assign alpha_g_sum[i]   = zero_i[i] ? '0 : alpha_sum_i[i];
+            assign alpha_g_carry[i] = zero_i[i] ? '0 : alpha_carry_i[i];
+            assign beta_g_sum[i]    = zero_i[i] ? '0 : beta_sum_i[i];
+            assign beta_g_carry[i]  = zero_i[i] ? '0 : beta_carry_i[i];
+            assign const_g[i]       = zero_i[i] ? '0 : const_dp8_i[i];
+        end
+    endgenerate
+
     generate
         for (n = 0; n < NUM_L0; n++) begin : gen_l0
             localparam int CX0 = 4*(n/2) + (n%2);
@@ -162,10 +179,10 @@ module pe_array_sqr_bfp #(
 
             assign lo_mant_raw[0] = dp8_sum[CX1];
             assign lo_mant_raw[1] = dp8_carry[CX1];
-            assign lo_mant_raw[2] = alpha_sum_i[CX1];
-            assign lo_mant_raw[3] = alpha_carry_i[CX1];
-            assign lo_mant_raw[4] = beta_sum_i[CX1];
-            assign lo_mant_raw[5] = beta_carry_i[CX1];
+            assign lo_mant_raw[2] = alpha_g_sum[CX1];
+            assign lo_mant_raw[3] = alpha_g_carry[CX1];
+            assign lo_mant_raw[4] = beta_g_sum[CX1];
+            assign lo_mant_raw[5] = beta_g_carry[CX1];
 
             if (n < NUM_NEG) begin : gen_comp
                 comp_n #(.WIDTH(DP8_WIDTH), .SIZE(NUM_MANT)) comp_n_i (
@@ -179,11 +196,11 @@ module pe_array_sqr_bfp #(
 
             assign hi_bundle[0] = dp8_sum[CX0];
             assign hi_bundle[1] = dp8_carry[CX0];
-            assign hi_bundle[2] = alpha_sum_i[CX0];
-            assign hi_bundle[3] = alpha_carry_i[CX0];
-            assign hi_bundle[4] = beta_sum_i[CX0];
-            assign hi_bundle[5] = beta_carry_i[CX0];
-            assign hi_bundle[6] = const_dp8_i[CX0];
+            assign hi_bundle[2] = alpha_g_sum[CX0];
+            assign hi_bundle[3] = alpha_g_carry[CX0];
+            assign hi_bundle[4] = beta_g_sum[CX0];
+            assign hi_bundle[5] = beta_g_carry[CX0];
+            assign hi_bundle[6] = const_g[CX0];
 
             assign lo_bundle[0] = lo_mant[0];
             assign lo_bundle[1] = lo_mant[1];
@@ -191,7 +208,7 @@ module pe_array_sqr_bfp #(
             assign lo_bundle[3] = lo_mant[3];
             assign lo_bundle[4] = lo_mant[4];
             assign lo_bundle[5] = lo_mant[5];
-            assign lo_bundle[6] = const_dp8_i[CX1];
+            assign lo_bundle[6] = const_g[CX1];
 
             shift_n #(.WIDTH(DP8_WIDTH), .SIZE(NUM_ROW), .SHIFT(SH0), .IS_SIGNED(1'b1)) shift_n_i (
                 .in_i(hi_bundle), .sel_i(sel_shift_i[0]), .out_o(hi_sh)
