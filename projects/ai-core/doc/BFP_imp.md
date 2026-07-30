@@ -341,34 +341,56 @@ combine + `C` + block-negate) and the α/β **generators** are square-specific.
 | `pe_sqr_bfp` | `pe_bfp` | mask (incl. exp operands) + acc & acc_exp pipeline regs + `pe_array_sqr_bfp` + `acc_array_sqr_bfp`; α/β per-DP8 fan-in ports |
 | `top_NxN_sqr_bfp` | `top_NxN_bfp` + `top_NxN_sqr` | `ctrl_sqr` + `const_sqr_bfp` + mantissa & exp dispatchers + α/β **square-array** generators per row/col + `pe_sqr_bfp` grid |
 
-### `pe_array_sqr_bfp` — dataflow (the crux)
-Per PE:
-1. **PE squares** — 16× `dp_8_sqr` on the masked A/B mantissas → 16 carry-save `PE_j` (18-bit unsigned).
-2. **α/β in** — 16 `−α_j` pairs (row generator) + 16 `−β_j` pairs (column generator); 16 `C_j` (from `const_sqr_bfp`); `neg_i` (modes 10/11).
-3. **Per-DP8 combine** — 16× CPR ~7:2 folding `{PE_j(2), −α_j(2), −β_j(2), C_j(1)}` → one carry-save pair `D_j = 2·P_j`. **No alignment** (all rows share scale `E_j`); `|2·P_j| ≤ 2^14` signed → narrower than the 18-bit square-sums.
-4. **Exponent** — 16× `add_n` (6+6→7) → `E_j = e_A,j + e_B,j`, exactly as `pe_array_bfp`.
-5. **Tree** — the `pe_array_bfp` aligned crossed tree fed by `D_j`/`E_j`: `align_cell_bfp` before the CPR at L0/L2/L3 (per-mode activation from §6), L1 recombine (same-exp, no align), one L0 register, data + exponent tap exports. Widths = `pe_array_bfp` **+1** (signed `2P`).
-6. **Block-negate** — modes 10/11 `comp_n` on the combined L0 lo legs (relocated from `pe_array_sqr`'s pre-tree slot); its `+2` deferral folds into `C_j`.
+### `pe_array_sqr_bfp` — dataflow (the crux, **as built + verified**)
+Per PE (the align-then-combine variant that was built — the combine is folded **into** the L0 CPR, not a separate 7:2 stage):
+1. **PE squares** — 16× `dp_8_sqr` → 16 carry-save `PE_j` (18-bit).
+2. **α/β/C in** — from the **neg-agnostic** generators: 16 `−α_j` + 16 `−β_j` carry-save pairs, plus 16 per-DP8 `const_dp8_i` (`const_sqr_bfp`); `neg_i[0:5]` for modes 10/11.
+3. **Exponent** — 16× `add_n` (6+6→7) → `E_j = e_A,j + e_B,j`.
+4. **L0 = combine + cross-merge in one shot** — per crossed node the two DP8s form two **7-row bundles** `{PE s/c, −α s/c, −β s/c, C}`. The CX1 (lo) **6-row mantissa bundle** is `comp_n`-negated as a whole for `neg_i` (`−PE,+α,+β`; C **not** complemented — `const_sqr_bfp` supplies the negated per-DP8 constant); the CX0 (hi) bundle is `<<8` radix-shifted; both `IS_SIGNED`. One `align_cell_bfp #(SIZE_0=7, SIZE_1=7)` → `max(E_CX0,E_CX1)`, then a **14:2 CPR** does `PE−α−β+C` **and** the cross-merge together → `D = 2·P` at the node scale.
+5. **Tree** — `pe_array_bfp`'s L1 (recombine, exp max-forward, no align) / L2 / L3 (align) on `D`; one L0 register; data + exponent tap exports. Node widths = `pe_array_sqr` (26/30/38/39); **taps 19/30/38/39** (= baseline-BFP+1, carrying `2·P`); L0 CPR `EXT=0` verified sufficient (the `PE−α−β` cancellation resolves in 26 bits, corner-tested).
+6. **½** deferred to `acc_array_sqr_bfp`. All-equal exponents ⇒ every tap resolves to `2·(A·B)`, bit-exact (verified, 11/11 modes).
 
 ### `acc_array_sqr_bfp`
 `acc_array_bfp` (per-lane `align_cell_bfp`, running-max exponent register, seed ≡ feedback format,
 lane fusion) **plus** the square's two shifts: `<<1` on the acc row entering the CPR and an
 arithmetic `>>1` on the resolved sum before the register (the ½). Single 2-row tap set (the tree
 already delivers `2P`); **no `C`/`c_neg` ports** (C is upstream, per-DP8). Register holds
-`P + acc` — the running product sum at its BFP scale.
+`P + acc` — the running product sum at its BFP scale. The ½ is **two** shifts: `acc_x2` (`<<1`
+on the acc row into the fold) keeps the accumulator un-halved, and `half` (arithmetic `>>1` on the
+resolved sum) applies the ÷2 — both with fused cross-lane bits, so `½(2·acc + 2·P) = acc + P`
+(the `>>1` is exact because the resolved `2·P` is even; a carry-save right-shift would not be).
+
+### `acc_array_sqr_bfp` — verification plan
+Full chain `disp_array_{a,b}_sqr` + `disp_array_exp_{a,b}_sqr_bfp` → `pe_array_sqr_bfp` →
+`acc_array_sqr_bfp`; α/β/const tb-driven from the **dispatched** operands (gate-4 style) until gates
+2/3 land. Golden = the tb's own leaf/cascade (per gate 4) → per read-level node tap value `T = 2·P`
+and exponent `E`; the accumulator delivers `½·T = P` (exact, `2·P` even).
+- **Pass A (equal exp):** single-shot `pe_out === P` bit-exact, `pe_exp === E`; accumulation
+  (seed + `NUM_ACC−1` feedback) `pe_out === seed + NUM_ACC·P` — exercises `acc_x2`/`half` and their
+  fused cross-lane bits with no rounding.
+- **Pass B (distinct exp, min-scale seed 0):** running scale `pe_exp === E`;
+  `pe_out === (seed >>> E) + NUM_ACC·P` bit-exact (P from the DUT tap ÷2) — the in-loop align + ½ +
+  running-max check.
+Seeding/lane-map reused from `tb_acc_array_bfp` (`set_acc`/`set_acc_exp`/`out_hlane`/`out_llane`);
+corner-biased operands; confirms no α/β/const/`C_*` at the accumulator. Follow-up once gate 3 lands:
+matmul-labeled equivalence vs the integer `acc_array_sqr` baseline (needs real per-DP8 C).
 
 ### Open decisions (settle during build)
-1. `−α/−β` complement location — in the generator (shared) vs per-PE at the combine; composition with the block-negate.
-2. `comp_n` block-negate on the `2·P_j` domain — confirm the one's-complement stays clean.
-3. per-DP8 `C_j` mechanism — 16-entry mode LUT vs derive from per-DP8 `is_signed`; idle-gate source.
-4. width/guard pass — signed `2P` through combine→tree; `acc_array_sqr_bfp` `CARRY` headroom for `2·acc + 2P`.
+1. `−α/−β` complement location — **RESOLVED**: in the generators (`pe_array_{alpha,beta}_sqr_bfp`,
+   one's-comp at the output, **neg-agnostic**); the block-negate lives in `pe_array_sqr_bfp` as a
+   whole-lo-bundle `comp_n`.
+2. `comp_n` block-negate — **RESOLVED**: on the 6 raw lo mantissa rows `{PE,−α,−β}` *before* the
+   combine (flips to `−PE,+α,+β`), not on the combined `2·P`; verified (modes 10/11 pass).
+3. per-DP8 `C_j` mechanism — 16-entry mode LUT vs derive from per-DP8 `is_signed`; idle-gate source. (gate 3)
+4. width/guard pass — L0 14:2 `EXT=0`/26-bit **confirmed** (gate 4); still open: `acc_array_sqr_bfp`
+   `CARRY`/`EXT` headroom for `2·acc + 2·P` (gate 5).
 
 ### Build ladder (bottom-up; one component + its tb per gate; explicit per-gate approval)
-1. `disp_array_exp_{a,b}_sqr_bfp` + tb — exp dispatch with square idle gating.
-2. `pe_array_{alpha,beta}_sqr_bfp` + tb — tree-less square arrays (golden = 16 per-DP8 `−α`/`−β`).
+1. **DONE** `disp_array_exp_{a,b}_sqr_bfp` + `tb_disp_array_exp_sqr_bfp` — exp dispatch with per-DP8 `zero_i` idle gating; 11 modes + random-ctrl pass.
+2. `pe_array_{alpha,beta}_sqr_bfp` + tb — **tree-less, neg-agnostic** square arrays (16× `dp_8_{alpha,beta}_sqr`, one's-comp at the output → 16 per-DP8 `−α`/`−β`; no tree/neg/exponents). One tb each, driven through `disp_array_{a,b}_sqr`.
 3. `const_sqr_bfp` + tb — per-DP8 `C_j`, idle-gated (golden = the sheets' per-DP8 `c`).
-4. `pe_array_sqr_bfp` + tb — **the crux**; driven through the dispatchers + α/β arrays; Pass A equal-exp bit-exact vs integer `pe_array_sqr`, Pass B exponent-exact + bounded value window.
-5. `acc_array_sqr_bfp` + tb — full chain into the accumulator (mirror `tb_acc_array_bfp`): Pass A bit-exact, Pass B min-scale seed accumulation.
+4. **DONE (built before 2/3, α/β/const tb-modeled via the real dispatchers)** `pe_array_sqr_bfp` + `tb_pe_array_sqr_bfp` — the crux; Pass A equal-exp bit-exact (`===2·A·B`), Pass B exponent-exact + windowed value; 11/11 modes, whole-lo-bundle negate verified.
+5. `acc_array_sqr_bfp` + tb — full chain into the accumulator (plan above): Pass A bit-exact, Pass B min-scale seed accumulation.
 6. `pe_sqr_bfp`, `top_NxN_sqr_bfp` + `tb_top_NxN_sqr_bfp` — streaming (single-shot / accumulate / scaling × equal- and distinct-exponent), independent software-dispatch golden.
 
 ### Verification & constraints
