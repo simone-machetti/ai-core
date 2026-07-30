@@ -46,9 +46,9 @@ module tb_acc_array_sqr #(
     parameter int NUM_ACC  = 8
 );
 
-    localparam real CLK_PERIOD = `CLK_PERIOD_NS;
-    localparam real CLK_HALF   = CLK_PERIOD / 2.0;
-    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
+    localparam real CLK_PERIOD  = `CLK_PERIOD_NS;
+    localparam real CLK_HALF    = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE    = CLK_PERIOD / 10.0;
 
     localparam int NUM_BLK      = 4;
     localparam int BLK_WIDTH    = 64;
@@ -104,7 +104,6 @@ module tb_acc_array_sqr #(
         '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3}
     };
 
-    // square idle-zero (both a_dp8 and b_dp8) - modes 5/6 only
     localparam logic ZERO_I_LUT [0:NUM_MODE-1][0:NUM_DP8-1] = '{
         '{default: 1'b0},
         '{default: 1'b0},

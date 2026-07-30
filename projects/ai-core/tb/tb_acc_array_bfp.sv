@@ -39,9 +39,9 @@ module tb_acc_array_bfp #(
     parameter int NUM_ACC  = 8
 );
 
-    localparam real CLK_PERIOD = `CLK_PERIOD_NS;
-    localparam real CLK_HALF   = CLK_PERIOD / 2.0;
-    localparam real T_SETTLE   = CLK_PERIOD / 10.0;
+    localparam real CLK_PERIOD  = `CLK_PERIOD_NS;
+    localparam real CLK_HALF    = CLK_PERIOD / 2.0;
+    localparam real T_SETTLE    = CLK_PERIOD / 10.0;
 
     localparam int NUM_BLK      = 4;
     localparam int BLK_WIDTH    = 64;
@@ -227,7 +227,6 @@ module tb_acc_array_bfp #(
     logic             prop_carry;
     logic [ACC_W-1:0] pe_out     [0:NUM_LANE-1];
 
-    // BFP exponent sideband + BFP datapath signals.
     logic [ EXP_A_WIDTH-1:0] pe_exp_a;
     logic [ EXP_B_WIDTH-1:0] pe_exp_b;
     logic [EXP_IN_WIDTH-1:0] exp_a_dp8  [0:NUM_DP8-1];
