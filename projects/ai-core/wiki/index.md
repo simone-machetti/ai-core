@@ -2,30 +2,45 @@
 
 LLM-authored design documentation for the **ai-core** project. Each page summarizes and cross-references the project's own `rtl/`, `tb/`, and `doc/` sources and links back to them. See [log.md](log.md) for the change history.
 
-> Organized as: **architectures/** — the top-level assemblies, one per variant (currently the baseline PE grid `top_NxN`); **modules/** — the reusable building blocks (the shared control/dispatch, the PE core and datapath sub-blocks, and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. The `N × N` PE grid `top_NxN` — whose single-PE case is simply `N = 1` — is built and verified end to end.
+> Organized as: **architectures/** — the top-level assemblies, one per variant (`top_NxN`, its square amortization `top_NxN_sqr`, and the two block-floating-point grids `top_NxN_bfp` / `top_NxN_sqr_bfp`); **modules/** — the reusable building blocks (the shared control/dispatch, the PE core and datapath sub-blocks, the BFP alignment library, and the primitive library); **testbenches/** — the self-checking testbenches (`tb_<module>`); plus `concepts/`, `decisions/`, `experiments/`, `references/`. All four `N × N` grids — whose single-PE case is simply `N = 1` — are built and verified end to end (the square is bit-exact to the baseline; the BFP variants add an exponent sideband, bit-identical when exponents are equal).
 
 ## Architectures
 
 * [PE Grid (baseline)](architectures/top_NxN.md) — `top_NxN`: baseline `N × N` grid of `pe` cores with one shared `ctrl` and per-row/per-column dispatch (`disp_array_a`/`disp_array_b`); row/column enables (`en_row`/`en_col`) scale the active region to any `rows × cols` rectangle; default 2×2, chip 8×8, single PE = N=1.
 * [PE Grid (square)](architectures/top_NxN_sqr.md) — `top_NxN_sqr`: the square `N × N` grid — `ctrl_sqr` + shared `const_sqr` + per-row `{disp_a_sqr + α gen}` + per-col `{disp_b_sqr + β gen}` + N² `pe_sqr` + `icg`. Same interface/behaviour as `top_NxN`; α/β generators share the row/col clock-gate. Verified bit-exact vs `top_NxN` at full streaming throughput (single-shot + accumulate + scaling).
+* [PE Grid (BFP)](architectures/top_NxN_bfp.md) — `top_NxN_bfp`: the `top_NxN` grid with the BFP exponent sideband — per-row/column mantissa+exponent dispatch (`disp_array_*` + `disp_array_exp_*_bfp`) into N² `pe_bfp`; per-lane `align_cell_bfp` brings addends to a common max-exponent scale, so it is bit-identical to `top_NxN` when the exponents are equal. Raw un-normalized `out_q`/`out_exp`.
+* [PE Grid (Square-BFP)](architectures/top_NxN_sqr_bfp.md) — `top_NxN_sqr_bfp`: the square grid with the BFP sideband — `ctrl_sqr` (reused, no `ctrl_sqr_bfp`) + shared `const_sqr_bfp` + per-row/col `{disp_sqr + disp_exp_sqr_bfp + tree-less α/β gen}` + N² `pe_sqr_bfp`. `A[r]·B[c]` in block floating point via the square identity; verified 66/66 (equal-exp matmul + distinct-exp exponent/mantissa window), N=2.
 
 ## Modules
 
 * [Processing Element](modules/pe.md) — `pe`: the self-contained per-PE core — `en_i` operand mask + `pe_array` + `acc_array` + the two acc pipeline registers.
 * [Control](modules/ctrl.md) — `ctrl`: shared grid-wide mode decoder + control pipeline — one instance for the whole grid, a lookup table mapping `mode_i` to every datapath control.
 * [Processing Element (square)](modules/pe_sqr.md) — `pe_sqr`: the square PE core — `pe_array_sqr` + `acc_array_sqr` + 2 acc regs; takes the shared `−α`/`−β` taps and `c`/`c_neg` as inputs; `en_i` masks A, B and the tap buses for a fully-quiet gated PE.
+* [Processing Element (BFP)](modules/pe_bfp.md) — `pe_bfp`: the `pe` core with the exponent sideband — masks the mantissa **and** exponent operands, `pe_array_bfp` + `acc_array_bfp` + twin acc / acc-exp pipeline registers.
+* [Processing Element (Square-BFP)](modules/pe_sqr_bfp.md) — `pe_sqr_bfp`: the square-BFP PE core — `pe_array_sqr_bfp` + `acc_array_sqr_bfp` + twin acc/acc-exp regs; α/β/const are folded at L0 upstream, so the accumulator takes one tap set (no `c`/`c_neg`).
 * [Control (square)](modules/ctrl_sqr.md) — `ctrl_sqr`: the square `ctrl` — `mode →` every square control; drops `ctr_l`/`ctr_h`, adds `zero`/`neg`/`sel_const`; mode-5 all-signed.
 * [Dispatch Array A](modules/disp_array_a.md) — `disp_array_a`: A-path dispatch, one per grid row (per-pair 4→1 A-block select, broadcast to the row).
 * [Dispatch Array B](modules/disp_array_b.md) — `disp_array_b`: B-path dispatch, one per grid column (4→1 B-block select + high/low split + B-gate, broadcast to the column).
 * [Dispatch Array A (Square)](modules/disp_array_a_sqr.md) — `disp_array_a_sqr`: square A dispatch — routes + centers (per-DP8 `gate_a_n_sqr`) + idle-zeros; `+is_signed_a/zero_i`.
 * [Dispatch Array B (Square)](modules/disp_array_b_sqr.md) — `disp_array_b_sqr`: square B dispatch — routes + centers (per-DP8 `gate_b_n_sqr`) + idle-zeros; negate/carry dropped.
+* [Exponent Dispatch A (BFP)](modules/disp_array_exp_a_bfp.md) — `disp_array_exp_a_bfp`: A-exponent dispatch, one per row — routes each block's 6-bit exponent to its DP8s (duplicated per pair), idle-zeroed by `ctr`.
+* [Exponent Dispatch B (BFP)](modules/disp_array_exp_b_bfp.md) — `disp_array_exp_b_bfp`: B-exponent dispatch, one per column — routes the high/low half exponents to the even/odd DP8s.
+* [Exponent Dispatch A (Square-BFP)](modules/disp_array_exp_a_sqr_bfp.md) — `disp_array_exp_a_sqr_bfp`: the square A-exp dispatcher — `disp_array_exp_a_bfp` keyed on per-DP8 `zero_i` (idle) instead of `ctr_h`/`ctr_l`.
+* [Exponent Dispatch B (Square-BFP)](modules/disp_array_exp_b_sqr_bfp.md) — `disp_array_exp_b_sqr_bfp`: the square B-exp dispatcher — `zero_i`-keyed idle-zero.
 * [PE Array](modules/pe_array.md) — `pe_array`: 16 DP8s + 4-level carry-save shift/compress tree, with a tap (L0–L3) at every level.
 * [PE Array (Square)](modules/pe_array_sqr.md) — `pe_array_sqr`: square-variant PE array — 16× `dp_8_sqr` + the same crossed tree, with the complex negate relocated in as per-block `comp_n`; `neg_i[5:0]`, no `is_signed`.
 * [PE Array Alpha (Square)](modules/pe_array_alpha_sqr.md) — `pe_array_alpha_sqr`: per-row A-only correction generator — `pe_array_sqr` with `dp_8_alpha_sqr` cores (B dropped, `+is_signed_b`); same tree/widths/taps. Emits `−α` (one's-complemented taps).
 * [PE Array Beta (Square)](modules/pe_array_beta_sqr.md) — `pe_array_beta_sqr`: per-column B-only correction generator — `pe_array_sqr` with `dp_8_beta_sqr` cores (A dropped, `+is_signed_a`/`zero`); same tree/widths/taps. Emits `−β` (one's-complemented taps).
+* [PE Array (BFP)](modules/pe_array_bfp.md) — `pe_array_bfp`: the `pe_array` tree with per-lane `align_cell_bfp` aligners, a per-DP8 scale add and a running exponent max-tree; taps carry data + a 7-bit scale, transparent (= `pe_array`) when exponents match.
+* [PE Array (Square-BFP)](modules/pe_array_sqr_bfp.md) — `pe_array_sqr_bfp`: the square front-end on `pe_array_bfp`'s aligned tree — 16× `dp_8_sqr` + per-DP8 `−α`/`−β`/`C` folded at L0 (two 7-row bundles → `align_cell_bfp` → 14:2 CPR → `2·P`); taps +1-bit (19/30/38/39).
+* [PE Array Alpha (Square-BFP)](modules/pe_array_alpha_sqr_bfp.md) — `pe_array_alpha_sqr_bfp`: the tree-less, neg-agnostic per-row `−α` generator — just 16× `dp_8_alpha_sqr` one's-complemented; combinational, its register lives in `pe_array_sqr_bfp`'s L0.
+* [PE Array Beta (Square-BFP)](modules/pe_array_beta_sqr_bfp.md) — `pe_array_beta_sqr_bfp`: the tree-less per-column `−β` generator — 16× `dp_8_beta_sqr` one's-complemented, `+zero_i`; combinational.
 * [Constant LUT (Square)](modules/const_sqr.md) — `const_sqr`: per-mode `C` for `½(PE − α − β + C)` — folds centering `C_real`, the α/β-complement `+4`, and the block-negate `−2N`; makes the accumulator fully additive.
+* [Constant LUT (Square-BFP)](modules/const_sqr_bfp.md) — `const_sqr_bfp`: the per-DP8 constant LUT — `mode →` 16 signed `C_j` (centering `C_cent + 4`, or `2 − C_cent` for negated blocks); combinational, no register, no idle-gate.
 * [Accumulator Array](modules/acc_array.md) — `acc_array`: 8 lanes that resolve a tap, accumulate, and fuse lane pairs into 40-bit results.
 * [Accumulator Array (Square)](modules/acc_array_sqr.md) — `acc_array_sqr`: all-additive resolve `½(PE − α − β + C)` — triple tap mux + acc-mux `<<1` + const mux (`RH=sign(RL)`) → CPR 8:2 → `add_n` → `÷2` (`>>1` + `H→L` cross-bit). No subtractor; native-unit `acc_i`, true-value register.
+* [Accumulator Array (BFP)](modules/acc_array_bfp.md) — `acc_array_bfp`: the `acc_array` with in-loop BFP alignment — per-lane `align_cell_bfp` to `max(acc_exp, tap_exp)`, running-max exponent register, lane-fusion fill chain; transparent (= `acc_array`) when exponents match.
+* [Accumulator Array (Square-BFP)](modules/acc_array_sqr_bfp.md) — `acc_array_sqr_bfp`: `acc_array_bfp` + the square's `½` (`<<1` acc-row + arithmetic `>>1` output) on one `2·P` tap set; no `c`/`c_neg` (folded upstream); `EXT=CARRY=3`.
 * [Dot Product 8](modules/dp_8.md) — `dp_8`: eight int8×int4 MACs, per-operand signedness, 20-bit sign-consistent carry-save output.
 * [Dot Product 8 (Square)](modules/dp_8_sqr.md) — `dp_8_sqr`: square-variant DP8 — add-then-square (16× `s_5_bit_sqr`) over pre-centered nibbles, 18-bit unsigned carry-save square-sum; drop-in for `dp_8`.
 * [Dot Product 8 Alpha (Square)](modules/dp_8_alpha_sqr.md) — `dp_8_alpha_sqr`: A-only α square-sum — `dp_8_sqr` with B removed, the removed-B `−8` injected by two `gate_n_sqr` banks; 18-bit carry-save.
@@ -39,6 +54,10 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [Adder N](modules/add_n.md) — `add_n`: two-input adder with a carry chain (WIDTH-bit sum + CARRY-bit carry).
 * [Extender N](modules/ext_n.md) — `ext_n`: widen SIZE words by EXT bits (sign or zero).
 * [Shifter N](modules/shift_n.md) — `shift_n`: conditional left shifter (width-growing) with a shared select.
+* [BFP Alignment Cell](modules/align_cell_bfp.md) — `align_cell_bfp`: the two-bundle align cell — one `sub_n_bfp` compare steers one `shift_n_bfp` (via `mux_n` swap/un-swap) to bring two exponent-sharing bundles to their shared `max`; supports lane-fusion chaining.
+* [BFP Aligner](modules/align_bfp.md) — `align_bfp`: the multi-exponent aligner — a binary tree of `align_cell_bfp`s collapsing `NUM_EXP` bundles to one global `max` scale (bit-identical to a single flat shift).
+* [Subtractor N (BFP)](modules/sub_n_bfp.md) — `sub_n_bfp`: unsigned compare → magnitude + sign (`|a−b|`, `a<b`), the exponent-difference primitive inside `align_cell_bfp`.
+* [Shifter N (BFP)](modules/shift_n_bfp.md) — `shift_n_bfp`: right shifter with a per-row fill input (arithmetic/logical, cross-boundary fill for lane fusion), the shift primitive inside `align_cell_bfp`.
 * [Multiplexer N](modules/mux_n.md) — `mux_n`: SIZE-to-1 multiplexer over WIDTH-bit words.
 * [Gate N](modules/gate_n.md) — `gate_n`: zero gate (pass / zero) over SIZE words.
 * [Gate B N](modules/gate_b_n.md) — `gate_b_n`: conditioning gate (pass / zero / negate) over SIZE words.

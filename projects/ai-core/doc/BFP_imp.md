@@ -335,7 +335,7 @@ combine + `C` + block-negate) and the α/β **generators** are square-specific.
 | ------ | ------------ | ------ |
 | `disp_array_exp_a_sqr_bfp`, `disp_array_exp_b_sqr_bfp` | baseline `disp_array_exp_{a,b}_bfp` | near-copy; ZERO-gate on the square dispatcher's idle codes |
 | `pe_array_alpha_sqr_bfp`, `pe_array_beta_sqr_bfp` | `pe_array_{alpha,beta}_sqr` | **delete the tree** → square array only; emit the 16 per-DP8 `−α_j`/`−β_j` carry-save pairs; **no exponents** |
-| `const_sqr_bfp` | `const_sqr` | emit **per-DP8** `C_j` (centering + α/β one's-comp `+4` + block-negate `−2N`), **idle-gated** (a zeroed DP8 → `C_j = 0`) |
+| `const_sqr_bfp` | `const_sqr` | emit **per-DP8** `C_j` (centering + α/β one's-comp `+4` + block-negate `−2N`) as a **mode LUT**; **no idle-gate** (`pe_array_sqr_bfp`'s `zero_i` masks idle constants) |
 | `pe_array_sqr_bfp` | `pe_array_bfp` tree **+** square front-end | 16× `dp_8_sqr` → 16× per-DP8 combine CPR (`PE_j − α_j − β_j + C_j`) → `add_n` scale per DP8 → the `pe_array_bfp` aligned crossed tree (widths **+1**); `comp_n` block-negate relocated onto the combined L0 lo legs |
 | `acc_array_sqr_bfp` | `acc_array_bfp` **+** square shifts | add `<<1` on the acc row and `>>1` on the resolved output (the ½); single 2-row tap set; **no `C`/`c_neg` ports** |
 | `pe_sqr_bfp` | `pe_bfp` | mask (incl. exp operands) + acc & acc_exp pipeline regs + `pe_array_sqr_bfp` + `acc_array_sqr_bfp`; α/β per-DP8 fan-in ports |
@@ -382,7 +382,7 @@ Corner-biased operands. Confirms no α/β/const/`C_*` at the accumulator, and th
    whole-lo-bundle `comp_n`.
 2. `comp_n` block-negate — **RESOLVED**: on the 6 raw lo mantissa rows `{PE,−α,−β}` *before* the
    combine (flips to `−PE,+α,+β`), not on the combined `2·P`; verified (modes 10/11 pass).
-3. per-DP8 `C_j` mechanism — **RESOLVED (formula, validated in the gate-5 tb; module = gate 3)**:
+3. per-DP8 `C_j` mechanism — **RESOLVED (formula validated in the gate-5 tb; built as `const_sqr_bfp`, gate 3 DONE — mode-driven LUT)**:
    `C_j = 16·c(nAH) + c(nAL)` with `nAH = ~is_signed_a + ~is_signed_b`, `nAL = 1 + ~is_signed_b`,
    `c(0/1/2) = 0/512/2048`; then `const_dp8_i = C_cent + 4` (non-negated; the `+4` cancels the two
    generators' per-DP8 one's-comp `−2` deferrals) or `2 − C_cent` (negated blocks, modes 10/11).
@@ -393,10 +393,12 @@ Corner-biased operands. Confirms no α/β/const/`C_*` at the accumulator, and th
 ### Build ladder (bottom-up; one component + its tb per gate; explicit per-gate approval)
 1. **DONE** `disp_array_exp_{a,b}_sqr_bfp` + `tb_disp_array_exp_sqr_bfp` — exp dispatch with per-DP8 `zero_i` idle gating; 11 modes + random-ctrl pass.
 2. **DONE** `pe_array_{alpha,beta}_sqr_bfp` + `tb_pe_array_{alpha,beta}_sqr_bfp` — **tree-less, neg-agnostic** square arrays (16× `dp_8_{alpha,beta}_sqr`, one's-comp at the output → 16 per-DP8 `−α`/`−β`; no tree/neg/exponents); 11/11 each vs the leaf golden.
-3. `const_sqr_bfp` + tb — per-DP8 `C_j` (formula in decision 3; **no idle-gate needed**). Golden = the sheets' per-DP8 `c`; the gate-5 tb already validates the formula end-to-end.
+3. **DONE (no standalone tb — verified inside the gate-6 top tb)** `const_sqr_bfp` — per-DP8 `C_j` as a **mode-driven combinational LUT** (`mode_i → const_dp8_o[0:15]`), values precomputed from `ctrl_sqr`'s `is_signed_a/b`+`neg` decode via the decision-3 formula (byte-identical to the gate-5 tb). No register and **no idle-gate** in the module: the grid registers the mode once so the constant meets the singly-registered operands at L0, and `pe_array_sqr_bfp`'s `zero_i` masks idle constants.
 4. **DONE** `pe_array_sqr_bfp` + `tb_pe_array_sqr_bfp` — the crux; Pass A equal-exp bit-exact (`===2·A·B`), Pass B exponent-exact + windowed value; 11/11 modes, whole-lo-bundle negate + `zero_i` idle clean-zero verified.
 5. **DONE (real α/β generators; const tb-computed)** `acc_array_sqr_bfp` + `tb_acc_array_sqr_bfp` — three-way `matmul == sqr == sqr_bfp` (Pass A single-shot + accumulation) and BFP min-scale-seed Pass B; 11/11, 0 mismatches.
-6. `pe_sqr_bfp`, `top_NxN_sqr_bfp` + `tb_top_NxN_sqr_bfp` — streaming (single-shot / accumulate / scaling × equal- and distinct-exponent), independent software-dispatch golden.
+6. **DONE** `pe_sqr_bfp`, `top_NxN_sqr_bfp` + `tb_top_NxN_sqr_bfp` — streaming (single-shot / accumulate / scaling × equal- and distinct-exponent), independent software golden; **66/66, 0 mismatches** (N=2). Controller **reused verbatim** — `ctrl_sqr`, **no `ctrl_sqr_bfp`** (it already drops `ctr_l/ctr_h` and emits the `zero` the exp dispatchers need; `sel_const` goes unused). Verified to the **same standard as baseline BFP** (both exponent experiments, both checks):
+   - **Equal-exp** = black-box **bit-exact matmul** `A·B` + `exp = 2·base` (exercises the full grid: row/col fan-out, per-PE accumulate, streaming, clock-gating/scaling, `const_sqr_bfp`, and the whole mantissa datapath with the aligners transparent).
+   - **Distinct-exp** = **exponent check** `out_exp === egold` (fan-out + max-tree) **and a from-operands mantissa window**. The window reuses the multiply `sw_dispatch`/`dp8_gold` (the square places the *same* operands into the *same* DP8s — only centred — and the L0 block-negate reproduces the sign the multiply bakes into dispatch, so each DP8 bundle resolves to exactly `2·(signed product)`); the cascade differs only by feeding `2·dp8_gold` at L0, a **per-7-row-bundle** L0 truncation slack (up to `rows−1 = 6` per aligned bundle vs `1` for the multiply's 2-row DP8), and the `½` halving the window at read time. Slack `L0_SLACK = 6` (the analytical bound) passes tight; a negative control (window centre at `1·` instead of `2·`) fails all 33 distinct-exp cases while equal-exp stays 33/33, confirming the check is live and tight. (The array-level `tb_acc_array_sqr_bfp` Pass B remains the finer per-tap distinct-exp check.)
 
 ### Verification & constraints
 Independent software golden (no DUT-internal reads); all-equal exponents ⇒ bit-exact to the integer
