@@ -2,30 +2,36 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Square + BFP PE array. pe_array_bfp's exponent-aligned crossed tree with a
-//   square front-end: 16 dp_8_sqr produce the PE square-sums, and the per-row
-//   -alpha / per-column -beta carry-save pairs (already correctly signed) plus
-//   the per-DP8 constant const_dp8_i are folded in AT L0. Each L0 node aligns
-//   the two crossed DP8s as two 7-row bundles {PE s/c, -alpha s/c, -beta s/c, C}
-//   under their own scale E_j = e_A,j + e_B,j (align_cell_bfp SIZE_0=SIZE_1=7)
-//   and a 14:2 CPR does the cross-merge and the PE - alpha - beta + C combine in
-//   one shot, delivering 2*P at the block scale. L1 (no align, exponent max
-//   forward), L2 and L3 (align), the exponent max-tree and the per-level taps
-//   are pe_array_bfp verbatim. With all exponents equal the aligners are
-//   transparent and every tap resolves to 2*(A*B), bit-exact to the integer
-//   square identity.
+//   Square + BFP PE array. Same exponent-aligned crossed tree as pe_array_bfp,
+//   with a square reconstruction FRONT-END: 16 dp_8_sqr produce the PE
+//   square-sums, and the per-row -alpha / per-column -beta carry-save pairs plus
+//   the per-DP8 constant const_dp8_i are folded into 2*P PER DP8, before the
+//   crossed tree. Each DP8's mantissa lives in its own scale E_j = e_A,j + e_B,j,
+//   so the {PE, -alpha, -beta, C} reduction needs no alignment: a per-DP8 7:2 CPR
+//   (cpr_w_n IN_SIZE=7) collapses the six-row {PE, -alpha, -beta} bundle plus the
+//   const row to a single carry-save pair 2*P at the block scale. This front-end
+//   is the ext_inject_sqr_bfp block (one instantiation over all NUM_DP8 DP8s).
 //
-//   Block negate (modes 10/11): comp_n one's-complements the WHOLE lo mantissa
-//   bundle {PE, -alpha, -beta} of the CX1 operand of L0 nodes 0..5 (neg_i), so
-//   the block's contribution flips sign to -(PE - alpha - beta) = -2*P. The
-//   alpha/beta generators stay neg-agnostic (always -alpha/-beta); const_dp8_i
-//   carries the negated per-DP8 constant (and absorbs the six +1 deferrals).
+//   Block negate (modes 10/11): comp_n one's-complements the six-row
+//   {PE, -alpha, -beta} bundle of the NEGATED DP8s (2,3,6,7,10,11) inside
+//   ext_inject_sqr_bfp; the const row stays un-negated and carries the per-DP8
+//   constant (absorbing the six +1 deferrals) - exactly as before. So the
+//   alpha/beta generators stay neg-agnostic and const_sqr_bfp is UNCHANGED;
+//   neg_i (indexed by L0 node) is mapped back to the per-DP8 index here.
 //
-//   Widths: square-sum leaves are 18-bit; the combined 2*P is narrower, so the
-//   node widths equal pe_array_sqr (26/30/38/39) and the taps are baseline-BFP+1
-//   = 19/30/38/39 (they carry 2*P). EXP_WIDTH = 7 holds e_A + e_B exactly. The
-//   L0 hi shift and lo ext run IS_SIGNED (the bundle carries signed -alpha/-beta
-//   /C and the negated PE), unlike pe_array_sqr's unsigned PE-only hi path.
+//   From the 7:2 outputs onward the tree is baseline-BFP verbatim on two-row DP8
+//   pairs: L0 crosses two DP8s under their own scales (shift <<8, ext,
+//   align_cell_bfp SIZE_0=SIZE_1=2, 4:2 CPR); L1 (no align, exponent max forward),
+//   L2 and L3 (align), the exponent max-tree and the per-level taps are
+//   pe_array_bfp verbatim. Because 2*P is formed per DP8 before the shift/align
+//   and both are linear and uniform per block, this is a pure REASSOCIATION of the
+//   previous fused 14:2 node - the l0..l3 taps are bit-identical.
+//
+//   Widths: square-sum leaves and the per-DP8 2*P are DP8_WIDTH-bit (2*P fits the
+//   DP8 scale; widen p_sum/p_carry only if a corner overflows). Node widths and
+//   taps are unchanged (L0..L3 26/30/38/39, taps 19/30/38/39). EXP_WIDTH = 7 holds
+//   e_A + e_B exactly. The per-DP8 7:2 and the crossed shift/ext/align run
+//   IS_SIGNED (2*P carries signed -alpha/-beta/C and the negated PE).
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
@@ -38,8 +44,6 @@ module pe_array_sqr_bfp #(
     localparam int IN_WIDTH_A   = 8,
     localparam int IN_WIDTH_B   = 4,
     localparam int DP8_WIDTH    = 18,
-    localparam int NUM_ROW      = 7,
-    localparam int NUM_CPR      = 14,
     localparam int NUM_SHIFT    = 3,
     localparam int NUM_LEVEL    = 3,
     localparam int NUM_L0       = 8,
@@ -146,86 +150,63 @@ module pe_array_sqr_bfp #(
         end
     endgenerate
 
-    logic [DP8_WIDTH-1:0] alpha_g_sum   [0:NUM_DP8-1];
-    logic [DP8_WIDTH-1:0] alpha_g_carry [0:NUM_DP8-1];
-    logic [DP8_WIDTH-1:0] beta_g_sum    [0:NUM_DP8-1];
-    logic [DP8_WIDTH-1:0] beta_g_carry  [0:NUM_DP8-1];
-    logic [DP8_WIDTH-1:0] const_g       [0:NUM_DP8-1];
+    logic [DP8_WIDTH-1:0] p_sum   [0:NUM_DP8-1];
+    logic [DP8_WIDTH-1:0] p_carry [0:NUM_DP8-1];
+    logic [  NUM_DP8-1:0] dp8_neg;
 
-    generate
-        for (i = 0; i < NUM_DP8; i++) begin : gen_idle_gate
-            assign alpha_g_sum[i]   = zero_i[i] ? '0 : alpha_sum_i[i];
-            assign alpha_g_carry[i] = zero_i[i] ? '0 : alpha_carry_i[i];
-            assign beta_g_sum[i]    = zero_i[i] ? '0 : beta_sum_i[i];
-            assign beta_g_carry[i]  = zero_i[i] ? '0 : beta_carry_i[i];
-            assign const_g[i]       = zero_i[i] ? '0 : const_dp8_i[i];
+    always_comb begin
+        dp8_neg = '0;
+        for (int nn = 0; nn < NUM_NEG; nn++) begin
+            dp8_neg[4*(nn/2) + (nn%2) + 2] = neg_i[nn];
         end
-    endgenerate
+    end
+
+    ext_inject_sqr_bfp #(.NUM_DP8(NUM_DP8), .DP8_WIDTH(DP8_WIDTH)) ext_inject_sqr_bfp_i (
+        .pe_sum_i     (dp8_sum),
+        .pe_carry_i   (dp8_carry),
+        .alpha_sum_i  (alpha_sum_i),
+        .alpha_carry_i(alpha_carry_i),
+        .beta_sum_i   (beta_sum_i),
+        .beta_carry_i (beta_carry_i),
+        .const_i      (const_dp8_i),
+        .zero_i       (zero_i),
+        .neg_i        (dp8_neg),
+        .sum_o        (p_sum),
+        .carry_o      (p_carry)
+    );
 
     generate
         for (n = 0; n < NUM_L0; n++) begin : gen_l0
             localparam int CX0 = 4*(n/2) + (n%2);
             localparam int CX1 = CX0 + 2;
-            localparam int NUM_MANT = 6;
 
-            logic [DP8_WIDTH-1:0] lo_mant_raw [0:NUM_MANT-1];
-            logic [DP8_WIDTH-1:0] lo_mant     [0:NUM_MANT-1];
-            logic [DP8_WIDTH-1:0] hi_bundle   [ 0:NUM_ROW-1];
-            logic [DP8_WIDTH-1:0] lo_bundle   [ 0:NUM_ROW-1];
-            logic [ L0_WIDTH-1:0] hi_sh       [ 0:NUM_ROW-1];
-            logic [ L0_WIDTH-1:0] lo_ext      [ 0:NUM_ROW-1];
-            logic [ L0_WIDTH-1:0] zero_ch     [ 0:NUM_ROW-1];
-            logic [ L0_WIDTH-1:0] cpr_in      [ 0:NUM_CPR-1];
+            logic [DP8_WIDTH-1:0] hi_in   [0:1];
+            logic [DP8_WIDTH-1:0] lo_in   [0:1];
+            logic [ L0_WIDTH-1:0] hi_sh   [0:1];
+            logic [ L0_WIDTH-1:0] lo_ext  [0:1];
+            logic [ L0_WIDTH-1:0] zero_ch [0:1];
+            logic [ L0_WIDTH-1:0] cpr_in  [0:3];
 
-            assign lo_mant_raw[0] = dp8_sum[CX1];
-            assign lo_mant_raw[1] = dp8_carry[CX1];
-            assign lo_mant_raw[2] = alpha_g_sum[CX1];
-            assign lo_mant_raw[3] = alpha_g_carry[CX1];
-            assign lo_mant_raw[4] = beta_g_sum[CX1];
-            assign lo_mant_raw[5] = beta_g_carry[CX1];
+            assign hi_in[0] = p_sum[CX0];
+            assign hi_in[1] = p_carry[CX0];
+            assign lo_in[0] = p_sum[CX1];
+            assign lo_in[1] = p_carry[CX1];
 
-            if (n < NUM_NEG) begin : gen_comp
-                comp_n #(.WIDTH(DP8_WIDTH), .SIZE(NUM_MANT)) comp_n_i (
-                    .in_i(lo_mant_raw), .neg_i(neg_i[n]), .out_o(lo_mant)
-                );
-            end else begin : gen_nocomp
-                for (j = 0; j < NUM_MANT; j++) begin : gen_nocomp_row
-                    assign lo_mant[j] = lo_mant_raw[j];
-                end
-            end
-
-            assign hi_bundle[0] = dp8_sum[CX0];
-            assign hi_bundle[1] = dp8_carry[CX0];
-            assign hi_bundle[2] = alpha_g_sum[CX0];
-            assign hi_bundle[3] = alpha_g_carry[CX0];
-            assign hi_bundle[4] = beta_g_sum[CX0];
-            assign hi_bundle[5] = beta_g_carry[CX0];
-            assign hi_bundle[6] = const_g[CX0];
-
-            assign lo_bundle[0] = lo_mant[0];
-            assign lo_bundle[1] = lo_mant[1];
-            assign lo_bundle[2] = lo_mant[2];
-            assign lo_bundle[3] = lo_mant[3];
-            assign lo_bundle[4] = lo_mant[4];
-            assign lo_bundle[5] = lo_mant[5];
-            assign lo_bundle[6] = const_g[CX1];
-
-            shift_n #(.WIDTH(DP8_WIDTH), .SIZE(NUM_ROW), .SHIFT(SH0), .IS_SIGNED(1'b1)) shift_n_i (
-                .in_i(hi_bundle), .sel_i(sel_shift_i[0]), .out_o(hi_sh)
+            shift_n #(.WIDTH(DP8_WIDTH), .SIZE(2), .SHIFT(SH0), .IS_SIGNED(1'b1)) shift_n_i (
+                .in_i(hi_in), .sel_i(sel_shift_i[0]), .out_o(hi_sh)
             );
-            ext_n #(.WIDTH(DP8_WIDTH), .SIZE(NUM_ROW), .EXT(SH0), .IS_SIGNED(1'b1)) ext_n_i (
-                .in_i(lo_bundle), .out_o(lo_ext)
+            ext_n #(.WIDTH(DP8_WIDTH), .SIZE(2), .EXT(SH0), .IS_SIGNED(1'b1)) ext_n_i (
+                .in_i(lo_in), .out_o(lo_ext)
             );
 
-            for (j = 0; j < NUM_ROW; j++) begin : gen_zero_ch
-                assign zero_ch[j] = '0;
-            end
+            assign zero_ch[0] = '0;
+            assign zero_ch[1] = '0;
 
             /* verilator lint_off PINCONNECTEMPTY */
             align_cell_bfp #(
                 .WIDTH    (L0_WIDTH),
-                .SIZE_0   (NUM_ROW),
-                .SIZE_1   (NUM_ROW),
+                .SIZE_0   (2),
+                .SIZE_1   (2),
                 .EXP_WIDTH(EXP_WIDTH),
                 .IS_SIGNED(1'b1)
             ) align_cell_bfp_i (
@@ -243,7 +224,7 @@ module pe_array_sqr_bfp #(
             );
             /* verilator lint_on PINCONNECTEMPTY */
 
-            cpr_w_n #(.IN_WIDTH(L0_WIDTH), .IN_SIZE(NUM_CPR), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
+            cpr_w_n #(.IN_WIDTH(L0_WIDTH), .IN_SIZE(4), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
                 .in_i(cpr_in), .sum_o(l0_sum[n]), .carry_o(l0_carry[n])
             );
         end
