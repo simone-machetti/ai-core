@@ -94,18 +94,22 @@ make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_2x2_sqr_bfp_syn P
 make post-syn-sim PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=top_2x2_post_syn_sim \
     NETLIST_DIR=top_2x2_syn TB=tb_top_NxN_pwr CLK_PERIOD_NS=$CLK VCD=1
 ( cd "$PROJ/sim/top_2x2_post_syn_sim/output" && "$PROJ/sim/top_2x2_post_syn_sim/build/simv" +vectors=$NUM_VEC )
+sed -i -E '/^\$var real /d; /^r[0-9.]/d' "$PROJ/sim/top_2x2_post_syn_sim/output/activity.vcd"
 
 make post-syn-sim PROJECT=ai-core TOP_LEVEL=top_NxN_sqr OUT_DIR=top_2x2_sqr_post_syn_sim \
     NETLIST_DIR=top_2x2_sqr_syn TB=tb_top_NxN_sqr_pwr CLK_PERIOD_NS=$CLK VCD=1
 ( cd "$PROJ/sim/top_2x2_sqr_post_syn_sim/output" && "$PROJ/sim/top_2x2_sqr_post_syn_sim/build/simv" +vectors=$NUM_VEC )
+sed -i -E '/^\$var real /d; /^r[0-9.]/d' "$PROJ/sim/top_2x2_sqr_post_syn_sim/output/activity.vcd"
 
 make post-syn-sim PROJECT=ai-core TOP_LEVEL=top_NxN_bfp OUT_DIR=top_2x2_bfp_post_syn_sim \
     NETLIST_DIR=top_2x2_bfp_syn TB=tb_top_NxN_bfp_pwr CLK_PERIOD_NS=$CLK VCD=1
 ( cd "$PROJ/sim/top_2x2_bfp_post_syn_sim/output" && "$PROJ/sim/top_2x2_bfp_post_syn_sim/build/simv" +vectors=$NUM_VEC )
+sed -i -E '/^\$var real /d; /^r[0-9.]/d' "$PROJ/sim/top_2x2_bfp_post_syn_sim/output/activity.vcd"
 
 make post-syn-sim PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_2x2_sqr_bfp_post_syn_sim \
     NETLIST_DIR=top_2x2_sqr_bfp_syn TB=tb_top_NxN_sqr_bfp_pwr CLK_PERIOD_NS=$CLK VCD=1
 ( cd "$PROJ/sim/top_2x2_sqr_bfp_post_syn_sim/output" && "$PROJ/sim/top_2x2_sqr_bfp_post_syn_sim/build/simv" +vectors=$NUM_VEC )
+sed -i -E '/^\$var real /d; /^r[0-9.]/d' "$PROJ/sim/top_2x2_sqr_bfp_post_syn_sim/output/activity.vcd"
 
 # -----------------------------------------------------------------------------
 # Pass D - VCD-annotated power analysis
