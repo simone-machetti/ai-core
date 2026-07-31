@@ -17,19 +17,24 @@
 //     - comp_n one's-complements the six-row {PE, -alpha, -beta} bundle on the
 //       negated blocks (neg_i); const bypasses the negate (it already carries the
 //       negated per-DP8 constant, un-negated, exactly as const_sqr_bfp emits).
-//     - cpr_w_n 7:2 collapses {PE, -alpha, -beta, const} -> {sum, carry} = 2*P.
+//     - cpr_w_n 7:2 collapses {PE, -alpha, -beta, const} -> {sum, carry} = 2*P,
+//       carried at OUT_WIDTH bits so the signed carry-save pair stays sign-
+//       consistent for the downstream sign-extension in the crossed tree.
 //
 //   Combinational. neg_i is per-DP8: pe_array_sqr_bfp maps the node-indexed
 //   block-negate to the DP8 index before driving this block.
 //
 // Parameters:
 //   NUM_DP8   - number of DP8 blocks processed
-//   DP8_WIDTH - per-block carry-save word width (holds 2*P at the block scale)
+//   DP8_WIDTH - per-block input word width (PE / -alpha / -beta / const)
 //
 // Local parameters (fixed by the square reconstruction):
-//   NUM_MANT - negated rows {PE s/c, -alpha s/c, -beta s/c} (6)
-//   NUM_GATE - idle-gated rows {-alpha s/c, -beta s/c, const} (5)
-//   NUM_ROW  - 7:2 inputs {NUM_MANT rows, const} (7)
+//   NUM_MANT  - negated rows {PE s/c, -alpha s/c, -beta s/c} (6)
+//   NUM_GATE  - idle-gated rows {-alpha s/c, -beta s/c, const} (5)
+//   NUM_ROW   - 7:2 inputs {NUM_MANT rows, const} (7)
+//   OUT_WIDTH - 2*P carry-save width, DP8_WIDTH + clog2(NUM_ROW): the clog2(7)
+//               headroom keeps the 7:2 output sign-consistent so the downstream
+//               sign-extension into the crossed tree is correct.
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
@@ -39,7 +44,8 @@ module ext_inject_sqr_bfp #(
     parameter  int DP8_WIDTH = 18,
     localparam int NUM_MANT  = 6,
     localparam int NUM_GATE  = 5,
-    localparam int NUM_ROW   = 7
+    localparam int NUM_ROW   = 7,
+    localparam int OUT_WIDTH = DP8_WIDTH + $clog2(NUM_ROW)
 )(
     input  logic [DP8_WIDTH-1:0] pe_sum_i      [0:NUM_DP8-1],
     input  logic [DP8_WIDTH-1:0] pe_carry_i    [0:NUM_DP8-1],
@@ -50,8 +56,8 @@ module ext_inject_sqr_bfp #(
     input  logic [DP8_WIDTH-1:0] const_i       [0:NUM_DP8-1],
     input  logic                 zero_i        [0:NUM_DP8-1],
     input  logic [  NUM_DP8-1:0] neg_i,
-    output logic [DP8_WIDTH-1:0] sum_o         [0:NUM_DP8-1],
-    output logic [DP8_WIDTH-1:0] carry_o       [0:NUM_DP8-1]
+    output logic [OUT_WIDTH-1:0] sum_o         [0:NUM_DP8-1],
+    output logic [OUT_WIDTH-1:0] carry_o       [0:NUM_DP8-1]
 );
 
     genvar i;
@@ -93,7 +99,7 @@ module ext_inject_sqr_bfp #(
             assign row[5] = mant[5];
             assign row[6] = gate_out[4];
 
-            cpr_w_n #(.IN_WIDTH(DP8_WIDTH), .IN_SIZE(NUM_ROW), .EXT(0), .IS_SIGNED(1'b1)) cpr_w_n_i (
+            cpr_w_n #(.IN_WIDTH(DP8_WIDTH), .IN_SIZE(NUM_ROW), .IS_SIGNED(1'b1)) cpr_w_n_i (
                 .in_i(row), .sum_o(sum_o[i]), .carry_o(carry_o[i])
             );
         end

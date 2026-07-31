@@ -27,11 +27,13 @@
 //   and both are linear and uniform per block, this is a pure REASSOCIATION of the
 //   previous fused 14:2 node - the l0..l3 taps are bit-identical.
 //
-//   Widths: square-sum leaves and the per-DP8 2*P are DP8_WIDTH-bit (2*P fits the
-//   DP8 scale; widen p_sum/p_carry only if a corner overflows). Node widths and
-//   taps are unchanged (L0..L3 26/30/38/39, taps 19/30/38/39). EXP_WIDTH = 7 holds
-//   e_A + e_B exactly. The per-DP8 7:2 and the crossed shift/ext/align run
-//   IS_SIGNED (2*P carries signed -alpha/-beta/C and the negated PE).
+//   Widths: the square-sum leaves are DP8_WIDTH-bit; the per-DP8 2*P is
+//   P_WIDTH = DP8_WIDTH + clog2(NUM_ROW) = 21-bit, the clog2(7) headroom keeping
+//   the 7:2 output sign-consistent for the crossed-tree sign-extension. Node
+//   widths follow (L0..L3 = 29/33/41/42); the taps are unchanged (their low
+//   19/30/38/39 bits carry the same 2*P value). EXP_WIDTH = 7 holds e_A + e_B
+//   exactly. The per-DP8 7:2 and the crossed shift/ext/align run IS_SIGNED (2*P
+//   carries signed -alpha/-beta/C and the negated PE).
 // -----------------------------------------------------------------------------
 
 `timescale 1 ns/1 ps
@@ -44,6 +46,7 @@ module pe_array_sqr_bfp #(
     localparam int IN_WIDTH_A   = 8,
     localparam int IN_WIDTH_B   = 4,
     localparam int DP8_WIDTH    = 18,
+    localparam int NUM_ROW      = 7,
     localparam int NUM_SHIFT    = 3,
     localparam int NUM_LEVEL    = 3,
     localparam int NUM_L0       = 8,
@@ -53,11 +56,12 @@ module pe_array_sqr_bfp #(
     localparam int SH0          = 8,
     localparam int SH1          = 4,
     localparam int SH2          = 8,
-    localparam int L0_WIDTH     = DP8_WIDTH + SH0,
-    localparam int L1_WIDTH     = L0_WIDTH   + SH1,
-    localparam int L2_WIDTH     = L1_WIDTH   + SH2,
+    localparam int P_WIDTH      = DP8_WIDTH + $clog2(NUM_ROW),
+    localparam int L0_WIDTH     = P_WIDTH   + SH0,
+    localparam int L1_WIDTH     = L0_WIDTH  + SH1,
+    localparam int L2_WIDTH     = L1_WIDTH  + SH2,
     localparam int L3_EXT       = 1,
-    localparam int L3_WIDTH     = L2_WIDTH   + L3_EXT,
+    localparam int L3_WIDTH     = L2_WIDTH  + L3_EXT,
     localparam int L0_TAP_WIDTH = 19,
     localparam int L1_TAP_WIDTH = 30,
     localparam int L2_TAP_WIDTH = 38,
@@ -150,9 +154,9 @@ module pe_array_sqr_bfp #(
         end
     endgenerate
 
-    logic [DP8_WIDTH-1:0] p_sum   [0:NUM_DP8-1];
-    logic [DP8_WIDTH-1:0] p_carry [0:NUM_DP8-1];
-    logic [  NUM_DP8-1:0] dp8_neg;
+    logic [ P_WIDTH-1:0] p_sum   [0:NUM_DP8-1];
+    logic [ P_WIDTH-1:0] p_carry [0:NUM_DP8-1];
+    logic [ NUM_DP8-1:0] dp8_neg;
 
     always_comb begin
         dp8_neg = '0;
@@ -180,8 +184,8 @@ module pe_array_sqr_bfp #(
             localparam int CX0 = 4*(n/2) + (n%2);
             localparam int CX1 = CX0 + 2;
 
-            logic [DP8_WIDTH-1:0] hi_in   [0:1];
-            logic [DP8_WIDTH-1:0] lo_in   [0:1];
+            logic [ P_WIDTH-1:0] hi_in   [0:1];
+            logic [ P_WIDTH-1:0] lo_in   [0:1];
             logic [ L0_WIDTH-1:0] hi_sh   [0:1];
             logic [ L0_WIDTH-1:0] lo_ext  [0:1];
             logic [ L0_WIDTH-1:0] zero_ch [0:1];
@@ -192,10 +196,10 @@ module pe_array_sqr_bfp #(
             assign lo_in[0] = p_sum[CX1];
             assign lo_in[1] = p_carry[CX1];
 
-            shift_n #(.WIDTH(DP8_WIDTH), .SIZE(2), .SHIFT(SH0), .IS_SIGNED(1'b1)) shift_n_i (
+            shift_n #(.WIDTH(P_WIDTH), .SIZE(2), .SHIFT(SH0), .IS_SIGNED(1'b1)) shift_n_i (
                 .in_i(hi_in), .sel_i(sel_shift_i[0]), .out_o(hi_sh)
             );
-            ext_n #(.WIDTH(DP8_WIDTH), .SIZE(2), .EXT(SH0), .IS_SIGNED(1'b1)) ext_n_i (
+            ext_n #(.WIDTH(P_WIDTH), .SIZE(2), .EXT(SH0), .IS_SIGNED(1'b1)) ext_n_i (
                 .in_i(lo_in), .out_o(lo_ext)
             );
 
