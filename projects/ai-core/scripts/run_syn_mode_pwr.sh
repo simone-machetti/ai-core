@@ -3,8 +3,9 @@
 # Author: Simone Machetti
 #
 # Description:
-#   Per-mode dynamic power runs for the baseline (top_NxN) vs square
-#   (top_NxN_sqr) comparison, measured on the complete 2x2 grids. Same four
+#   Per-mode dynamic power runs for the four PE-grid variants - baseline
+#   (top_NxN), square (top_NxN_sqr), BFP (top_NxN_bfp) and square-BFP
+#   (top_NxN_sqr_bfp) - measured on the complete 2x2 grids. Same four
 #   passes as run_syn_pwr.sh, but pass C runs each of the 11 modes on its own
 #   with NUM_VEC vectors so every mode gets its own activity.vcd and its own
 #   power report, instead of one VCD averaged over all modes. The 8x8 and 16x16
@@ -33,54 +34,88 @@ NUM_VEC=100
 CLK=10
 
 BB_BAS="pe ctrl disp_array_a disp_array_b icg"
+
 BB_SQR="pe_sqr ctrl_sqr const_sqr disp_array_a_sqr disp_array_b_sqr \
         pe_array_alpha_sqr pe_array_beta_sqr icg"
+
+BB_BFP="pe_bfp ctrl disp_array_a disp_array_exp_a_bfp disp_array_b \
+        disp_array_exp_b_bfp icg"
+
+BB_SQR_BFP="pe_sqr_bfp ctrl_sqr const_sqr_bfp disp_array_a_sqr \
+            disp_array_exp_a_sqr_bfp disp_array_b_sqr disp_array_exp_b_sqr_bfp \
+            pe_array_alpha_sqr_bfp pe_array_beta_sqr_bfp icg"
 
 # -----------------------------------------------------------------------------
 # Pass A - per-module runs
 # -----------------------------------------------------------------------------
-make syn PROJECT=ai-core TOP_LEVEL=ctrl OUT_DIR=ctrl
-make syn PROJECT=ai-core TOP_LEVEL=disp_array_a OUT_DIR=disp_array_a
-make syn PROJECT=ai-core TOP_LEVEL=disp_array_b OUT_DIR=disp_array_b
-make syn PROJECT=ai-core TOP_LEVEL=pe OUT_DIR=pe
+make syn PROJECT=ai-core TOP_LEVEL=icg OUT_DIR=icg_syn
 
-make syn PROJECT=ai-core TOP_LEVEL=ctrl_sqr OUT_DIR=ctrl_sqr
-make syn PROJECT=ai-core TOP_LEVEL=const_sqr OUT_DIR=const_sqr
-make syn PROJECT=ai-core TOP_LEVEL=disp_array_a_sqr OUT_DIR=disp_array_a_sqr
-make syn PROJECT=ai-core TOP_LEVEL=disp_array_b_sqr OUT_DIR=disp_array_b_sqr
-make syn PROJECT=ai-core TOP_LEVEL=pe_array_alpha_sqr OUT_DIR=pe_array_alpha_sqr
-make syn PROJECT=ai-core TOP_LEVEL=pe_array_beta_sqr OUT_DIR=pe_array_beta_sqr
-make syn PROJECT=ai-core TOP_LEVEL=pe_sqr OUT_DIR=pe_sqr
+# baseline
+make syn PROJECT=ai-core TOP_LEVEL=ctrl OUT_DIR=ctrl_syn
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_a OUT_DIR=disp_array_a_syn
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_b OUT_DIR=disp_array_b_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe OUT_DIR=pe_syn
 
-make syn PROJECT=ai-core TOP_LEVEL=icg OUT_DIR=icg
+# square
+make syn PROJECT=ai-core TOP_LEVEL=ctrl_sqr OUT_DIR=ctrl_sqr_syn
+make syn PROJECT=ai-core TOP_LEVEL=const_sqr OUT_DIR=const_sqr_syn
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_a_sqr OUT_DIR=disp_array_a_sqr_syn
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_b_sqr OUT_DIR=disp_array_b_sqr_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_array_alpha_sqr OUT_DIR=pe_array_alpha_sqr_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_array_beta_sqr OUT_DIR=pe_array_beta_sqr_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_sqr OUT_DIR=pe_sqr_syn
+
+# BFP
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_exp_a_bfp OUT_DIR=disp_array_exp_a_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_exp_b_bfp OUT_DIR=disp_array_exp_b_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_bfp OUT_DIR=pe_bfp_syn
+
+# square BFP
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_exp_a_sqr_bfp OUT_DIR=disp_array_exp_a_sqr_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_exp_b_sqr_bfp OUT_DIR=disp_array_exp_b_sqr_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_array_alpha_sqr_bfp OUT_DIR=pe_array_alpha_sqr_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_array_beta_sqr_bfp OUT_DIR=pe_array_beta_sqr_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=const_sqr_bfp OUT_DIR=const_sqr_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_sqr_bfp OUT_DIR=pe_sqr_bfp_syn
 
 # -----------------------------------------------------------------------------
-# Pass B - 2x2 grids
+# Pass B - 2x2 grids (blackboxed)
 # -----------------------------------------------------------------------------
-make syn PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=top_2x2 PARAMS="N=2" \
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=top_2x2_syn PARAMS="N=2" \
     BLACKBOX_MODULES="$BB_BAS"
 
-make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr OUT_DIR=top_2x2_sqr PARAMS="N=2" \
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr OUT_DIR=top_2x2_sqr_syn PARAMS="N=2" \
     BLACKBOX_MODULES="$BB_SQR"
+
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bfp OUT_DIR=top_2x2_bfp_syn PARAMS="N=2" \
+    BLACKBOX_MODULES="$BB_BFP"
+
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_2x2_sqr_bfp_syn PARAMS="N=2" \
+    BLACKBOX_MODULES="$BB_SQR_BFP"
 
 # -----------------------------------------------------------------------------
 # Passes C and D - one gate-level simulation and one power run per mode
 # -----------------------------------------------------------------------------
 sweep () {
-    local top=$1 tb=$2 netlist=$3 tag=$4 bb=$5
+    local top=$1 tb=$2 grid=$3 bb=$4
 
-    make post-syn-sim PROJECT=ai-core TOP_LEVEL="$top" OUT_DIR="pwr_mode_$tag" \
+    local netlist="${grid}_syn"
+    local sim_dir="${grid}_post_syn_sim"
+
+    make post-syn-sim PROJECT=ai-core TOP_LEVEL="$top" OUT_DIR="$sim_dir" \
         NETLIST_DIR="$netlist" TB="$tb" CLK_PERIOD_NS=$CLK VCD=1
-    rm -f "$PROJ/sim/pwr_mode_$tag/output/activity.vcd"
+    rm -f "$PROJ/sim/$sim_dir/output/activity.vcd"
 
-    local simv="$PROJ/sim/pwr_mode_$tag/build/simv"
+    local simv="$PROJ/sim/$sim_dir/build/simv"
 
     for m in $MODES; do
-        local vcd_dir="pwr_mode_${tag}_m${m}"
+        local vcd_dir="${grid}_m${m}_post_syn_sim"
         mkdir -p "$PROJ/sim/$vcd_dir/output"
         ( cd "$PROJ/sim/$vcd_dir/output" && "$simv" +mode=$m +vectors=$NUM_VEC )
 
-        make post-syn-dpa PROJECT=ai-core TOP_LEVEL="$top" OUT_DIR="dpa_mode_${tag}_m${m}" \
+        sed -i -E '/^\$var real /d; /^r[0-9.]/d' "$PROJ/sim/$vcd_dir/output/activity.vcd"
+
+        make post-syn-dpa PROJECT=ai-core TOP_LEVEL="$top" OUT_DIR="${grid}_m${m}_post_syn_dpa" \
             NETLIST_DIR="$netlist" VCD_DIR="$vcd_dir" TB="$tb" CLK_PERIOD_NS=$CLK \
             BLACKBOX_MODULES="$bb"
 
@@ -88,5 +123,7 @@ sweep () {
     done
 }
 
-sweep top_NxN     tb_top_NxN_pwr     top_2x2     2x2     "$BB_BAS"
-sweep top_NxN_sqr tb_top_NxN_sqr_pwr top_2x2_sqr 2x2_sqr "$BB_SQR"
+sweep top_NxN         tb_top_NxN_pwr         top_2x2         "$BB_BAS"
+sweep top_NxN_sqr     tb_top_NxN_sqr_pwr     top_2x2_sqr     "$BB_SQR"
+sweep top_NxN_bfp     tb_top_NxN_bfp_pwr     top_2x2_bfp     "$BB_BFP"
+sweep top_NxN_sqr_bfp tb_top_NxN_sqr_bfp_pwr top_2x2_sqr_bfp "$BB_SQR_BFP"
