@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The accumulator is where the tap a mode reads meets the running or external accumulator, and in BFP those two can sit at different scales. So each lane inserts an aligner before the fold: it brings the accumulator row and the tap `(sum, carry)` pair to their common scale `max(acc_exp, tap_exp)`, the smaller-exponent side arithmetic-right-shifted (truncating), then the CPR 3:2 compresses the three aligned rows exactly as in the baseline ([BFP_imp.md](../../doc/BFP_imp.md) §8). Node and guard widths are unchanged — an aligned addend is a right-shifted (smaller) version of its integer worst case — so the mantissa datapath is [acc_array](./acc_array.md) verbatim; this page covers the exponent path and the aligner wiring.
+The accumulator is where the tap a mode reads meets the running or external accumulator, and in BFP those two can sit at different scales. So each lane inserts an aligner before the fold: it brings the accumulator row and the tap `(sum, carry)` pair to their common scale `max(acc_exp, tap_exp)`, the smaller-exponent side arithmetic-right-shifted (truncating), then the CPR 3:2 compresses the three aligned rows exactly as in the baseline. Node and guard widths are unchanged — an aligned addend is a right-shifted (smaller) version of its integer worst case — so the mantissa datapath is [acc_array](./acc_array.md) verbatim; this page covers the exponent path and the aligner wiring.
 
 - **Two exponent MUXes mirror the two data MUXes.** A per-lane OUT MUX EXP ([mux_n](./mux_n.md), `sel_out_i`) picks the tap scale from the [pe_array_bfp](./pe_array_bfp.md) tap exponents, following the same window map as the data (`L0→[g]`, `L1→[g/2]`, `L2→[0/1]` on lanes 2,3,6,7, `L3` on lanes 6,7; idle levels tied to the minimum scale `0`). A per-lane ACC MUX EXP ([mux_n](./mux_n.md), `sel_acc_i`) picks the seed scale `acc_exp_i` or the lane's own registered scale, matching the mantissa accumulate MUX.
 - **A running scale register.** The aligner emits `max(acc_exp, tap_exp)`; an exponent register per lane (loaded every cycle, reset to the minimum scale `0`) holds it as the running accumulator scale and drives `pe_exp_o`. The seed and the feedback share **one format** — a 20-bit mantissa (40-bit split H/L over a fused pair) plus a 7-bit product-domain scale — so the two accumulate MUXes just select between same-shape operands; the datapath carries no bias constant.
@@ -16,34 +16,34 @@ Pipeline depth is identical to `acc_array` — one register stage.
 
 None — fixed to the PE configuration; the key `localparam`s (identical to [acc_array](./acc_array.md) plus the exponent path):
 
-| Localparam            | Value             | Meaning                                                          |
-| --------------------- | ----------------- | ---------------------------------------------------------------- |
-| `NUM_LANE`            | 8                 | Accumulation lanes (one per output).                             |
-| `PE_WIDTH`            | 20                | Per-lane / `pe_out` width.                                       |
-| `FUSE`                | 40                | Sign-extended tap width used for windowing.                      |
-| `CPR_WIDTH`           | 22                | CPR 3:2 / `add_n` width (`PE_WIDTH + 2`).                        |
-| `CARRY`               | 2                 | Inter-lane (L→H) carry width — three 20-bit rows.               |
-| `L0_WIDTH`…`L3_WIDTH` | 18 / 29 / 37 / 38 | `pe_array_bfp` tap widths (carry-save pairs).                    |
-| `SEL_WIDTH`           | 2                 | Tap-level select.                                                |
-| `EXP_WIDTH`           | 7                 | **NEW** — product-domain scale width (`e_A + e_B`).             |
+| Localparam            | Value             | Meaning                                                                    |
+| --------------------- | ----------------- | -------------------------------------------------------------------------- |
+| `NUM_LANE`            | 8                 | Accumulation lanes (one per output).                                       |
+| `PE_WIDTH`            | 20                | Per-lane / `pe_out` width.                                                 |
+| `FUSE`                | 40                | Sign-extended tap width used for windowing.                                |
+| `CPR_WIDTH`           | 22                | CPR 3:2 / `add_n` width (`PE_WIDTH + 2`).                                  |
+| `CARRY`               | 2                 | Inter-lane (L→H) carry width — three 20-bit rows.                          |
+| `L0_WIDTH`…`L3_WIDTH` | 18 / 29 / 37 / 38 | `pe_array_bfp` tap widths (carry-save pairs).                              |
+| `SEL_WIDTH`           | 2                 | Tap-level select.                                                          |
+| `EXP_WIDTH`           | 7                 | **NEW** — product-domain scale width (`e_A + e_B`).                        |
 | `ROWS`                | 3                 | **NEW** — rows the aligner spans (1 acc + 2 tap) and the fill-chain width. |
 
 ## Interface
 
-| Signal                       | Dir | Width   | Description                                                          |
-| ---------------------------- | --- | ------- | ------------------------------------------------------------------- |
-| `clk_i` / `rst_ni`           | in  | 1       | Clock / asynchronous active-low reset.                              |
-| `l0_sum_i`/`l0_carry_i[0:7]` | in  | 18 each | L0 tap pairs, from `pe_array_bfp` (L1/L2/L3: 29/37/38).             |
-| `l1_sum_i` … `l3_carry_i`    | in  | 29…38   | L1/L2/L3 tap pairs (`[0:3]`/`[0:1]`/scalar).                        |
-| `l0_exp_i[0:7]`              | in  | 7 each  | **NEW** — L0 tap scales (L1/L2/L3: `[0:3]`/`[0:1]`/scalar).         |
-| `l1_exp_i` … `l3_exp_i`      | in  | 7 each  | **NEW** — L1/L2/L3 tap scales, from `pe_array_bfp`.                 |
-| `acc_i[0:7]`                 | in  | 20 each | External accumulator word, one per lane.                            |
-| `acc_exp_i[0:7]`             | in  | 7 each  | **NEW** — external seed scale (product-domain), one per lane.       |
-| `sel_out_i`                  | in  | 2       | Tap-level select (shared): which tree level all lanes read.         |
-| `sel_acc_i`                  | in  | 1       | Accumulate MUX (shared): `0` = `acc_i`, `1` = register feedback.    |
-| `prop_carry_i`               | in  | 1       | Inter-lane carry-chain / fusion enable (shared): lane fusion.       |
-| `pe_out_o[0:7]`              | out | 20 each | Per-lane results; a fused result is `{pe_out[even], pe_out[odd]}`.  |
-| `pe_exp_o[0:7]`              | out | 7 each  | **NEW** — per-lane running accumulator scale.                       |
+| Signal                       | Dir | Width   | Description                                                        |
+| ---------------------------- | --- | ------- | ------------------------------------------------------------------ |
+| `clk_i` / `rst_ni`           | in  | 1       | Clock / asynchronous active-low reset.                             |
+| `l0_sum_i`/`l0_carry_i[0:7]` | in  | 18 each | L0 tap pairs, from `pe_array_bfp` (L1/L2/L3: 29/37/38).            |
+| `l1_sum_i` … `l3_carry_i`    | in  | 29…38   | L1/L2/L3 tap pairs (`[0:3]`/`[0:1]`/scalar).                       |
+| `l0_exp_i[0:7]`              | in  | 7 each  | **NEW** — L0 tap scales (L1/L2/L3: `[0:3]`/`[0:1]`/scalar).        |
+| `l1_exp_i` … `l3_exp_i`      | in  | 7 each  | **NEW** — L1/L2/L3 tap scales, from `pe_array_bfp`.                |
+| `acc_i[0:7]`                 | in  | 20 each | External accumulator word, one per lane.                           |
+| `acc_exp_i[0:7]`             | in  | 7 each  | **NEW** — external seed scale (product-domain), one per lane.      |
+| `sel_out_i`                  | in  | 2       | Tap-level select (shared): which tree level all lanes read.        |
+| `sel_acc_i`                  | in  | 1       | Accumulate MUX (shared): `0` = `acc_i`, `1` = register feedback.   |
+| `prop_carry_i`               | in  | 1       | Inter-lane carry-chain / fusion enable (shared): lane fusion.      |
+| `pe_out_o[0:7]`              | out | 20 each | Per-lane results; a fused result is `{pe_out[even], pe_out[odd]}`. |
+| `pe_exp_o[0:7]`              | out | 7 each  | **NEW** — per-lane running accumulator scale.                      |
 
 ## Instantiation
 
@@ -126,7 +126,7 @@ reg_n #(.WIDTH(EXP_WIDTH), .SIZE(1)) reg_n_exp_i (
 assign reg_exp_q[g] = req[0];
 ```
 
-Because the scale only ever rises to a `max`, it is a **running max** within a run: a fed-back partial re-aligns (one right-shift, ≤ 1 ulp) when an incoming tap outranks it, and a tap floors when the accumulator outranks it — truncate only, LSB side, no rounding in the loop ([BFP_imp.md](../../doc/BFP_imp.md) §10). The mantissa `pe_out_o` and the scale `pe_exp_o` leave un-normalized; `pe_exp_o` is already in the seed's product-domain format, so an output can loop straight back as a seed.
+Because the scale only ever rises to a `max`, it is a **running max** within a run: a fed-back partial re-aligns (one right-shift, ≤ 1 ulp) when an incoming tap outranks it, and a tap floors when the accumulator outranks it — truncate only, LSB side, no rounding in the loop. The mantissa `pe_out_o` and the scale `pe_exp_o` leave un-normalized; `pe_exp_o` is already in the seed's product-domain format, so an output can loop straight back as a seed.
 
 ## Verification
 

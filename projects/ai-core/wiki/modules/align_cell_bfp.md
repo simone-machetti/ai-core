@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This is the hardware realization of the BFP two-operand alignment contract ([BFP_imp.md](../../doc/BFP_imp.md) §8): given `(rows_0, exp_0)` and `(rows_1, exp_1)`, bring both to `E = max(exp_0, exp_1)` by arithmetic-right-shifting the smaller-scale bundle by `|exp_0 − exp_1|` (truncating toward −∞), leaving row positions unchanged. The aligned rows leave as one vector in **input order** — `out_o[0 +: SIZE_0]` from `in_0_i`, `out_o[SIZE_0 +: SIZE_1]` from `in_1_i` — so a caller can wire the cell inline without re-permuting.
+This is the hardware realization of the BFP two-operand alignment contract: given `(rows_0, exp_0)` and `(rows_1, exp_1)`, bring both to `E = max(exp_0, exp_1)` by arithmetic-right-shifting the smaller-scale bundle by `|exp_0 − exp_1|` (truncating toward −∞), leaving row positions unchanged. The aligned rows leave as one vector in **input order** — `out_o[0 +: SIZE_0]` from `in_0_i`, `out_o[SIZE_0 +: SIZE_1]` from `in_1_i` — so a caller can wire the cell inline without re-permuting.
 
 The whole cell is one comparison steering one shifter. [sub_n_bfp](./sub_n_bfp.md) turns the two exponents into a sign and a magnitude; the **sign** (`msb`) drives every select — max-exponent pick, per-slot row swap, per-row output un-swap — and the **magnitude** (`amount`) is the single shift the shifter applies. Because a small-to-large right shift is always in one direction, no bidirectional shifter is needed: the muxes route whichever bundle is smaller *into* the fixed-direction [shift_n_bfp](./shift_n_bfp.md) and route the result back out.
 
@@ -15,31 +15,31 @@ The whole cell is one comparison steering one shifter. [sub_n_bfp](./sub_n_bfp.m
 
 ## Parameters
 
-| Parameter   | Default | Description                                                     |
-| ----------- | ------- | --------------------------------------------------------------- |
-| `WIDTH`     | 20      | Row width.                                                      |
-| `SIZE_0`    | 2       | Number of rows in bundle 0 (all share `exp_0_i`).              |
-| `SIZE_1`    | 2       | Number of rows in bundle 1 (all share `exp_1_i`).             |
-| `EXP_WIDTH` | 8       | Exponent width (unsigned).                                      |
-| `IS_SIGNED` | 1       | `1` = arithmetic (sign-fill) right shift; `0` = logical.       |
+| Parameter   | Default | Description                                              |
+| ----------- | ------- | -------------------------------------------------------- |
+| `WIDTH`     | 20      | Row width.                                               |
+| `SIZE_0`    | 2       | Number of rows in bundle 0 (all share `exp_0_i`).        |
+| `SIZE_1`    | 2       | Number of rows in bundle 1 (all share `exp_1_i`).        |
+| `EXP_WIDTH` | 8       | Exponent width (unsigned).                               |
+| `IS_SIGNED` | 1       | `1` = arithmetic (sign-fill) right shift; `0` = logical. |
 
 `SIZE_0` and `SIZE_1` may differ — the tree pairs unequal-size groups at its boundaries (see [align_bfp](./align_bfp.md)). Derived `localparam`s: `NUM_SH = max(SIZE_0, SIZE_1)` (shifter slots), `MIN_SH = min(SIZE_0, SIZE_1)` (slots present in *both* bundles), `SIZE_OUT = SIZE_0 + SIZE_1`.
 
 ## Interface
 
-| Signal       | Dir | Width                | Description                                                              |
-| ------------ | --- | -------------------- | ------------------------------------------------------------------------ |
-| `in_0_i`     | in  | `SIZE_0` × `WIDTH`   | Bundle 0 rows — array `[0:SIZE_0-1]`.                                    |
-| `exp_0_i`    | in  | `EXP_WIDTH`          | Bundle 0 shared exponent.                                                |
-| `in_1_i`     | in  | `SIZE_1` × `WIDTH`   | Bundle 1 rows — array `[0:SIZE_1-1]`.                                    |
-| `exp_1_i`    | in  | `EXP_WIDTH`          | Bundle 1 shared exponent.                                                |
-| `chain_en_i` | in  | 1                    | Lane-fusion enable: `1` takes the shifter fill from `chain_*_i`.        |
-| `chain_0_i`  | in  | `SIZE_0` × `WIDTH`   | Fill rows for bundle 0 (H neighbour's rows in a fused pair).             |
-| `chain_1_i`  | in  | `SIZE_1` × `WIDTH`   | Fill rows for bundle 1.                                                  |
-| `chain_0_o`  | out | `SIZE_0` × `WIDTH`   | Raw `in_0_i` forwarded to the L neighbour of a fused pair.               |
-| `chain_1_o`  | out | `SIZE_1` × `WIDTH`   | Raw `in_1_i` forwarded to the L neighbour.                               |
+| Signal       | Dir | Width                | Description                                                                      |
+| ------------ | --- | -------------------- | -------------------------------------------------------------------------------- |
+| `in_0_i`     | in  | `SIZE_0` × `WIDTH`   | Bundle 0 rows — array `[0:SIZE_0-1]`.                                            |
+| `exp_0_i`    | in  | `EXP_WIDTH`          | Bundle 0 shared exponent.                                                        |
+| `in_1_i`     | in  | `SIZE_1` × `WIDTH`   | Bundle 1 rows — array `[0:SIZE_1-1]`.                                            |
+| `exp_1_i`    | in  | `EXP_WIDTH`          | Bundle 1 shared exponent.                                                        |
+| `chain_en_i` | in  | 1                    | Lane-fusion enable: `1` takes the shifter fill from `chain_*_i`.                 |
+| `chain_0_i`  | in  | `SIZE_0` × `WIDTH`   | Fill rows for bundle 0 (H neighbour's rows in a fused pair).                     |
+| `chain_1_i`  | in  | `SIZE_1` × `WIDTH`   | Fill rows for bundle 1.                                                          |
+| `chain_0_o`  | out | `SIZE_0` × `WIDTH`   | Raw `in_0_i` forwarded to the L neighbour of a fused pair.                       |
+| `chain_1_o`  | out | `SIZE_1` × `WIDTH`   | Raw `in_1_i` forwarded to the L neighbour.                                       |
 | `out_o`      | out | `SIZE_OUT` × `WIDTH` | Aligned rows, input order — `[0 +: SIZE_0]` from 0, `[SIZE_0 +: SIZE_1]` from 1. |
-| `exp_o`      | out | `EXP_WIDTH`          | Common scale `max(exp_0_i, exp_1_i)`.                                    |
+| `exp_o`      | out | `EXP_WIDTH`          | Common scale `max(exp_0_i, exp_1_i)`.                                            |
 
 For standalone use tie `chain_en_i` low and `chain_0_i`/`chain_1_i` to zero; the `chain_*_o` outputs may be left open.
 
@@ -132,7 +132,7 @@ For a fused H/L lane pair (the [gate_b_n](./gate_b_n.md) carry idiom, two crossi
 
 ## Notes
 
-- **Truncation is LSB-side and one-directional** — the smaller bundle floors toward −∞ by `|Δexp|`; the datapath keeps its integer widths because an aligned addend is only a right-shifted (smaller) version of its integer worst case ([BFP_imp.md](../../doc/BFP_imp.md) §8). No rounding here; the single rounding lives at the output quantization stage (§10).
+- **Truncation is LSB-side and one-directional** — the smaller bundle floors toward −∞ by `|Δexp|`; the datapath keeps its integer widths because an aligned addend is only a right-shifted (smaller) version of its integer worst case. No rounding here; the single rounding lives at the output quantization stage.
 - **Carry-save use** — a "row" is just a `WIDTH`-bit bus, so a carry-save operand is a 2-row bundle (sum + carry) sharing one exponent; each row floors independently. This is how the tree cells ([pe_array_bfp](./pe_array_bfp.md)) and the accumulator cells ([acc_array_bfp](./acc_array_bfp.md)) align carry-save pairs with the same primitive.
 - Consumers: [align_bfp](./align_bfp.md) (tree of these cells), and directly-instantiated fused pairs in [acc_array_bfp](./acc_array_bfp.md) / [pe_array_sqr_bfp](./pe_array_sqr_bfp.md).
 

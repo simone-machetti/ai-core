@@ -10,12 +10,12 @@ The distinguishing feature is the **fill window**. Instead of shifting a bare wo
 
 ## Parameters
 
-| Parameter   | Default                | Description                                                  |
-| ----------- | ---------------------- | ------------------------------------------------------------ |
-| `WIDTH`     | 8                      | Bit width of each word.                                      |
-| `SIZE`      | 4                      | Number of words (all share the amount `amt_i`).             |
-| `AMT_WIDTH` | `$clog2(2·WIDTH + 1)`  | Shift-amount width — wide enough to name every amount `0 … 2·WIDTH`. |
-| `IS_SIGNED` | 1                      | `1` = arithmetic (sign-extend the window), `0` = logical.   |
+| Parameter   | Default               | Description                                                          |
+| ----------- | --------------------- | -------------------------------------------------------------------- |
+| `WIDTH`     | 8                     | Bit width of each word.                                              |
+| `SIZE`      | 4                     | Number of words (all share the amount `amt_i`).                      |
+| `AMT_WIDTH` | `$clog2(2·WIDTH + 1)` | Shift-amount width — wide enough to name every amount `0 … 2·WIDTH`. |
+| `IS_SIGNED` | 1                     | `1` = arithmetic (sign-extend the window), `0` = logical.            |
 
 ## Interface
 

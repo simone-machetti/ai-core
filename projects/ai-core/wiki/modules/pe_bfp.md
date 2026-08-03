@@ -12,20 +12,20 @@
 
 ## Interface
 
-| Signal                                                | Dir | Width   | Description                                                    |
-| ----------------------------------------------------- | --- | ------- | -------------------------------------------------------------- |
-| `clk_i` / `rst_ni`                                    | in  | 1       | Clock (externally gated) / async reset.                        |
-| `a_dp8_i` / `b_dp8_i`                                 | in  | 64 / 32 | Dispatched mantissa operands (16 DP8s), from `disp_array_*`.   |
-| `exp_a_dp8_i` / `exp_b_dp8_i`                         | in  | 6 / 6   | Dispatched per-DP8 exponents, from `disp_array_exp_*_bfp`.     |
-| `en_i`                                                | in  | 1       | Operand + exponent isolation mask (and external clock-gate enable). |
-| `is_signed_a_i` / `is_signed_b_i`                     | in  | 1 each  | Per-DP8 signedness, from `ctrl`.                              |
-| `sel_shift_i`                                         | in  | 3       | `pe_array_bfp` tree shift enables.                            |
-| `en_level_i`                                          | in  | 3       | Tree operand-isolation enables — masks levels below the tap.  |
-| `acc_i`                                               | in  | 20×8    | Per-PE external accumulator seed (mantissa).                  |
-| `acc_exp_i`                                           | in  | 7×8     | Per-PE external seed scale (product-domain).                  |
-| `sel_out_i`/`sel_acc_i`/`prop_carry_i`               | in  | 2/1/1   | acc-stage controls.                                           |
-| `out_o`                                               | out | 20×8    | Per-lane result mantissas (`pe_out`).                         |
-| `out_exp_o`                                           | out | 7×8     | Per-lane running accumulator scales (`pe_exp`).              |
+| Signal                                 | Dir | Width   | Description                                                         |
+| -------------------------------------- | --- | ------- | ------------------------------------------------------------------- |
+| `clk_i` / `rst_ni`                     | in  | 1       | Clock (externally gated) / async reset.                             |
+| `a_dp8_i` / `b_dp8_i`                  | in  | 64 / 32 | Dispatched mantissa operands (16 DP8s), from `disp_array_*`.        |
+| `exp_a_dp8_i` / `exp_b_dp8_i`          | in  | 6 / 6   | Dispatched per-DP8 exponents, from `disp_array_exp_*_bfp`.          |
+| `en_i`                                 | in  | 1       | Operand + exponent isolation mask (and external clock-gate enable). |
+| `is_signed_a_i` / `is_signed_b_i`      | in  | 1 each  | Per-DP8 signedness, from `ctrl`.                                    |
+| `sel_shift_i`                          | in  | 3       | `pe_array_bfp` tree shift enables.                                  |
+| `en_level_i`                           | in  | 3       | Tree operand-isolation enables — masks levels below the tap.        |
+| `acc_i`                                | in  | 20×8    | Per-PE external accumulator seed (mantissa).                        |
+| `acc_exp_i`                            | in  | 7×8     | Per-PE external seed scale (product-domain).                        |
+| `sel_out_i`/`sel_acc_i`/`prop_carry_i` | in  | 2/1/1   | acc-stage controls.                                                 |
+| `out_o`                                | out | 20×8    | Per-lane result mantissas (`pe_out`).                               |
+| `out_exp_o`                            | out | 7×8     | Per-lane running accumulator scales (`pe_exp`).                     |
 
 ## Examples
 

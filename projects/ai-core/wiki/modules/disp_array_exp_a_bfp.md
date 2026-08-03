@@ -4,7 +4,7 @@
 
 ## Purpose
 
-BFP is a 6-bit exponent sideband bolted onto the integer operands (see [BFP_imp.md](../../doc/BFP_imp.md) §3): the 256-bit A word carries **one exponent per 64-bit block** (the source rule), so a row's A exponents are just four 6-bit values. This module dispatches them exactly the way [disp_array_a](./disp_array_a.md) dispatches the mantissa blocks — a per-pair 4→1 select on the shared `sel_a`, the chosen block duplicated onto both DP8s of the pair — so each exponent rides to the same DP8 as its mantissa.
+BFP is a 6-bit exponent sideband bolted onto the integer operands: the 256-bit A word carries **one exponent per 64-bit block** (the source rule), so a row's A exponents are just four 6-bit values. This module dispatches them exactly the way [disp_array_a](./disp_array_a.md) dispatches the mantissa blocks — a per-pair 4→1 select on the shared `sel_a`, the chosen block duplicated onto both DP8s of the pair — so each exponent rides to the same DP8 as its mantissa.
 
 Two things make it more than a straight copy of the mantissa dispatcher:
 
@@ -30,15 +30,15 @@ The idle mask fires on a single code: `localparam logic [OP_WIDTH-1:0] GATE_ZERO
 
 ## Interface
 
-| Signal              | Dir | Width   | Description                                                                 |
-| ------------------- | --- | ------- | --------------------------------------------------------------------------- |
-| `clk_i`             | in  | 1       | Clock (gated per row by the row's ICG).                                     |
-| `rst_ni`            | in  | 1       | Asynchronous active-low reset.                                              |
-| `pe_exp_a_i`        | in  | 24      | Row's A exponents — four 6-bit blocks (block `b` = `[b*6 +: 6]`).           |
-| `sel_a_i[0:7]`      | in  | 2 each  | Per-pair A-block select (4→1), from `ctrl` — the same vector `disp_array_a` uses. |
-| `ctr_l_i[0:7]`      | in  | 2 each  | Odd-DP8 (`2p+1`) gate op; ZERO (`2'b01`) masks that half's exponent.        |
-| `ctr_h_i[0:7]`      | in  | 2 each  | Even-DP8 (`2p`) gate op; ZERO masks that half's exponent.                   |
-| `exp_a_dp8_o[0:15]` | out | 6 each  | A format exponent per DP8, broadcast to the row's PEs.                      |
+| Signal              | Dir | Width  | Description                                                                       |
+| ------------------- | --- | ------ | --------------------------------------------------------------------------------- |
+| `clk_i`             | in  | 1      | Clock (gated per row by the row's ICG).                                           |
+| `rst_ni`            | in  | 1      | Asynchronous active-low reset.                                                    |
+| `pe_exp_a_i`        | in  | 24     | Row's A exponents — four 6-bit blocks (block `b` = `[b*6 +: 6]`).                 |
+| `sel_a_i[0:7]`      | in  | 2 each | Per-pair A-block select (4→1), from `ctrl` — the same vector `disp_array_a` uses. |
+| `ctr_l_i[0:7]`      | in  | 2 each | Odd-DP8 (`2p+1`) gate op; ZERO (`2'b01`) masks that half's exponent.              |
+| `ctr_h_i[0:7]`      | in  | 2 each | Even-DP8 (`2p`) gate op; ZERO masks that half's exponent.                         |
+| `exp_a_dp8_o[0:15]` | out | 6 each | A format exponent per DP8, broadcast to the row's PEs.                            |
 
 ## Instantiation
 
@@ -96,7 +96,7 @@ assign exp_a_dp8_o[2*p+0] = exp_h[0];   // even DP8
 assign exp_a_dp8_o[2*p+1] = exp_l[0];   // odd  DP8
 ```
 
-A gate fires **per half, not per pair** — mode 5 idles only the low half on pairs 0–3 and only the high half on pairs 4–7, so the two outputs of a pair gate independently. Because the idle value is all-zeros, this relies on the BFP exponent being **unsigned** (a signed encoding would need the most-negative code as the idle floor — see [BFP_imp.md](../../doc/BFP_imp.md) §10).
+A gate fires **per half, not per pair** — mode 5 idles only the low half on pairs 0–3 and only the high half on pairs 4–7, so the two outputs of a pair gate independently. Because the idle value is all-zeros, this relies on the BFP exponent being **unsigned** (a signed encoding would need the most-negative code as the idle floor).
 
 ## Notes
 

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-In the square-BFP PE the reduction is done **once**, inside [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)'s exponent-aligned tree, on the *combined* per-DP8 leaf `2·P_j = PE_j − α_j − β_j + C_j`. The α term must therefore arrive **at the leaf, un-reduced** — one `−α_j` carry-save pair per DP8, folded in at that PE's L0 node under the block's own scale. So there is no tree here to mirror [pe_array_sqr_bfp](./pe_array_sqr_bfp.md) with: the generator collapses to the 16 [dp_8_alpha_sqr](./dp_8_alpha_sqr.md) cores and nothing else. One instance per grid **row**, fanned into every PE in that row. See [BFP_imp.md](../../doc/BFP_imp.md) §9.
+In the square-BFP PE the reduction is done **once**, inside [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)'s exponent-aligned tree, on the *combined* per-DP8 leaf `2·P_j = PE_j − α_j − β_j + C_j`. The α term must therefore arrive **at the leaf, un-reduced** — one `−α_j` carry-save pair per DP8, folded in at that PE's L0 node under the block's own scale. So there is no tree here to mirror [pe_array_sqr_bfp](./pe_array_sqr_bfp.md) with: the generator collapses to the 16 [dp_8_alpha_sqr](./dp_8_alpha_sqr.md) cores and nothing else. One instance per grid **row**, fanned into every PE in that row.
 
 This is the central delta from [pe_array_alpha_sqr](./pe_array_alpha_sqr.md), which reduces its 16 `ALPHA_DP8` through the *same* linear tree as the PE. Because [pe_array_sqr_bfp](./pe_array_sqr_bfp.md) reduces the combined leaf instead, α/β and PE still pass through one identical reduction — just downstream, not here.
 
@@ -29,12 +29,12 @@ None — fixed to the PE configuration; all `localparam`s. `NUM_DP8 = 16`, `A_DP
 
 Compared with [pe_array_alpha_sqr](./pe_array_alpha_sqr.md): the tree ports (`clk_i`/`rst_ni`, `neg_i`, `sel_shift_i`, `en_level_i`, the L1–L3 taps) are **gone**, and the outputs become the 16 per-DP8 leaves.
 
-| Signal                  | Dir | Width   | Description                                                             |
-| ----------------------- | --- | ------- | ----------------------------------------------------------------------- |
-| `a_dp8_i[0:15]`         | in  | 64 each | Pre-centered A per DP8 (8 × int8), from [disp_array_a_sqr](./disp_array_a_sqr.md). |
-| `is_signed_b_i[0:15]`   | in  | 1 each  | Removed-B signedness (drives the α bias inside [dp_8_alpha_sqr](./dp_8_alpha_sqr.md)). |
-| `alpha_sum_o[0:15]`     | out | 18 each | Per-DP8 `−α` sum row (one's-complemented `dp8_sum`).                    |
-| `alpha_carry_o[0:15]`   | out | 18 each | Per-DP8 `−α` carry row (one's-complemented `dp8_carry`).               |
+| Signal                | Dir | Width   | Description                                                                            |
+| --------------------- | --- | ------- | -------------------------------------------------------------------------------------- |
+| `a_dp8_i[0:15]`       | in  | 64 each | Pre-centered A per DP8 (8 × int8), from [disp_array_a_sqr](./disp_array_a_sqr.md).     |
+| `is_signed_b_i[0:15]` | in  | 1 each  | Removed-B signedness (drives the α bias inside [dp_8_alpha_sqr](./dp_8_alpha_sqr.md)). |
+| `alpha_sum_o[0:15]`   | out | 18 each | Per-DP8 `−α` sum row (one's-complemented `dp8_sum`).                                   |
+| `alpha_carry_o[0:15]` | out | 18 each | Per-DP8 `−α` carry row (one's-complemented `dp8_carry`).                               |
 
 Combinational — no clock. The pipeline register lives in [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)'s L0, which captures the whole combined bundle.
 

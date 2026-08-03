@@ -32,7 +32,8 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 * [PE Array Alpha (Square)](modules/pe_array_alpha_sqr.md) — `pe_array_alpha_sqr`: per-row A-only correction generator — `pe_array_sqr` with `dp_8_alpha_sqr` cores (B dropped, `+is_signed_b`); same tree/widths/taps. Emits `−α` (one's-complemented taps).
 * [PE Array Beta (Square)](modules/pe_array_beta_sqr.md) — `pe_array_beta_sqr`: per-column B-only correction generator — `pe_array_sqr` with `dp_8_beta_sqr` cores (A dropped, `+is_signed_a`/`zero`); same tree/widths/taps. Emits `−β` (one's-complemented taps).
 * [PE Array (BFP)](modules/pe_array_bfp.md) — `pe_array_bfp`: the `pe_array` tree with per-lane `align_cell_bfp` aligners, a per-DP8 scale add and a running exponent max-tree; taps carry data + a 7-bit scale, transparent (= `pe_array`) when exponents match.
-* [PE Array (Square-BFP)](modules/pe_array_sqr_bfp.md) — `pe_array_sqr_bfp`: the square front-end on `pe_array_bfp`'s aligned tree — 16× `dp_8_sqr` + per-DP8 `−α`/`−β`/`C` folded at L0 (two 7-row bundles → `align_cell_bfp` → 14:2 CPR → `2·P`); taps +1-bit (19/30/38/39).
+* [PE Array (Square-BFP)](modules/pe_array_sqr_bfp.md) — `pe_array_sqr_bfp`: the square front-end on `pe_array_bfp`'s aligned tree — 16× `dp_8_sqr` + per-DP8 `−α`/`−β`/`C` folded to `2·P` by one `ext_inject_sqr_bfp` (7:2 CPR) *before* a baseline-BFP crossed tree (2-row align, 4:2 CPR); taps +1-bit (19/30/38/39).
+* [External-term Injection (Square-BFP)](modules/ext_inject_sqr_bfp.md) — `ext_inject_sqr_bfp`: the per-DP8 square reconstruction front-end — folds `{PE, −α, −β, C}` → `2·P` per block (idle-gate + `comp_n` block-negate + 7:2 CPR) at the block scale `E_j`, reverting the tree above it to baseline-BFP; one instance over all 16 DP8s.
 * [PE Array Alpha (Square-BFP)](modules/pe_array_alpha_sqr_bfp.md) — `pe_array_alpha_sqr_bfp`: the tree-less, neg-agnostic per-row `−α` generator — just 16× `dp_8_alpha_sqr` one's-complemented; combinational, its register lives in `pe_array_sqr_bfp`'s L0.
 * [PE Array Beta (Square-BFP)](modules/pe_array_beta_sqr_bfp.md) — `pe_array_beta_sqr_bfp`: the tree-less per-column `−β` generator — 16× `dp_8_beta_sqr` one's-complemented, `+zero_i`; combinational.
 * [Constant LUT (Square)](modules/const_sqr.md) — `const_sqr`: per-mode `C` for `½(PE − α − β + C)` — folds centering `C_real`, the α/β-complement `+4`, and the block-negate `−2N`; makes the accumulator fully additive.
@@ -73,20 +74,32 @@ LLM-authored design documentation for the **ai-core** project. Each page summari
 
 * [tb_top_NxN](testbenches/tb_top_NxN.md) — `N × N` grid matmul at each PE's `out_q` (distinct A/row, B/col) at full pipeline throughput (fresh operand every clock, pipeline-delayed golden), all 11 modes, streaming single-shot + accumulation (`seed + Σ` tiles) + rectangle scaling via `en_row`/`en_col`; default 2×2.
 * [tb_top_NxN_sqr](testbenches/tb_top_NxN_sqr.md) — the square grid as an equivalence oracle: baseline `tb_top_NxN` streaming bench reused verbatim (bit-exact), full-throughput streaming, all 11 modes × 3 passes, N=2, 0 mismatches.
+* [tb_top_NxN_bfp](testbenches/tb_top_NxN_bfp.md) — the BFP grid streaming, distinct A/row + B/col per PE; each mode × 3 patterns × 2 exponent experiments (equal-exp bit-exact matmul + distinct-exp exponent/mantissa window), N=2, 0 mismatches.
+* [tb_top_NxN_sqr_bfp](testbenches/tb_top_NxN_sqr_bfp.md) — the square-BFP grid as a black box computing `A·B` in BFP; verified like `tb_top_NxN_bfp` (**66/66**: equal-exp bit-exact + distinct-exp square window), N=2.
 * [tb_top_NxN_global](testbenches/tb_top_NxN_global.md) — pre-synthesis 3-way equivalence: instantiates **both** `top_NxN` and `top_NxN_sqr`, drives identical streaming inputs, and checks `golden == baseline == square` at every PE (`cmp3` flags `BAS!=GOLD`/`SQR!=GOLD`/`BAS!=SQR`); all 11 modes × 3 passes, N=2, 0 mismatches.
 * [tb_pe_array](testbenches/tb_pe_array.md) — independent `A·B` matmul over all 11 modes (packs from the Storage table, compares at the taps).
 * [tb_pe_array_sqr](testbenches/tb_pe_array_sqr.md) — `disp_sqr → pe_array_sqr` tree check: golden square-sum + block negate + crossed weighted reduction vs each read-level tap, all 11 modes, corner-biased.
 * [tb_pe_array_alpha_sqr](testbenches/tb_pe_array_alpha_sqr.md) — `disp_a_sqr → pe_array_alpha_sqr`: golden α square-sum (removed-B `−8` bias) + block negate + tree vs each tap, all 11 modes.
 * [tb_pe_array_beta_sqr](testbenches/tb_pe_array_beta_sqr.md) — `disp_b_sqr → pe_array_beta_sqr`: golden β square-sum (high `−8·au` / low fixed `−8` + idle-zero) + block negate + tree vs each tap, all 11 modes.
+* [tb_pe_array_bfp](testbenches/tb_pe_array_bfp.md) — `disp → pe_array_bfp` with the baseline `pe_array` alongside; Pass A equal-exp taps bit-identical to the integer tree, Pass B distinct-exp max-tree + truncation window, all 11 modes.
+* [tb_pe_array_sqr_bfp](testbenches/tb_pe_array_sqr_bfp.md) — `disp_sqr → pe_array_sqr_bfp` crossed tree over the reconstructed `2·P` leaves (tb supplies `−α`/`−β`/`C`); Pass A bit-exact `2·A·B`, Pass B distinct-exp window, all 11 modes.
+* [tb_pe_array_alpha_sqr_bfp](testbenches/tb_pe_array_alpha_sqr_bfp.md) — `disp_a_sqr → pe_array_alpha_sqr_bfp`: the 16 per-DP8 `−α` outputs vs a `dp_8_alpha_sqr` golden (`−ALPHA_DP8 − 2`, idle `−2`), all 11 modes.
+* [tb_pe_array_beta_sqr_bfp](testbenches/tb_pe_array_beta_sqr_bfp.md) — `disp_b_sqr → pe_array_beta_sqr_bfp`: the 16 per-DP8 `−β` outputs vs a `dp_8_beta_sqr` golden (`−BETA_DP8 − 2`, idle `−2`), all 11 modes.
 * [tb_acc_array](testbenches/tb_acc_array.md) — `disp→pe→acc` end-to-end matmul at `pe_out`, all 11 modes, single-shot and accumulating.
 * [tb_acc_array_sqr](testbenches/tb_acc_array_sqr.md) — whole square path (`disp → pe∥α∥β → const → acc`) as an equivalence oracle: `pe_out` == baseline matmul, all 11 modes × 2000, single-shot + accumulation, 0 mismatches.
+* [tb_acc_array_bfp](testbenches/tb_acc_array_bfp.md) — whole BFP path (`disp → pe_array_bfp → acc_array_bfp`) vs the integer path + matmul golden; Pass A equal-exp bit-identical (single-shot + accumulate), Pass B min-scale-seed closed form, all 11 modes.
+* [tb_acc_array_sqr_bfp](testbenches/tb_acc_array_sqr_bfp.md) — whole square-BFP path vs the integer square path + matmul golden (three agree); Pass A `b_pe_out === pe_out === X`, Pass B in-loop align + `½` closed form, all 11 modes.
 * [tb_disp_array](testbenches/tb_disp_array.md) — every DP8 operand from `disp_array_a`/`disp_array_b` vs a golden router model, all 11 modes.
 * [tb_disp_array_sqr](testbenches/tb_disp_array_sqr.md) — square dispatchers vs a golden route + center + idle-zero model, all 11 modes.
+* [tb_disp_array_exp_bfp](testbenches/tb_disp_array_exp_bfp.md) — the BFP exponent dispatchers vs a golden router (block-select + H/L split + per-half ZERO-only mask); modes 10/11 negate-never-touches-scale, 5/6 idle-half mask, + a random sweep.
+* [tb_disp_array_exp_sqr_bfp](testbenches/tb_disp_array_exp_sqr_bfp.md) — the square-BFP exponent dispatchers vs a golden router with the per-DP8 `zero_i` mask; modes 5/6 partly-idle pair, + a random sweep.
 * [tb_dp_8](testbenches/tb_dp_8.md) — resolve + sign-consistency of the carry-save dot product, all signedness combos.
 * [tb_dp_8_sqr](testbenches/tb_dp_8_sqr.md) — carry-save square-sum vs a golden `Σ 16·(AH+b)²+(AL+b)²`, pre-centered signed nibbles, corner-biased.
 * [tb_booth_r4](testbenches/tb_booth_r4.md) — weighted partial-product sum equals `a·b`, all signedness combos.
 * [tb_cpr_w_n](testbenches/tb_cpr_w_n.md) — carry-save output resolves to the input sum.
 * [tb_cpr_c_n](testbenches/tb_cpr_c_n.md) — carry-save output resolves to the input sum.
+* [tb_align_cell_bfp](testbenches/tb_align_cell_bfp.md) — the two-bundle align cell (signed H/L pair + chain + unsigned standalone) vs a flat value-level golden: shift-to-max, winner pass-through, chained fusion, `exp_o = max`.
+* [tb_align_bfp](testbenches/tb_align_bfp.md) — the multi-exponent aligner tree (signed + unsigned) vs the single flat shift: all-equal transparent, one-hot deep-flush, corner-biased deltas.
 
 ## Concepts
 
@@ -98,9 +111,9 @@ _None yet._
 
 ## Experiments
 
-* [Synthesis Area](experiments/syn_area.md) — `top_NxN` vs `top_NxN_sqr` cell area at 8×8 and 16×16, measured on the complete synthesized grids (per-component pass A, blackbox-linked pass B). Square is −1.53 % at 8×8 and −7.26 % at 16×16; 8×8 is the crossover, the asymptote is 0.8684.
-* [Synthesis Power](experiments/syn_pwr.md) — `top_NxN` vs `top_NxN_sqr` VCD-annotated dynamic power at 100 vectors/mode, measured on the complete 2×2 grids and assembled per component for the larger sizes (gate-level simulation of an 8×8 does not fit in memory). Square is +37.06 % at 2×2, −3.50 % at 8×8 and −11.20 % at 16×16; the power crossover is N = 6.48, just before the area crossover at N = 7.05, and the asymptote is 0.8080.
-* [Per-Mode Synthesis Power](experiments/syn_mode_pwr.md) — the same comparison measured once per operating mode (100 vectors each) instead of averaged over all 11. The square's 8×8 margin ranges from **−16.94 % (mode 6) to +8.01 % (mode 1)** and the crossover from **N = 3.25 to N = 17.16**: both the N² per-tile saving and the N α/β overhead scale with the mode, and their ratio decides the winner. Square wins 9 of 11 modes at 8×8 (loses 1 and 3), 10 of 11 at 16×16 (loses 1).
+* [Synthesis Area](experiments/syn_area.md) — the four grids' cell area at 8×8 and 16×16, each square measured against **its own baseline** (per-component pass A, blackbox-linked pass B). Square is −0.9 % / −6.9 % (crossover N ≈ 7.5); **Square-BFP reaches parity with Baseline-BFP** (+2.6 % at 8×8, −0.0 % at 16×16, crossover N ≈ 16) — the payoff of the per-DP8 7:2 reconstruction (which brings `pe_sqr_bfp` below `pe_bfp`) plus the tree-less α/β generators. The BFP sideband itself costs ~40 % area.
+* [Synthesis Power](experiments/syn_pwr.md) — the four grids' VCD-annotated dynamic power at 100 vectors/mode, measured on the complete 2×2 grids and assembled per component for the larger sizes (gate-level simulation of an 8×8 does not fit in memory). Square is −8.9 % / −16.1 % (crossover N ≈ 4.9); Square-BFP −2.6 % / −6.4 % (crossover N ≈ 6.0). The BFP sideband costs ~34 % power; both power crossovers land earlier than their area counterparts.
+* [Per-Mode Synthesis Power](experiments/syn_mode_pwr.md) — the same 4-variant comparison measured once per operating mode instead of averaged over all 11. The square's 8×8 margin runs **−22.4 % (mode 6) to +1.4 % (mode 1)**, the square-BFP's **−14.1 % to +4.8 %**; both the N² per-tile saving and the N α/β overhead scale with the mode, so the crossover spans **N ≈ 2.2 to 20**. Square wins 10/11 at 8×8 and 11/11 at 16×16; Square-BFP wins 8/11 at 8×8 (loses 1, 3, 7) and 10/11 at 16×16 — both losing mode 1.
 
 ## References
 

@@ -1,6 +1,6 @@
 # PE Grid (Square-BFP)
 
-`top_NxN_sqr_bfp` — the **square-BFP** N × N grid of Processing Elements: the [top_NxN_sqr](./top_NxN_sqr.md) analogue with the BFP exponent sideband, or [top_NxN_bfp](./top_NxN_bfp.md) with the square datapath. It tiles N² [pe_sqr_bfp](../modules/pe_sqr_bfp.md) cores, sharing operand A (mantissa + exponent) along each row and B along each column, so PE[r][c] evaluates `A[r] · B[c]` in block floating point via the square identity. **Same external interface and behaviour as `top_NxN_bfp`** — all the square-BFP machinery is internal (see [BFP_imp.md](../../doc/BFP_imp.md) §9).
+`top_NxN_sqr_bfp` — the **square-BFP** N × N grid of Processing Elements: the [top_NxN_sqr](./top_NxN_sqr.md) analogue with the BFP exponent sideband, or [top_NxN_bfp](./top_NxN_bfp.md) with the square datapath. It tiles N² [pe_sqr_bfp](../modules/pe_sqr_bfp.md) cores, sharing operand A (mantissa + exponent) along each row and B along each column, so PE[r][c] evaluates `A[r] · B[c]` in block floating point via the square identity. **Same external interface and behaviour as `top_NxN_bfp`** — all the square-BFP machinery is internal.
 
 ## Purpose
 

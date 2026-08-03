@@ -1,6 +1,6 @@
 # Accumulator Array (Square-BFP)
 
-`acc_array_sqr_bfp` — the final stage of the **square-BFP** PE. It is [acc_array_bfp](./acc_array_bfp.md) (per-lane [align_cell_bfp](./align_cell_bfp.md), running-max exponent register, seed ≡ feedback format, lane-fusion align chain, `L→H` adder carry) **plus** the square's `½`, borrowed verbatim from [acc_array_sqr](./acc_array_sqr.md): a `<<1` on the acc row entering the fold and an arithmetic `>>1` on the resolved sum. Because [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)'s tree already delivers `2·P` as one tap pair, there is a **single 2-row tap set** and **no `C`/`c_neg` ports** — the `PE − α − β + C` combine is folded per-DP8 at L0 upstream (see [BFP_imp.md](../../doc/BFP_imp.md) §9).
+`acc_array_sqr_bfp` — the final stage of the **square-BFP** PE. It is [acc_array_bfp](./acc_array_bfp.md) (per-lane [align_cell_bfp](./align_cell_bfp.md), running-max exponent register, seed ≡ feedback format, lane-fusion align chain, `L→H` adder carry) **plus** the square's `½`, borrowed verbatim from [acc_array_sqr](./acc_array_sqr.md): a `<<1` on the acc row entering the fold and an arithmetic `>>1` on the resolved sum. Because [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)'s tree already delivers `2·P` as one tap pair, there is a **single 2-row tap set** and **no `C`/`c_neg` ports** — the `PE − α − β + C` combine is folded per-DP8 at L0 upstream.
 
 ## Purpose
 
@@ -46,21 +46,21 @@ None — fixed to the PE configuration; the key `localparam`s:
 
 ## Interface
 
-| Signal                             | Dir | Width   | Description                                                      |
-| ---------------------------------- | --- | ------- | --------------------------------------------------------------- |
-| `clk_i` / `rst_ni`                 | in  | 1       | Clock / async active-low reset.                                 |
-| `l0_sum_i` / `l0_carry_i[0:7]`     | in  | 19 each | L0 tap pairs (`2·P`), from `pe_array_sqr_bfp`.                  |
-| `l1_sum_i` / `l1_carry_i[0:3]`     | in  | 30 each | L1 tap pairs.                                                    |
-| `l2_sum_i` / `l2_carry_i[0:1]`     | in  | 38 each | L2 tap pairs.                                                    |
-| `l3_sum_i` / `l3_carry_i`          | in  | 39      | L3 tap pair (scalar).                                            |
-| `l0_exp_i[0:7]` … `l3_exp_i`       | in  | 7 each  | Per-level tap exponents (product scale), from the tree.         |
-| `acc_i[0:7]`                       | in  | 20 each | External seed, **native units** (the `<<1` doubles it inside).  |
-| `acc_exp_i[0:7]`                   | in  | 7 each  | Seed exponent — same 7-bit product scale as the feedback.       |
-| `sel_out_i`                        | in  | 2       | Tap-level select (shared): which tree level all lanes read.     |
-| `sel_acc_i`                        | in  | 1       | Acc mux (shared): `0` = `acc_i`, `1` = register feedback.       |
-| `prop_carry_i`                     | in  | 1       | Lane-fusion enable (shared): align chain + adder carry.         |
-| `pe_out_o[0:7]`                    | out | 20 each | Per-lane running result `P + acc`, **native units**.            |
-| `pe_exp_o[0:7]`                    | out | 7 each  | Per-lane running BFP scale (the max held by the register).      |
+| Signal                         | Dir | Width   | Description                                                    |
+| ------------------------------ | --- | ------- | -------------------------------------------------------------- |
+| `clk_i` / `rst_ni`             | in  | 1       | Clock / async active-low reset.                                |
+| `l0_sum_i` / `l0_carry_i[0:7]` | in  | 19 each | L0 tap pairs (`2·P`), from `pe_array_sqr_bfp`.                 |
+| `l1_sum_i` / `l1_carry_i[0:3]` | in  | 30 each | L1 tap pairs.                                                  |
+| `l2_sum_i` / `l2_carry_i[0:1]` | in  | 38 each | L2 tap pairs.                                                  |
+| `l3_sum_i` / `l3_carry_i`      | in  | 39      | L3 tap pair (scalar).                                          |
+| `l0_exp_i[0:7]` … `l3_exp_i`   | in  | 7 each  | Per-level tap exponents (product scale), from the tree.        |
+| `acc_i[0:7]`                   | in  | 20 each | External seed, **native units** (the `<<1` doubles it inside). |
+| `acc_exp_i[0:7]`               | in  | 7 each  | Seed exponent — same 7-bit product scale as the feedback.      |
+| `sel_out_i`                    | in  | 2       | Tap-level select (shared): which tree level all lanes read.    |
+| `sel_acc_i`                    | in  | 1       | Acc mux (shared): `0` = `acc_i`, `1` = register feedback.      |
+| `prop_carry_i`                 | in  | 1       | Lane-fusion enable (shared): align chain + adder carry.        |
+| `pe_out_o[0:7]`                | out | 20 each | Per-lane running result `P + acc`, **native units**.           |
+| `pe_exp_o[0:7]`                | out | 7 each  | Per-lane running BFP scale (the max held by the register).     |
 
 ## Instantiation
 

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-[const_sqr](./const_sqr.md) folds every square-reconstruction deferral into **one** tree-summed constant that the accumulator adds, because the baseline square combines `PE − α − β + C` after the reduction, once per output lane. The BFP square is different: it combines `PE_j − α_j − β_j + C_j` **per DP8, at L0**, under each block's own scale `E_j` (see [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)). So the constant is needed **per DP8, not per output lane** — this LUT supplies all 16 at once. See [BFP_imp.md](../../doc/BFP_imp.md) §9.
+[const_sqr](./const_sqr.md) folds every square-reconstruction deferral into **one** tree-summed constant that the accumulator adds, because the baseline square combines `PE − α − β + C` after the reduction, once per output lane. The BFP square is different: it combines `PE_j − α_j − β_j + C_j` **per DP8, at L0**, under each block's own scale `E_j` (see [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)). So the constant is needed **per DP8, not per output lane** — this LUT supplies all 16 at once.
 
 Each DP8's constant is the signed value its L0 node **adds**, and it folds three deferrals:
 
@@ -36,10 +36,10 @@ The `+4` (`= C_cent 0 + 4`) is never a real active value — `nAL ≥ 1` forces 
 
 ## Interface
 
-| Signal          | Dir | Width   | Description                                                          |
-| --------------- | --- | ------- | ------------------------------------------------------------------- |
-| `mode_i`        | in  | 4       | Mode address.                                                       |
-| `const_dp8_o[0:15]` | out | 18 each | Per-DP8 signed constant `C_j` (holds `−10 238 … +34 820`).      |
+| Signal              | Dir | Width   | Description                                                |
+| ------------------- | --- | ------- | ---------------------------------------------------------- |
+| `mode_i`            | in  | 4       | Mode address.                                              |
+| `const_dp8_o[0:15]` | out | 18 each | Per-DP8 signed constant `C_j` (holds `−10 238 … +34 820`). |
 
 ## Parameters
 
@@ -49,6 +49,6 @@ None — fixed to the mode-constant LUT (the mode addresses and the per-mode con
 
 - **No register, no idle-gate** — unlike [const_sqr](./const_sqr.md), this LUT is purely combinational. The grid registers the mode **once** ahead of the LUT so the constant meets the singly-registered dispatched operands at the L0 combine, where [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)'s L0 register captures the whole bundle — **one register fewer** than [const_sqr](./const_sqr.md), which must reach the later accumulate stage. And the idle constants are masked by [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)'s `zero_i`, so no idle-gate is needed here.
 - **Verification** — there is no standalone testbench; `const_sqr_bfp` was validated inside the top-level `tb_top_NxN_sqr_bfp` (gate 6), and its formula was byte-for-byte previewed by the tb-computed constant in `tb_acc_array_sqr_bfp` (gate 5) before the module was built.
-- Consumer: [pe_array_sqr_bfp](./pe_array_sqr_bfp.md) — row 6 of each L0 bundle (hi = `const_dp8_o[CX0]`, lo = `const_dp8_o[CX1]`), added into the 14:2 combine and **not** complemented by the block-negate (the negated blocks take the pre-negated `2 − C_cent` from this LUT instead).
+- Consumer: [pe_array_sqr_bfp](./pe_array_sqr_bfp.md) via [ext_inject_sqr_bfp](./ext_inject_sqr_bfp.md) — the 7th input (row 6) of each DP8's per-block **7:2** combine, added **un-negated** and bypassing the `comp_n` block-negate (the negated blocks take the pre-negated `2 − C_cent` from this LUT instead).
 
 Source: [const_sqr_bfp.sv](../../rtl/const_sqr_bfp.sv)

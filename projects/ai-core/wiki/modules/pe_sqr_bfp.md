@@ -25,21 +25,21 @@ reg_n #(.WIDTH(PE_WIDTH), .SIZE(NUM_LANE)) reg_acc2_i (.d_i(acc_q1), .q_o(acc_q2
 
 ## Interface
 
-| Signal                                    | Dir | Width   | Description                                                     |
-| ----------------------------------------- | --- | ------- | -------------------------------------------------------------- |
-| `clk_i` / `rst_ni`                        | in  | 1       | Clock (externally gated) / async reset.                        |
-| `a_dp8_i` / `b_dp8_i`                      | in  | 64 / 32 | Dispatched mantissa operands (16 DP8s), from `disp_array_*_sqr`. |
-| `exp_a_dp8_i` / `exp_b_dp8_i`             | in  | 6 ×16   | Dispatched per-DP8 exponents, from `disp_array_exp_*_sqr_bfp`.  |
-| `alpha_sum_i` / `alpha_carry_i`           | in  | 18 ×16  | Per-DP8 `−α` carry-save pairs, from `pe_array_alpha_sqr_bfp` (row). |
-| `beta_sum_i` / `beta_carry_i`             | in  | 18 ×16  | Per-DP8 `−β` carry-save pairs, from `pe_array_beta_sqr_bfp` (col).  |
-| `const_dp8_i`                             | in  | 18 ×16  | Per-DP8 constant `C_j`, from `const_sqr_bfp`.                   |
-| `en_i`                                     | in  | 1       | Operand + tap + exp isolation mask (and external clock-gate enable). |
-| `en_level_i`                              | in  | 3       | Tree operand-isolation enables — masks levels below the tap.   |
-| `neg_i` / `sel_shift_i`                    | in  | 6 / 3   | `pe_array_sqr_bfp` controls (block-negate, tree shifts).       |
-| `zero_i`                                   | in  | 1 ×16   | Per-DP8 idle clean-zero (gates α/β/const of an idle DP8).      |
-| `acc_i` / `acc_exp_i`                      | in  | 20×8 / 7×8 | Per-PE external accumulator seed and its scale.             |
-| `sel_out_i`/`sel_acc_i`/`prop_carry_i`    | in  | 2/1/1   | acc-stage controls.                                            |
-| `out_o` / `out_exp_o`                      | out | 20×8 / 7×8 | Per-lane results (`pe_out`) and running BFP scale.          |
+| Signal                                 | Dir | Width      | Description                                                          |
+| -------------------------------------- | --- | ---------- | -------------------------------------------------------------------- |
+| `clk_i` / `rst_ni`                     | in  | 1          | Clock (externally gated) / async reset.                              |
+| `a_dp8_i` / `b_dp8_i`                  | in  | 64 / 32    | Dispatched mantissa operands (16 DP8s), from `disp_array_*_sqr`.     |
+| `exp_a_dp8_i` / `exp_b_dp8_i`          | in  | 6 ×16      | Dispatched per-DP8 exponents, from `disp_array_exp_*_sqr_bfp`.       |
+| `alpha_sum_i` / `alpha_carry_i`        | in  | 18 ×16     | Per-DP8 `−α` carry-save pairs, from `pe_array_alpha_sqr_bfp` (row).  |
+| `beta_sum_i` / `beta_carry_i`          | in  | 18 ×16     | Per-DP8 `−β` carry-save pairs, from `pe_array_beta_sqr_bfp` (col).   |
+| `const_dp8_i`                          | in  | 18 ×16     | Per-DP8 constant `C_j`, from `const_sqr_bfp`.                        |
+| `en_i`                                 | in  | 1          | Operand + tap + exp isolation mask (and external clock-gate enable). |
+| `en_level_i`                           | in  | 3          | Tree operand-isolation enables — masks levels below the tap.         |
+| `neg_i` / `sel_shift_i`                | in  | 6 / 3      | `pe_array_sqr_bfp` controls (block-negate, tree shifts).             |
+| `zero_i`                               | in  | 1 ×16      | Per-DP8 idle clean-zero (gates α/β/const of an idle DP8).            |
+| `acc_i` / `acc_exp_i`                  | in  | 20×8 / 7×8 | Per-PE external accumulator seed and its scale.                      |
+| `sel_out_i`/`sel_acc_i`/`prop_carry_i` | in  | 2/1/1      | acc-stage controls.                                                  |
+| `out_o` / `out_exp_o`                  | out | 20×8 / 7×8 | Per-lane results (`pe_out`) and running BFP scale.                   |
 
 ## Instantiation
 

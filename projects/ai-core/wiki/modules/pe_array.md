@@ -143,12 +143,12 @@ assign lo_in[1] = dp8_carry[CX1];
 
 `CX0`/`CX1` step by 2, so a node mixes DP8s from two different dispatch 2×DP8 pairs (equivalently `l0[2g] = dp8[4g] + dp8[4g+2]`, `l0[2g+1] = dp8[4g+1] + dp8[4g+3]`):
 
-| L0 node | DP8s combined |  | L0 node | DP8s combined   |
+| L0 node | DP8s combined |     | L0 node | DP8s combined   |
 | ------- | ------------- | --- | ------- | --------------- |
-| `l0[0]` | dp8 0 + dp8 2 |  | `l0[4]` | dp8 8 + dp8 10  |
-| `l0[1]` | dp8 1 + dp8 3 |  | `l0[5]` | dp8 9 + dp8 11  |
-| `l0[2]` | dp8 4 + dp8 6 |  | `l0[6]` | dp8 12 + dp8 14 |
-| `l0[3]` | dp8 5 + dp8 7 |  | `l0[7]` | dp8 13 + dp8 15 |
+| `l0[0]` | dp8 0 + dp8 2 |     | `l0[4]` | dp8 8 + dp8 10  |
+| `l0[1]` | dp8 1 + dp8 3 |     | `l0[5]` | dp8 9 + dp8 11  |
+| `l0[2]` | dp8 4 + dp8 6 |     | `l0[6]` | dp8 12 + dp8 14 |
+| `l0[3]` | dp8 5 + dp8 7 |     | `l0[7]` | dp8 13 + dp8 15 |
 
 The lower DP8 index (`CX0`) is the higher-weight field, so it is the shifted operand. Wire this crossed, not adjacent — it is the cross-boundary connection between dispatch pairs.
 

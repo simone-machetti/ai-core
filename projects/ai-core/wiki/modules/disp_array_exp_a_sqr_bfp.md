@@ -16,13 +16,13 @@ None — fixed to the PE configuration; all `localparam`s. `NUM_BLK = 4` (A bloc
 
 ## Interface
 
-| Signal              | Dir | Width   | Description                                                                          |
-| ------------------- | --- | ------- | ------------------------------------------------------------------------------------ |
-| `clk_i` / `rst_ni`  | in  | 1       | Clock / async active-low reset.                                                     |
-| `pe_exp_a_i`        | in  | 24      | Row A exponents — four 6-bit per-block exponents.                                    |
-| `sel_a_i[0:7]`      | in  | 2 each  | Per-pair A-block select (4→1); the **same** select the mantissa dispatcher uses.    |
-| `zero_i[0:15]`      | in  | 1 each  | **NEW** — per-DP8 idle zero (replaces the baseline `ctr_h_i`/`ctr_l_i` ZERO-decode). |
-| `exp_a_dp8_o[0:15]` | out | 6 each  | Per-DP8 A exponent, idle-gated, broadcast to the row's PEs.                          |
+| Signal              | Dir | Width  | Description                                                                          |
+| ------------------- | --- | ------ | ------------------------------------------------------------------------------------ |
+| `clk_i` / `rst_ni`  | in  | 1      | Clock / async active-low reset.                                                      |
+| `pe_exp_a_i`        | in  | 24     | Row A exponents — four 6-bit per-block exponents.                                    |
+| `sel_a_i[0:7]`      | in  | 2 each | Per-pair A-block select (4→1); the **same** select the mantissa dispatcher uses.     |
+| `zero_i[0:15]`      | in  | 1 each | **NEW** — per-DP8 idle zero (replaces the baseline `ctr_h_i`/`ctr_l_i` ZERO-decode). |
+| `exp_a_dp8_o[0:15]` | out | 6 each | Per-DP8 A exponent, idle-gated, broadcast to the row's PEs.                          |
 
 ## Instantiation
 

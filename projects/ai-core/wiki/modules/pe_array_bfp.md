@@ -4,7 +4,7 @@
 
 ## Purpose
 
-BFP is a pure exponent sideband on top of the integer datapath ([BFP_imp.md](../../doc/BFP_imp.md) §8). The mantissa tree is unchanged — same 16 `dp_8` (signed per DP8, as the baseline), same crossed L0 pairing, same `shift_n`/`ext_n`/`cpr_w_n` node shape, same widths, same single L0 register stage, same tap slicing. This page covers only the two deltas; see [pe_array](./pe_array.md) for the shared tree anatomy.
+BFP is a pure exponent sideband on top of the integer datapath. The mantissa tree is unchanged — same 16 `dp_8` (signed per DP8, as the baseline), same crossed L0 pairing, same `shift_n`/`ext_n`/`cpr_w_n` node shape, same widths, same single L0 register stage, same tap slicing. This page covers only the two deltas; see [pe_array](./pe_array.md) for the shared tree anatomy.
 
 1. **In-tree alignment.** One [align_cell_bfp](./align_cell_bfp.md) sits before the CPR 4:2 of every **L0, L2 and L3** node (8 + 2 + 1 = 11 sites), placed *after* the radix `shift_n`/`ext_n` on the width-matched CPR operands. It brings the node's two carry-save addends to their common scale `max(e_left, e_right)`, the smaller-exponent side arithmetic-right-shifted (truncating), before they compress. **L1 never aligns** — see [Why L1 only forwards a max](#why-l1-only-forwards-a-max).
 2. **The exponent path.** `exp_a_dp8_i` / `exp_b_dp8_i` bring the dispatched per-DP8 6-bit format exponents; one [add_n](./add_n.md) per DP8 forms the product scale `e_A + e_B`, and a running max tree carries a scale alongside every tap.
@@ -15,15 +15,15 @@ Because an aligned addend is only a **right-shifted (smaller)** version of its i
 
 None — fixed to the PE configuration; the shape is baked in as `localparam`s. Identical to [pe_array](./pe_array.md) plus the two exponent widths:
 
-| Localparam                    | Value             | Meaning                                                        |
-| ----------------------------- | ----------------- | -------------------------------------------------------------- |
-| `NUM_DP8`                     | 16                | `dp_8` cores driving the tree.                                |
-| `NUM_L0`/`NUM_L1`/`NUM_L2`    | 8 / 4 / 2         | node count at L0/L1/L2 (L3 is a single node).                  |
-| `DP8_WIDTH`                   | 20                | each `dp_8` carry-save row width (sign-consistent).           |
-| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8         | per-level left-shift amount (L0/L1/L2; L3 has no shift).       |
-| `L0_WIDTH`…`L3_WIDTH`         | 28 / 32 / 40 / 40 | internal node width at each level (what feeds the next level). |
-| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18 / 29 / 37 / 38 | tap width exported to the accumulator at each level.           |
-| `EXP_IN_WIDTH`                | 6                 | **NEW** — dispatched per-DP8 format-exponent width.           |
+| Localparam                    | Value             | Meaning                                                                 |
+| ----------------------------- | ----------------- | ----------------------------------------------------------------------- |
+| `NUM_DP8`                     | 16                | `dp_8` cores driving the tree.                                          |
+| `NUM_L0`/`NUM_L1`/`NUM_L2`    | 8 / 4 / 2         | node count at L0/L1/L2 (L3 is a single node).                           |
+| `DP8_WIDTH`                   | 20                | each `dp_8` carry-save row width (sign-consistent).                     |
+| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8         | per-level left-shift amount (L0/L1/L2; L3 has no shift).                |
+| `L0_WIDTH`…`L3_WIDTH`         | 28 / 32 / 40 / 40 | internal node width at each level (what feeds the next level).          |
+| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18 / 29 / 37 / 38 | tap width exported to the accumulator at each level.                    |
+| `EXP_IN_WIDTH`                | 6                 | **NEW** — dispatched per-DP8 format-exponent width.                     |
 | `EXP_WIDTH`                   | 7                 | **NEW** — product-domain scale width (`e_A + e_B`, `6 + 6 → 7`, exact). |
 
 Everything runs signed (`IS_SIGNED = 1'b1` on every `shift_n`, `ext_n`, `align_cell_bfp`, `cpr_w_n`) and every `cpr_w_n` keeps `EXT = 0` — the mantissa widths and guard margins are byte-for-byte the baseline's.

@@ -22,12 +22,12 @@ Derived `localparam`s: `TOTAL = NUM_EXP · SIZE` (total rows out) and `LEVELS = 
 
 ## Interface
 
-| Signal  | Dir | Width                          | Description                                                       |
-| ------- | --- | ------------------------------ | ----------------------------------------------------------------- |
-| `in_i`  | in  | `NUM_EXP` × `SIZE` × `WIDTH`   | Input bundles — array `[0:NUM_EXP-1][0:SIZE-1]`.                  |
-| `exp_i` | in  | `NUM_EXP` × `EXP_WIDTH`        | Per-bundle shared exponents — array `[0:NUM_EXP-1]`.             |
-| `out_o` | out | `TOTAL` × `WIDTH`              | Aligned rows, flat, input order — `[0:TOTAL-1]`.                 |
-| `exp_o` | out | `EXP_WIDTH`                    | Common scale `max` of all `exp_i`.                               |
+| Signal  | Dir | Width                        | Description                                          |
+| ------- | --- | ---------------------------- | ---------------------------------------------------- |
+| `in_i`  | in  | `NUM_EXP` × `SIZE` × `WIDTH` | Input bundles — array `[0:NUM_EXP-1][0:SIZE-1]`.     |
+| `exp_i` | in  | `NUM_EXP` × `EXP_WIDTH`      | Per-bundle shared exponents — array `[0:NUM_EXP-1]`. |
+| `out_o` | out | `TOTAL` × `WIDTH`            | Aligned rows, flat, input order — `[0:TOTAL-1]`.     |
+| `exp_o` | out | `EXP_WIDTH`                  | Common scale `max` of all `exp_i`.                   |
 
 The cells' lane-fusion chains are **tied off inside** `align_bfp` (`chain_en_i = 0`); a design needing fused wide lanes instantiates [align_cell_bfp](./align_cell_bfp.md) directly instead. As with the cell, the parent must present the **minimum** exponent on any idle/zeroed bundle so it never wins the `max`.
 
@@ -90,7 +90,7 @@ For the default `NUM_EXP = 8` this is a clean 3-level binary tree — 8 → 4 �
 
 ## Notes
 
-- **Equal exponents ⇒ transparent.** Every cell sees a zero difference, shifts by `0`, and passes both bundles through bit-identically — so integer modes (alignment amount `0` everywhere) run bit-exact through the same tree, the global invariant of the BFP datapath ([BFP_imp.md](../../doc/BFP_imp.md) §8).
+- **Equal exponents ⇒ transparent.** Every cell sees a zero difference, shifts by `0`, and passes both bundles through bit-identically — so integer modes (alignment amount `0` everywhere) run bit-exact through the same tree, the global invariant of the BFP datapath.
 - **Widths are unchanged.** An aligned row is only a right-shifted (smaller) version of its integer worst case, so `WIDTH` stays the integer node width; the tree adds no guard bits.
 - **Where it is used.** The per-merge aligners of the BFP reduction tree ([pe_array_bfp](./pe_array_bfp.md), and the square variant [pe_array_sqr_bfp](./pe_array_sqr_bfp.md)) and the per-lane aligners of [acc_array_bfp](./acc_array_bfp.md) are all built from the same [align_cell_bfp](./align_cell_bfp.md) cell; `align_bfp` is the standalone multi-exponent form of that cell used where a whole exponent set must collapse to one scale at once.
 

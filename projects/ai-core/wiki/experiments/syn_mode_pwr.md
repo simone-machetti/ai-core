@@ -1,108 +1,111 @@
-# Per-Mode Synthesis Power — Baseline vs Square
+# Per-Mode Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP
 
-VCD-annotated dynamic power of [top_NxN](../architectures/top_NxN.md) (baseline) against [top_NxN_sqr](../architectures/top_NxN_sqr.md) (square), measured **once per operating mode** on the complete 2×2 grids and assembled per component for 8×8 and 16×16.
-
+VCD-annotated dynamic power of the four PE-grid variants measured **once per operating mode** on the complete 2×2 grids and assembled per component for 8×8 and 16×16.
 
 ## Purpose
 
-[Synthesis Power](syn_pwr.md) drove all 11 modes into a single VCD and reported one averaged figure. That average is the wrong summary if the modes differ, and this experiment shows they differ enormously: the square's margin at 8×8 ranges from **−16.9 % (mode 6) to +8.0 % (mode 1)** across modes, so a single number both understates the win and hides the two modes where the square is a net loss at the target grid size.
+[Synthesis Power](syn_pwr.md) drove all 11 modes into a single VCD and reported one averaged figure per variant. That average hides an enormous per-mode spread: the square's 8×8 margin runs from **−22.4 % (mode 6) to +1.4 % (mode 1)**, and the square-BFP's from **−14.1 % (mode 6) to +4.8 % (mode 1)** — so a single number both understates the win and hides the modes where the square is a net loss at the target grid size. This experiment measures each mode on its own.
 
 ## Method
 
-As [Synthesis Power](syn_pwr.md) — per-component synthesis, blackbox-linked 2×2 grids, gate-level simulation, OpenSTA power with the resulting activity annotated — but pass C is run once per mode, with 100 random operand sets in that mode alone rather than 10 in each of 11.
+As [Synthesis Power](syn_pwr.md) — per-component synthesis, blackbox-linked 2×2 grids, gate-level simulation, OpenSTA power with the resulting activity annotated — but pass C is run once per mode, 100 random operand sets in that mode alone. Four variants × 11 modes = **44 gate-level runs**, each reusing its variant's one compiled binary (`MODE_SEL` / `NUM_STREAM` are read from `+mode` / `+vectors` at run time), because the Verilator build takes ~10 min per variant while a simulation takes ~2 s — compiling per mode would turn the sweep into hours.
 
 ```
-# one gate-level run per mode, reusing one compiled binary
-simv +mode=<m> +vectors=100
+simv +mode=<m> +vectors=100          # one gate-level run per mode, per variant
 
-make post-syn-dpa PROJECT=ai-core TOP_LEVEL=top_NxN OUT_DIR=dpa_mode_2x2_m<m> \
-    NETLIST_DIR=top_2x2 VCD_DIR=pwr_mode_2x2_m<m> TB=tb_top_NxN_pwr CLK_PERIOD_NS=10 \
-    BLACKBOX_MODULES="pe ctrl disp_array_a disp_array_b icg"
+make post-syn-dpa PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp \
+    OUT_DIR=top_2x2_sqr_bfp_m<m>_post_syn_dpa NETLIST_DIR=top_2x2_sqr_bfp_syn \
+    VCD_DIR=top_2x2_sqr_bfp_m<m>_post_syn_sim TB=tb_top_NxN_sqr_bfp_pwr CLK_PERIOD_NS=10 \
+    BLACKBOX_MODULES="pe_sqr_bfp ctrl_sqr …"
 ```
 
-`MODE_SEL` and `NUM_STREAM` are read from `+mode` / `+vectors` at run time, so all 22 runs reuse two compiled binaries. This is not a convenience — the Verilator build takes ~10 min per variant while the simulation itself takes ~2 s, so compiling per mode would turn a 35 min sweep into a 4 h one.
-
-Clock is 100 MHz on both sides, and the benches now derive their period from the flow's `CLK_PERIOD_NS` instead of hardcoding it, so the simulated clock and the SDC clock cannot drift apart. Dumping starts after reset deassertion, so the reset transient is not charged to the per-mode average. Annotation is complete on every run — 679 188 pins baseline, 885 044 square, 0 unannotated. The netlist carries the tree operand isolation of [pe_array § Operand isolation](../modules/pe_array.md#operand-isolation-en_level).
+Clock is 100 MHz on all sides (derived from `CLK_PERIOD_NS`, so simulated and SDC clocks cannot drift); dumping starts after reset deassertion. Annotation is complete on every run (0 unannotated pins). Only 2×2 is measured — gate-level simulation memory grows as N² — so the 8×8 / 16×16 columns are assembled per component and are **projections, not measurements**.
 
 All commands are in [run_syn_mode_pwr.sh](../../scripts/run_syn_mode_pwr.sh). Numbers land in `doc/data/res_syn_mode_pwr.xlsx` and `doc/charts/hist_syn_mode_pwr_{8x8,16x16}.png`.
 
-Only 2×2 is measured, for the reason given in [Synthesis Power](syn_pwr.md): gate-level simulation memory grows as N². The 8×8 and 16×16 columns are assembled from per-component unit power and are **projections, not measurements**.
-
 ## Results
 
-Measured 2×2 and assembled grids, mW:
+Per-mode margin of each square variant against **its own baseline** (assembled totals; negative = the square wins):
 
-| Mode | 2×2 bas | 2×2 sqr | 8×8 bas | 8×8 sqr | 8×8      | 16×16 bas | 16×16 sqr | 16×16    |
-| ---- | ------- | ------- | ------- | ------- | -------- | --------- | --------- | -------- |
-| 1    | 2.7973  | 4.1126  | 39.666  | 42.844  | +8.01 %  | 155.273   | 156.081   | +0.52 %  |
-| 2    | 3.2136  | 4.2929  | 46.321  | 43.634  | −5.80 %  | 181.894   | 157.851   | −13.22 % |
-| 3    | 3.1598  | 4.5485  | 46.057  | 46.837  | +1.70 %  | 181.238   | 170.081   | −6.16 %  |
-| 5    | 1.8619  | 2.3246  | 24.906  | 23.352  | −6.24 %  | 96.377    | 84.199    | −12.64 % |
-| 6    | 1.9965  | 2.2969  | 27.040  | 22.460  | −16.94 % | 104.900   | 80.334    | −23.42 % |
-| 7    | 3.1853  | 4.5481  | 45.846  | 45.623  | −0.49 %  | 179.985   | 164.420   | −8.65 %  |
-| 8    | 3.3289  | 4.5675  | 48.161  | 44.991  | −6.58 %  | 189.254   | 161.268   | −14.79 % |
-| 9    | 3.3579  | 4.6484  | 48.625  | 46.551  | −4.26 %  | 191.110   | 167.684   | −12.26 % |
-| 10   | 3.2319  | 4.4299  | 46.573  | 45.211  | −2.93 %  | 182.879   | 163.755   | −10.46 % |
-| 11   | 3.2188  | 4.3871  | 46.352  | 43.971  | −5.14 %  | 181.990   | 158.428   | −12.95 % |
-| 12   | 3.2978  | 4.5905  | 48.288  | 46.367  | −3.98 %  | 190.182   | 167.444   | −11.96 % |
-| mean | 2.9681  | 4.0679  | 42.530  | 41.077  | −3.42 %  | 166.826   | 148.322   | −11.09 % |
+| Mode | Square/Base 8×8 | Square/Base 16×16 | Sqr-BFP/Base-BFP 8×8 | Sqr-BFP/Base-BFP 16×16 |
+| ---- | --------------- | ----------------- | -------------------- | ---------------------- |
+| 1    | **+1.4 %**      | −5.6 %            | **+4.8 %**           | **+0.8 %**             |
+| 2    | −10.9 %         | −17.9 %           | −4.6 %               | −8.5 %                 |
+| 3    | −4.0 %          | −11.4 %           | **+0.9 %**           | −3.0 %                 |
+| 5    | −12.8 %         | −18.9 %           | −5.6 %               | −8.4 %                 |
+| 6    | −22.4 %         | −28.5 %           | −14.1 %              | −17.1 %                |
+| 7    | −6.0 %          | −13.7 %           | **+0.9 %**           | −3.1 %                 |
+| 8    | −11.5 %         | −19.3 %           | −3.0 %               | −7.0 %                 |
+| 9    | −9.2 %          | −16.8 %           | −3.5 %               | −7.5 %                 |
+| 10   | −8.2 %          | −15.3 %           | −3.0 %               | −6.8 %                 |
+| 11   | −10.3 %         | −17.7 %           | −4.4 %               | −8.3 %                 |
+| 12   | −9.0 %          | −16.5 %           | −3.2 %               | −7.1 %                 |
+| mean | −8.8 %          | −16.1 %           | −2.7 %               | −6.5 %                 |
 
-**At 8×8 the square wins in 9 of 11 modes and loses in modes 1 and 3.** At 16×16 it wins in 10 of 11, losing only mode 1 (+0.52 %). The mean margin is −3.42 % at 8×8 and −11.09 % at 16×16, closely matching the all-mode figures of −3.50 % and −11.20 % in [Synthesis Power](syn_pwr.md) — with the tree operand isolation in the netlist, the per-mode detail and the merged summary now agree.
+**Square vs baseline:** wins **10 of 11** at 8×8 (loses only mode 1) and **11 of 11** at 16×16. **Square-BFP vs baseline-BFP:** wins **8 of 11** at 8×8 (loses modes 1, 3, 7 — all narrowly) and **10 of 11** at 16×16 (loses only mode 1). The mean margins match the all-mode merged figures of [Synthesis Power](syn_pwr.md) to within 0.3 pp on all four numbers, cross-validating both experiments.
 
 ### Baseline power tracks lane utilization
 
-The baseline spans 1.86 to 3.35 mW at 2×2, a **1.80× spread**, and it is explained by how many of the PE's 128 MAC lanes the mode occupies. A lane is one 8×4 multiply, so a mode's lane count is its logical product count scaled by the lanes each product needs — a 16-bit A costs two lanes, an 8-bit B costs two nibbles. On that measure **modes 5 and 6 sit at 50 % and every other mode is at 100 %**, and the power follows directly: 0.34–0.38 mW per PE for the two half-occupied modes against 0.57–0.71 mW for the rest, almost exactly 2×.
-
-Counting logical products alone (M·K·N) is misleading here — it makes mode 8 look like an eighth of mode 1's work when both fill the array — and the remaining spread among the 100 % modes comes from operand packing and tap level, not from occupancy.
+Both baselines span a wide per-mode range explained by how many of the PE's MAC lanes the mode occupies. A lane is one 8×4 multiply, so a mode's lane count is its logical product count scaled by the lanes each product needs (a 16-bit A costs two lanes, an 8-bit B two nibbles). On that measure **modes 5 and 6 sit at 50 % and every other mode is at 100 %**, and the PE power follows — roughly 0.37 mW/PE for the two half-occupied modes against 0.62–0.71 mW for the rest. Counting logical products alone (`M·K·N`) is misleading here — it makes mode 8 look like a fraction of mode 1's work when both fill the array.
 
 ### Both terms scale with the mode; their ratio sets the crossover
 
-The square's economics are an N² per-tile saving against an N per-row/column cost, and **both** vary by mode:
+The square's economics are an N² per-tile saving against an N per-row/column cost, and **both** vary by mode. Per pair (per-tile PE saving, α/β cost per row+column, the resulting crossover N, and the N→∞ asymptote):
 
-| Mode | saving per tile [mW] | α/β per row+col [mW] | crossover N | asymptote |
-| ---- | -------------------- | -------------------- | ----------- | --------- |
-| 1    | 0.0433               | 0.7441               | 17.16       | 0.9269    |
-| 2    | 0.1458               | 0.8308               | 5.70        | 0.7908    |
-| 3    | 0.0993               | 0.8922               | 8.98        | 0.8573    |
-| 5    | 0.0709               | 0.3724               | 5.26        | 0.8053    |
-| 6    | 0.1204               | 0.3901               | 3.25        | 0.6969    |
-| 7    | 0.1181               | 0.9167               | 7.76        | 0.8288    |
-| 8    | 0.1691               | 0.9564               | 5.66        | 0.7671    |
-| 9    | 0.1506               | 0.9454               | 6.28        | 0.7946    |
-| 10   | 0.1281               | 0.8543               | 6.67        | 0.8173    |
-| 11   | 0.1469               | 0.8769               | 5.97        | 0.7895    |
-| 12   | 0.1476               | 0.9404               | 6.37        | 0.7982    |
+**Square vs Baseline**
 
-**The crossover ranges from N = 3.25 to N = 17.16.** The α/β generators are not a fixed overhead: they see the same operands the PEs do, so in modes 5 and 6 they cost 0.37–0.39 mW per row+column against 0.74–0.96 mW elsewhere. What decides the crossover is the *ratio* of per-tile saving to per-row cost, not the absolute size of either.
+| Mode | save/tile [mW] | α/β per row+col [mW] | crossover N | asymptote |
+| ---- | -------------- | -------------------- | ----------- | --------- |
+| 1    | 0.0834         | 0.6900               | 8.93        | 0.8704    |
+| 2    | 0.1878         | 0.7770               | 4.42        | 0.7489    |
+| 3    | 0.1421         | 0.8370               | 6.24        | 0.8098    |
+| 5    | 0.1011         | 0.3630               | 3.70        | 0.7465    |
+| 6    | 0.1511         | 0.3835               | 2.56        | 0.6501    |
+| 7    | 0.1603         | 0.8635               | 5.72        | 0.7835    |
+| 8    | 0.2118         | 0.9005               | 4.50        | 0.7275    |
+| 9    | 0.1928         | 0.8895               | 4.89        | 0.7542    |
+| 10   | 0.1706         | 0.8020               | 5.00        | 0.7732    |
+| 11   | 0.1894         | 0.8235               | 4.63        | 0.7470    |
+| 12   | 0.1899         | 0.8895               | 4.96        | 0.7572    |
 
-Mode 1 is the outlier at both ends — the smallest per-tile saving (0.0433 mW, because `pe → pe_sqr` is only −7.4 % there against −31.7 % in mode 6) combined with a full-cost α/β. That pushes its crossover out to N ≈ 17.2, which is why it is the one mode where the square loses at both 8×8 and 16×16.
+**Square-BFP vs Baseline-BFP** (smaller savings — the BFP PE is ~35 % busier — but cheaper, **tree-less** α/β generators)
 
-Mode 6 is the opposite: a large per-tile saving against the cheapest α/β of any mode, giving a crossover at N = 3.25 and −16.9 % already at 8×8.
+| Mode | save/tile [mW] | α/β per row+col [mW] | crossover N | asymptote |
+| ---- | -------------- | -------------------- | ----------- | --------- |
+| 1    | 0.0299         | 0.5690               | 19.97       | 0.9668    |
+| 2    | 0.1279         | 0.6030               | 4.93        | 0.8753    |
+| 3    | 0.0702         | 0.6140               | 9.11        | 0.9301    |
+| 5    | 0.0646         | 0.2630               | 3.89        | 0.8855    |
+| 6    | 0.1159         | 0.2720               | 2.18        | 0.7966    |
+| 7    | 0.0714         | 0.6185               | 9.06        | 0.9269    |
+| 8    | 0.1134         | 0.6310               | 5.80        | 0.8878    |
+| 9    | 0.1199         | 0.6310               | 5.48        | 0.8843    |
+| 10   | 0.1101         | 0.6025               | 5.71        | 0.8921    |
+| 11   | 0.1242         | 0.6035               | 5.10        | 0.8757    |
+| 12   | 0.1154         | 0.6305               | 5.69        | 0.8878    |
+
+The crossover ranges **N = 2.56 to 8.93** for the square and **N = 2.18 to 19.97** for the square-BFP. What decides it is the *ratio* of per-tile saving to per-row cost, not the absolute size of either — the α/β generators are not a fixed overhead, they see the same operands the PEs do, so in modes 5/6 they cost ~0.36 mW/row+col (square) / ~0.27 (square-BFP) against ~0.85 / ~0.62 elsewhere.
+
+**Mode 1 is the outlier at both ends of both pairs** — the smallest per-tile saving (`pe → pe_sqr` is only −7 % there, against −32 % in mode 6) combined with a full-cost α/β. That pushes its crossover to N ≈ 8.9 (square) and N ≈ 20.0 (square-BFP), which is why it is the mode where each square loses at 8×8 (and, for square-BFP, still narrowly loses at 16×16). **Mode 6 is the opposite** — a large per-tile saving against the cheapest α/β — giving crossover N ≈ 2.2–2.6 and the biggest wins at every size.
 
 ## Consequences
 
-The single-number answer from [Synthesis Power](syn_pwr.md) — square wins from 7×7, −3.5 % at 8×8 — is not wrong on average but is not usable as a design guide. Two things follow.
+The single-number answers from [Synthesis Power](syn_pwr.md) (square wins from 5×5; square-BFP from 6×6) are correct on average but not usable as a design guide.
 
-If the workload is known to be mode-1 heavy, the square is the wrong choice at both 8×8 and 16×16 (mode 3 is also a small loss at 8×8). For the other nine modes it wins at 8×8, by 0.5–17 %.
-
-And the α/β generators are worth attacking selectively rather than uniformly. They are pure overhead in every mode, but they cost 0.74–0.96 mW per row+column in nine of the eleven modes and only ~0.38 mW in modes 5 and 6. Clock-gating them when a mode does not need full-rate correction would move the crossover most where it currently sits worst.
+- If the workload is mode-1 heavy, the square is the wrong choice at both 8×8 and 16×16; the square-BFP additionally loses modes 3 and 7 at 8×8. For the remaining modes both win.
+- The α/β generators are worth attacking **selectively**. They are pure overhead in every mode but cost 2–3× more in the full modes than in modes 5/6, so clock-gating them when a mode does not need full-rate correction moves the crossover most where it currently sits worst. The square-BFP already halves this overhead structurally with its tree-less generators.
 
 ## Caveats
 
-Everything from [Synthesis Power](syn_pwr.md) applies — hostile uniform-random stimulus, pre-layout so no interconnect or clock tree, unconstrained netlist. Two more are specific to this experiment.
-
-Each run stays in one mode for its whole window, so mode-transition power is not captured anywhere. A real workload switching modes will pay transitions that neither this experiment nor [Synthesis Power](syn_pwr.md) measures.
-
-The mean row is an unweighted mean over modes, which is not a workload average. Weighting by actual mode usage would move it, and the spread is wide enough that the weighting matters more than the measurement precision.
+Everything from [Synthesis Power](syn_pwr.md) applies — hostile uniform-random stimulus, pre-layout (no interconnect or clock tree), unconstrained netlist. Two more: each run stays in one mode, so **mode-transition power is not captured** anywhere; and the mean row is an **unweighted** mean over modes, not a workload average — weighting by real mode usage would move it, and the spread is wide enough that the weighting matters more than the measurement precision.
 
 ## Cost
 
-| Pass                          | Wall time   |
-| ----------------------------- | ----------- |
-| A + B — synthesis             | ~6 min      |
-| C — 2 Verilator builds        | ~15 min     |
-| C — 22 gate-level simulations | ~1 min      |
-| D — 22 power runs             | ~11 min     |
-| **total**                     | **~33 min** |
+| Pass                           | Wall time |
+| ------------------------------ | --------- |
+| A + B — synthesis (4 variants) | ~12 min   |
+| C — 4 Verilator builds         | ~40 min   |
+| C — 44 gate-level simulations  | ~2 min    |
+| D — 44 power runs              | ~25 min   |
 
-Each `activity.vcd` is deleted once its power report exists; keeping all 22 would cost ~3 GB, and any one regenerates in ~2 s from the compiled binary. The 22 report directories total ~1 GB.
+Each `activity.vcd` is deleted once its power report exists; any one regenerates in ~2 s from the compiled binary.

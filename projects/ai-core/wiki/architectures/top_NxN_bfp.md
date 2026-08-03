@@ -4,7 +4,7 @@
 
 ## Purpose
 
-BFP rides on top of the integer grid as a pure exponent sideband ([BFP_imp.md](../../doc/BFP_imp.md) §8): the mantissa datapath is `top_NxN` verbatim, and the exponent dispatchers slot in **parallel to the mantissa dispatchers, under the same gated clocks**. All the redundant control/dispatch is hoisted and shared exactly as in the baseline:
+BFP rides on top of the integer grid as a pure exponent sideband: the mantissa datapath is `top_NxN` verbatim, and the exponent dispatchers slot in **parallel to the mantissa dispatchers, under the same gated clocks**. All the redundant control/dispatch is hoisted and shared exactly as in the baseline:
 
 - **[ctrl](../modules/ctrl.md) — unchanged.** The exponent path reuses `sel_a`/`sel_b`/`ctr_l`/`ctr_h`, and the tree/accumulator reuse `sel_shift`/`en_level`/`sel_out`/`prop_carry`, so BFP needs **no new decode** — the aligners self-activate on unequal exponents.
 - Per **row**: **[disp_array_a](../modules/disp_array_a.md) + [disp_array_exp_a_bfp](../modules/disp_array_exp_a_bfp.md)** share the row clock-gate (`clk_a`) — the dispatched A mantissa and the A exponent freeze together when the row is off.

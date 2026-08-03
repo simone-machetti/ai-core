@@ -4,7 +4,7 @@
 
 ## Purpose
 
-BFP alignment brings two bundles to their common scale `max(exp_0, exp_1)` by right-shifting the smaller-exponent bundle by `|exp_0 − exp_1|` (see [BFP_imp.md](../../doc/BFP_imp.md) §8, the alignment-block contract). That step needs exactly two facts about the two exponents — *which* one is larger, and *by how much* — and `sub_n_bfp` produces both from a single subtraction:
+BFP alignment brings two bundles to their common scale `max(exp_0, exp_1)` by right-shifting the smaller-exponent bundle by `|exp_0 − exp_1|` (the alignment-block contract). That step needs exactly two facts about the two exponents — *which* one is larger, and *by how much* — and `sub_n_bfp` produces both from a single subtraction:
 
 - **`sign_o`** decides every select inside the cell — which bundle is the max (so which exponent leaves), which bundle is right-shifted, and how the outputs un-swap back to input order.
 - **`abs_o`** is the shift amount handed to [shift_n_bfp](./shift_n_bfp.md).
@@ -21,8 +21,8 @@ Splitting one comparison into (sign, magnitude) is what lets the cell reuse one 
 
 ## Interface
 
-| Signal   | Dir | Width   | Description                                                    |
-| -------- | --- | ------- | -------------------------------------------------------------- |
+| Signal   | Dir | Width   | Description                                                   |
+| -------- | --- | ------- | ------------------------------------------------------------- |
 | `in_0_i` | in  | `WIDTH` | First unsigned operand (e.g. `exp_0`).                        |
 | `in_1_i` | in  | `WIDTH` | Second unsigned operand (e.g. `exp_1`).                       |
 | `abs_o`  | out | `WIDTH` | Magnitude `\|in_0_i − in_1_i\|` (the alignment shift amount). |
@@ -55,7 +55,7 @@ Both operands are zero-extended by one bit and subtracted as signed `DIFF_WIDTH`
 
 ## Notes
 
-- The operands are **unsigned** by contract: BFP exponents are carried bias-agnostic and unsigned (see [BFP_imp.md](../../doc/BFP_imp.md) §10), so an idle/zeroed bundle presented at exponent `0` is the smallest possible value and can never win a `max`. A signed encoding would break that idle-min convention.
+- The operands are **unsigned** by contract: BFP exponents are carried bias-agnostic and unsigned, so an idle/zeroed bundle presented at exponent `0` is the smallest possible value and can never win a `max`. A signed encoding would break that idle-min convention.
 - Consumers: [align_cell_bfp](./align_cell_bfp.md) (the alignment cell) drives its whole select network from `sign_o` and feeds `abs_o` straight into [shift_n_bfp](./shift_n_bfp.md).
 
 Source: [sub_n_bfp.sv](../../rtl/sub_n_bfp.sv)
