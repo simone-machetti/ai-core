@@ -10,8 +10,9 @@
 #   power_hierarchy.rpt) - gate-level simulation of an 8x8 or 16x16 grid does not
 #   fit in memory - and collected per category in doc/data/res_syn_pwr.xlsx. All
 #   four variants come from the same VCD-annotated run set so they are mutually
-#   consistent. Colours follow hist_syn_area.py, with Clock added (power has a
-#   clock term area does not). Writes hist_syn_pwr.png next to this.
+#   consistent. Bars are NORMALIZED to the baseline grid of the same size. Colours
+#   follow hist_syn_area.py, with Clock added (power has a clock term area does
+#   not). Writes hist_syn_pwr.png next to this.
 # -----------------------------------------------------------------------------
 
 from pathlib import Path
@@ -63,12 +64,10 @@ COUNT = {
 
 VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP"]
 
-
 def assemble(variant, n):
     mult = {"1": 1, "N": n, "2N": 2 * n, "N2": n * n}
     return {sec: sum(v * mult[COUNT[k]] for k, v in comps.items())
             for sec, comps in UNIT[variant].items()}
-
 
 SECTIONS = ["PE", "Alpha-Beta", "Dispatch", "Clock", "Others"]
 COLORS = {
@@ -80,7 +79,10 @@ COLORS = {
 }
 
 SIZES = [8, 16]
-bars = [(v, sz, assemble(v, sz)) for sz in SIZES for v in VARIANTS]
+
+base_tot = {sz: sum(assemble("Baseline", sz).values()) for sz in SIZES}
+bars = [(v, sz, {s: p / base_tot[sz] for s, p in assemble(v, sz).items()})
+        for sz in SIZES for v in VARIANTS]
 tot = [sum(cat.values()) for _, _, cat in bars]
 
 x = []
@@ -106,7 +108,7 @@ pad = 0.012 * max(tot)
 CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP"}
 total_of = {(v, sz): sum(cat.values()) for v, sz, cat in bars}
 for (v, sz, _), xi, t_ in zip(bars, x, tot):
-    label = f"{t_:.1f}"
+    label = f"{t_:.3f}"
     if v in CORRESP:
         label += f"\n({t_ / total_of[(CORRESP[v], sz)] - 1.0:+.0%})"
     ax.text(xi, t_ + pad, label, ha="center", va="bottom", fontsize=8.5)
@@ -119,7 +121,7 @@ for gi, sz in enumerate(SIZES):
     ax.text(sum(xs) / len(xs), -0.14 * max(tot), f"{sz}×{sz}",
             ha="center", va="top", fontsize=11, fontweight="bold")
 
-ax.set_ylabel("Dynamic power [mW]")
+ax.set_ylabel("Normalized dynamic power [Baseline = 1]")
 ax.set_title("Dynamic Power — Baseline / Square / Baseline-BFP / Square-BFP Matrix Grid (ASAP7)")
 ax.set_ylim(0, max(tot) * 1.15)
 ax.grid(axis="y", linestyle="--", alpha=0.35, zorder=0)
@@ -133,5 +135,5 @@ fig.savefig(out, dpi=200, bbox_inches="tight")
 print(f"saved {out}")
 for (v, sz, cat), t_ in zip(bars, tot):
     rel = f"  ({t_ / total_of[(CORRESP[v], sz)] - 1:+.1%})" if v in CORRESP else ""
-    print(f"{v:11s} {sz:2d}x{sz:<2d} total={t_:8.3f} mW{rel:>10}  " +
+    print(f"{v:11s} {sz:2d}x{sz:<2d} total={t_:6.3f}{rel:>10}  " +
           "  ".join(f"{s}={cat[s]:.3f}" for s in SECTIONS))

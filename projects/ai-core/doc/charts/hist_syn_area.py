@@ -8,9 +8,10 @@
 #   Clock (ICG) / Others (matching hist_syn_pwr.py). Every bar is assembled
 #   analytically from the per-component standalone cell areas and a per-N count
 #   model; the fixed top-level glue is the 2x2 grid area minus the assembled
-#   components at N=2. The unit areas (um^2) and glue are inlined below - only the
-#   components and the 2x2 grids are ever synthesized, the 8x8 and 16x16 grids are
-#   never built. Values are collected in doc/data/res_syn_area.xlsx. Writes
+#   components at N=2. Bars are NORMALIZED to the baseline grid of the same size,
+#   so the y axis is a ratio. The unit areas (um^2) and glue are inlined below -
+#   only the components and the 2x2 grids are ever synthesized, the 8x8 and 16x16
+#   grids are never built. Values are collected in doc/data/res_syn_area.xlsx. Writes
 #   hist_syn_area.png next to this.
 # -----------------------------------------------------------------------------
 
@@ -78,10 +79,8 @@ VAR = {
 VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP"]
 SECTIONS = ["PE", "Alpha-Beta", "Dispatch", "Clock", "Others"]
 
-
 def mult(k, n):
     return {"1": 1, "N": n, "2N": 2 * n, "N2": n * n}[k]
-
 
 def assemble(variant, n):
     out = {}
@@ -100,10 +99,12 @@ COLORS = {
     "Clock":      "#9fb3c8cc",
     "Others":     "#eadbbccc",
 }
-UM2_PER_MM2 = 1.0e6
 
 SIZES = [8, 16]
-bars = [(v, sz, assemble(v, sz)) for sz in SIZES for v in VARIANTS]
+
+base_tot = {sz: sum(assemble("Baseline", sz).values()) for sz in SIZES}
+bars = [(v, sz, {s: a / base_tot[sz] for s, a in assemble(v, sz).items()})
+        for sz in SIZES for v in VARIANTS]
 tot = [sum(cat.values()) for _, _, cat in bars]
 
 x = []
@@ -119,32 +120,32 @@ width = 0.72
 for xi, (_, _, cat) in zip(x, bars):
     bottom = 0.0
     for sec in SECTIONS:
-        val = cat[sec] / UM2_PER_MM2
+        val = cat[sec]
         if val > 0:
             ax.bar(xi, val, width, bottom=bottom, color=COLORS[sec],
                    edgecolor="black", linewidth=0.4, zorder=3)
         bottom += val
 
-pad = 0.012 * max(tot) / UM2_PER_MM2
+pad = 0.012 * max(tot)
 CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP"}
 total_of = {(v, sz): sum(cat.values()) for v, sz, cat in bars}
 for (v, sz, _), xi, t_ in zip(bars, x, tot):
-    label = f"{t_ / UM2_PER_MM2:.3f}"
+    label = f"{t_:.3f}"
     if v in CORRESP:
         label += f"\n({t_ / total_of[(CORRESP[v], sz)] - 1.0:+.0%})"
-    ax.text(xi, t_ / UM2_PER_MM2 + pad, label, ha="center", va="bottom", fontsize=8.5)
+    ax.text(xi, t_ + pad, label, ha="center", va="bottom", fontsize=8.5)
 
 ax.set_xticks(x)
 ax.set_xticklabels([b[0] for b in bars], rotation=20, ha="right", fontsize=9)
 
 for gi, sz in enumerate(SIZES):
     xs = x[gi * len(VARIANTS):(gi + 1) * len(VARIANTS)]
-    ax.text(sum(xs) / len(xs), -0.14 * max(tot) / UM2_PER_MM2, f"{sz}×{sz}",
+    ax.text(sum(xs) / len(xs), -0.14 * max(tot), f"{sz}×{sz}",
             ha="center", va="top", fontsize=11, fontweight="bold")
 
-ax.set_ylabel("Cell area [mm²]")
+ax.set_ylabel("Normalized cell area [Baseline = 1]")
 ax.set_title("Synthesis Cell Area — Baseline / Square / Baseline-BFP / Square-BFP Matrix Grid (ASAP7)")
-ax.set_ylim(0, max(tot) / UM2_PER_MM2 * 1.15)
+ax.set_ylim(0, max(tot) * 1.15)
 ax.grid(axis="y", linestyle="--", alpha=0.35, zorder=0)
 
 legend = [Patch(facecolor=COLORS[s], edgecolor="black", linewidth=0.4, label=s) for s in SECTIONS]
@@ -156,5 +157,5 @@ fig.savefig(out, dpi=200, bbox_inches="tight")
 print(f"saved {out}")
 for (v, sz, cat), t_ in zip(bars, tot):
     rel = f"  ({t_ / total_of[(CORRESP[v], sz)] - 1:+.1%})" if v in CORRESP else ""
-    print(f"{v:11s} {sz:2d}x{sz:<2d} total={t_ / UM2_PER_MM2:8.4f} mm^2{rel:>10}  " +
-          "  ".join(f"{s}={cat[s] / UM2_PER_MM2:.4f}" for s in SECTIONS))
+    print(f"{v:11s} {sz:2d}x{sz:<2d} total={t_:6.3f}{rel:>10}  " +
+          "  ".join(f"{s}={cat[s]:.3f}" for s in SECTIONS))
