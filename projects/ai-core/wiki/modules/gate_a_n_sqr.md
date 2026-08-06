@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The square datapath ([dp_8_sqr](./dp_8_sqr.md)) works on nibbles pre-centered to the signed range `[−8,7]`, so the `−8` bias is applied once at the dispatcher and shared by the PE and the α/β generators. `gate_a_n_sqr` does that for A: within an int8 `{AH, AL}` it flips the **low** nibble MSB unconditionally (AL is never an operand MSN → always unsigned) and the **high** nibble MSB iff `~is_signed_i`. `zero_i` overrides to a real `0` so an idle DP8 squares `(0+0)² = 0`. It is the A counterpart of [gate_b_n_sqr](./gate_b_n_sqr.md); the baseline A path had no gate, since A was never conditioned. See [square_imp.md](../../doc/formulas/square/square_imp.md) §5.
+The square datapath ([dp_8_sqr](./dp_8_sqr.md)) works on nibbles pre-centered to the signed range `[−8,7]`, so the `−8` bias is applied once at the dispatcher and shared by the PE and the α/β generators. `gate_a_n_sqr` does that for A: within an int8 `{AH, AL}` it flips the **low** nibble MSB unconditionally (AL is never an operand MSN → always unsigned) and the **high** nibble MSB iff `~is_signed_i`. `zero_i` overrides to a real `0` so an idle DP8 squares `(0+0)² = 0`. It is the A counterpart of [gate_b_n_sqr](./gate_b_n_sqr.md); the baseline A path had no gate, since A was never conditioned.
 
 ## Parameters
 
@@ -44,6 +44,6 @@ assign out_o[i] = zero_i ? '0 : {
 };
 ```
 
-Flipping a nibble's MSB maps an unsigned `[0,15]` value to its signed centered value (`u ↦ u−8`); leaving it maps a signed nibble unchanged. AL is always unsigned so its MSB always flips; AH follows `is_signed_i`. When `zero_i` is set the word is a **real** hardware zero — necessary because a centered `0` would otherwise be `−8` (and `(a−8)² ≠ 0`), so idle DP8s must be zeroed, not just centered ([square_imp.md](../../doc/formulas/square/square_imp.md) §3).
+Flipping a nibble's MSB maps an unsigned `[0,15]` value to its signed centered value (`u ↦ u−8`); leaving it maps a signed nibble unchanged. AL is always unsigned so its MSB always flips; AH follows `is_signed_i`. When `zero_i` is set the word is a **real** hardware zero — necessary because a centered `0` would otherwise be `−8` (and `(a−8)² ≠ 0`), so idle DP8s must be zeroed, not just centered.
 
 Source: [gate_a_n_sqr.sv](../../rtl/gate_a_n_sqr.sv) — Used by: [disp_array_a_sqr](./disp_array_a_sqr.md)

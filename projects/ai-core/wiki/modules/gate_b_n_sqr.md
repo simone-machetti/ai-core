@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The square variant's replacement for [gate_b_n](./gate_b_n.md): it keeps **pass/zero** and adds **centering**, but **drops the negate** (`GATE_NEG`/`GATE_NEG_CARRY`) and its carry chain — the complex-mode B-negate has moved into `pe_array_sqr` as a per-DP8 carry-save block-negate ([square_imp.md](../../doc/formulas/square/square_imp.md) §4). It is the B counterpart of [gate_a_n_sqr](./gate_a_n_sqr.md); centering is done here (once at the dispatcher) so the PE and β generator share it.
+The square variant's replacement for [gate_b_n](./gate_b_n.md): it keeps **pass/zero** and adds **centering**, but **drops the negate** (`GATE_NEG`/`GATE_NEG_CARRY`) and its carry chain — the complex-mode B-negate has moved into `pe_array_sqr` as a per-DP8 carry-save block-negate. It is the B counterpart of [gate_a_n_sqr](./gate_a_n_sqr.md); centering is done here (once at the dispatcher) so the PE and β generator share it.
 
 ## Parameters
 

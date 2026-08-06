@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The square datapath needs pre-centered nibbles, so `disp_array_a_sqr` folds the `−8` centering into the A dispatch (shared by the row's PEs and its α generator). It also gains a per-DP8 `zero_i`: the square PE cannot idle a lane by zeroing B alone (a centered `0` becomes `−8`, and `(a−8)² ≠ 0`), so idle DP8s zero **both** operands to a real hardware zero (modes 5/6, [square_imp.md](../../doc/formulas/square/square_imp.md) §3). The two new inputs — per-DP8 `is_signed_a_i[16]` and `zero_i[16]` — come from [ctrl](./ctrl.md).
+The square datapath needs pre-centered nibbles, so `disp_array_a_sqr` folds the `−8` centering into the A dispatch (shared by the row's PEs and its α generator). It also gains a per-DP8 `zero_i`: the square PE cannot idle a lane by zeroing B alone (a centered `0` becomes `−8`, and `(a−8)² ≠ 0`), so idle DP8s zero **both** operands to a real hardware zero (modes 5/6). The two new inputs — per-DP8 `is_signed_a_i[16]` and `zero_i[16]` — come from [ctrl](./ctrl.md).
 
 ## Parameters
 

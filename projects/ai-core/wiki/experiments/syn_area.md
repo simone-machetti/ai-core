@@ -1,6 +1,6 @@
 # Synthesis Area — Baseline / Square / Baseline-BFP / Square-BFP
 
-Cell-area comparison of the four PE-grid variants — [top_NxN](../architectures/top_NxN.md) (baseline), [top_NxN_sqr](../architectures/top_NxN_sqr.md) (square), [top_NxN_bfp](../architectures/top_NxN_bfp.md) (baseline-BFP) and [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md) (square-BFP) — at 8×8 and 16×16, measured on the complete synthesized grids.
+Cell-area comparison of the four PE-grid variants — [top_NxN](../architectures/top_NxN.md) (baseline), [top_NxN_sqr](../architectures/top_NxN_sqr.md) (square), [top_NxN_bfp](../architectures/top_NxN_bfp.md) (baseline-BFP) and [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md) (square-BFP) — at 8×8 and 16×16, assembled from per-component measurements.
 
 ## Purpose
 
@@ -8,22 +8,24 @@ Two orthogonal axes. The **square** axis replaces each PE's multipliers with squ
 
 ## Method
 
-Two passes per variant. Pass A synthesizes each component once on its own (`OUT_DIR=<module>_syn`). Pass B synthesizes the whole grid, linking those netlists through `BLACKBOX_MODULES` rather than re-elaborating every instance — so the run cost stops depending on the PE count, and the netlist carries one shared module per component (the hierarchy a tiled place-and-route wants: the PE is the replicated tile, hardened once and placed N² times).
+Two passes per variant, both at **N = 2**. Pass A synthesizes each component once on its own (`OUT_DIR=<module>_syn`). Pass B synthesizes the 2×2 grid, linking those netlists through `BLACKBOX_MODULES` rather than re-elaborating every instance — the netlist carries one shared module per component (the hierarchy a tiled place-and-route wants: the PE is the replicated tile, hardened once and placed N² times), and the residual top-level area is the fixed glue term.
 
 ```
 # pass A - one run per component
 make syn PROJECT=ai-core TOP_LEVEL=<module> OUT_DIR=<module>_syn
 
-# pass B - the complete grid (blackbox list is per variant)
-make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_16x16_sqr_bfp_syn PARAMS="N=16" \
+# pass B - the 2x2 grid (blackbox list is per variant)
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_2x2_sqr_bfp_syn PARAMS="N=2" \
     BLACKBOX_MODULES="pe_sqr_bfp ext_inject_sqr_bfp ctrl_sqr const_sqr_bfp \
                       disp_array_a_sqr disp_array_b_sqr disp_array_exp_a_sqr_bfp disp_array_exp_b_sqr_bfp \
                       pe_array_alpha_sqr_bfp pe_array_beta_sqr_bfp icg"
 ```
 
-Library is `asap7sc7p5t` RVT TT. Pass B resolves each blackboxed module at `imp/<module>_syn/output/netlist.v` (the `bb_netlist` helper searches `<module>_syn` first), hence the `_syn` suffix in pass A. Only the grid size needs `-G` (`PARAMS="N=8"`); every component has a `localparam`-only interface, so each component's area is its own pass-A figure and only the top-level glue is synthesized in grid context. Interconnect, clock tree and placement utilization are out of scope and come later from P&R.
+The 8×8 and 16×16 figures are then **assembled analytically** from the per-component areas and a per-N instance-count model — PE and per-PE clock gate ×N², dispatch and α/β ×N, row/column clock gates ×2N, control/const/glue ×1 — in [hist_syn_area.py](../../doc/charts/hist_syn_area.py). **No 8×8 or 16×16 grid is ever synthesized.** The assembly is exact rather than approximate: every component has a `localparam`-only interface, so its area does not depend on N, and only the grid size would need `-G` at all. The earlier method did elaborate the full grids, which cost ~26 GB at 16×16 for figures the count model reproduces from a 2×2 run.
 
-All commands are in [run_syn_area.sh](../../scripts/run_syn_area.sh). Numbers land in `doc/data/res_syn_area.xlsx` and `doc/charts/hist_syn_area.png`.
+Library is `asap7sc7p5t` RVT TT. Pass B resolves each blackboxed module at `imp/<module>_syn/output/netlist.v` (the `bb_netlist` helper searches `<module>_syn` first), hence the `_syn` suffix in pass A. Interconnect, clock tree and placement utilization are out of scope and come later from P&R.
+
+All commands are in [run_syn_area.sh](../../scripts/run_syn_area.sh). Numbers land in `doc/data/res_syn_area.xlsx` and `doc/charts/hist_syn_area.png`; the chart is normalized to the baseline grid of the same size, so it carries ratios rather than absolute mm². [Grid Scaling](syn_scaling.md) evaluates the same model over a range of N, and [Intra-PE Area](syn_pe_area.md) opens the PE up into its DP8 array, tree and accumulator.
 
 ## Instance counts
 
@@ -77,25 +79,8 @@ The BFP sideband itself costs ~40 % area on both axes (`Baseline-BFP/Baseline �
 
 ## Cost and reproduction
 
-Peak memory scales as N² and sits in the Slang frontend elaborating the top level (N² PE cells, plus `acc_i` / `out_q_o` at 40 960 bits each when N=16); blackboxing does not reduce it, because it only removes what is below the tile boundary. The BFP grids are heavier per PE (the aligners and the exponent sideband), so their peaks sit above the baseline/square figures below:
+Every run is at N = 2, so the whole sweep is cheap — the four component sets plus the four 2×2 grids take about 12 minutes together and need no special setup. Peak memory sits in the Slang frontend elaborating the top level and is modest at this size.
 
-| Grid (baseline / square) | Peak RAM | Wall time |
-| ------------------------ | -------- | --------- |
-| 8×8                      | 6.7 GB   | 3.1 min   |
-| 16×16                    | 25.9 GB  | 11.8 min  |
+This is the reason the method changed. Elaboration cost scales as N² and blackboxing does not reduce it, because it only removes what is *below* the tile boundary: the old approach of synthesizing the full grids peaked at 6.7 GB for 8×8 and **25.9 GB for 16×16**, which does not fit a 30 GB machine and needed a swap file and serialized runs. The count model reproduces those totals exactly from the 2×2 data, so the large elaborations bought nothing and were dropped.
 
-25.9 GB does not fit a 30 GB machine, so the 16×16 runs need swap (the peak is transient — once elaboration finishes the design collapses to N² cells plus glue):
-
-```bash
-sudo fallocate -l 32G /swapfile2 && sudo chmod 600 /swapfile2
-sudo mkswap /swapfile2 && sudo swapon /swapfile2
-sudo sysctl vm.swappiness=10   # prefer dropping page cache over swapping the heap
-```
-
-Afterwards — not while a run is in flight, `swapoff` has to page everything back in:
-
-```bash
-sudo swapoff /swapfile2 && sudo rm /swapfile2 && sudo sysctl vm.swappiness=60
-```
-
-Run the 16×16 grids one at a time; two concurrent peaks do not fit even with swap.
+The one thing the assembly cannot capture is anything that is *not* a per-instance property — interconnect, clock tree and placement utilization at large N. Those come from P&R, not from synthesis at any grid size.

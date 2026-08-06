@@ -4,7 +4,7 @@
 
 ## Purpose
 
-It reduces the 16 per-DP8 beta square-sums `BETA_DP8` through the **same** linear tree `L(·)` as the PE, so the downstream `Result = ½(PE − α − β + C)` is exact. One instance per grid **column**, fanned into every PE in that column. See [square_imp.md](../../doc/formulas/square/square_imp.md) §5–§7.
+It reduces the 16 per-DP8 beta square-sums `BETA_DP8` through the **same** linear tree `L(·)` as the PE, so the downstream `Result = ½(PE − α − β + C)` is exact. One instance per grid **column**, fanned into every PE in that column.
 
 Everything below the DP8 leaves is byte-identical to [pe_array_sqr](./pe_array_sqr.md) (crossed L0 pairing, 6 [comp_n](./comp_n.md) block-negates on L0 nodes 0–5, unsigned L0-hi `shift_n`, single L0 register, tap slicing). β's blocks carry the **same** `neg` as the PE — a negated block resolves to `−BETA_DP8−2`. Idle DP8s are forced to a real zero via `zero_i` (the β low block's fixed `−8` would otherwise leak).
 

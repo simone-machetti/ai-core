@@ -85,7 +85,7 @@ Nodes 6 and 7 have no `comp_n` (their DP8s are never negated), which is why `neg
 | 11         | `001111`     | 0,1,2,3 → DP8 2,3,6,7   |
 | all others | `000000`     | none                    |
 
-Mode 12 (`C16C16`) does **not** appear here: its Im-part negation is done in software by the caller (it stores `−b_im`), so no hardware negate — see [square_imp.md](../../doc/formulas/square/square_imp.md) §4.
+Mode 12 (`C16C16`) does **not** appear here: its Im-part negation is done in software by the caller (it stores `−b_im`), so no hardware negate.
 
 ### Signedness (L0 hi is unsigned)
 

@@ -6,7 +6,7 @@
 
 The square accumulator adds four carry-save terms — `PE`, `−α`, `−β`, and `C` — then halves. Two of those terms carry data-independent `comp_n`-style deferrals, and `C` absorbs them so the datapath needs no subtractor and no carry-in injection:
 
-- **`+C_real`** — the excess-8 **centering** constant (verified per mode; see [square_imp.md](../../doc/formulas/square/square_imp.md) §3). Real modes and the **Im(D)** half of complex modes; `Re(D)`'s `C_real = 0` (the `+re·re` and `−im·im` centering constants cancel).
+- **`+C_real`** — the excess-8 **centering** constant (verified per mode). Real modes and the **Im(D)** half of complex modes; `Re(D)`'s `C_real = 0` (the `+re·re` and `−im·im` centering constants cancel).
 - **`+4`** — subtracting α and β by one's-complementing their taps defers `−2` each (the [pe_array_alpha_sqr](./pe_array_alpha_sqr.md) / [pe_array_beta_sqr](./pe_array_beta_sqr.md) generators emit `−α`/`−β` as `~tap = −tap−2`) → `+4` on **every** output.
 - **`−2N`** — the [comp_n](./comp_n.md) block-negate deferral, tree-weighted, on the **HW-negated `Re(D)`** outputs only (modes 10/11: the negated `im·im` group lands in Re, whose `C_real = 0`). `2N = 34`/`68`. **Mode 12** (C16×C16) is *software* pre-negated — no `comp_n`, so the `im·im` centering does **not** cancel in Re; its Re takes the full `c_o` like the Im half, and its `c_neg_o` is unused (see Notes).
 
@@ -51,7 +51,7 @@ None — fixed to the mode-constant LUT (the mode addresses and constants are ha
 
 ## Notes
 
-- The `2N` values (34/68) are the tree-weighted `comp_n` deferrals derived in [square_imp.md](../../doc/formulas/square/square_imp.md) §4, applying to the HW-negated Re outputs of modes 10/11 only. Mode 12 is software pre-negated (no `comp_n`), so — unlike 10/11 — the `im·im` centering does not cancel and its Re uses the full `c_o`; the emitted `c_neg_o = +4` is a moot value the accumulator does not select.
+- The `2N` values (34/68) are the tree-weighted `comp_n` deferrals, applying to the HW-negated Re outputs of modes 10/11 only. Mode 12 is software pre-negated (no `comp_n`), so — unlike 10/11 — the `im·im` centering does not cancel and its Re uses the full `c_o`; the emitted `c_neg_o = +4` is a moot value the accumulator does not select.
 - Consumer: [acc_array_sqr](./acc_array_sqr.md) (built) — it adds `c_o` on the real/Im outputs (and both halves of mode 12) and `c_neg_o` on the HW-negated Re outputs of modes 10/11, then `÷2`. `RH`/`RL` are the hi/lo halves of the sign-extended `c_neg_o` (`RH = sign(RL)`).
 
 Source: [const_sqr.sv](../../rtl/const_sqr.sv)

@@ -10,7 +10,7 @@
 BETA_DP8 = 2^4 · Σ_k (B_k − 8·au)²  +  Σ_k (B_k − 8)²             au = ~is_signed_a
 ```
 
-The high (`<<4`) block subtracts the removed A-**high**'s `−8` via a [gate_n_sqr](./gate_n_sqr.md) driven by `is_signed_a_i`; the low block subtracts a **fixed** `−8` via a [gate_n_beta_sqr](./gate_n_beta_sqr.md) (A-low is structurally always unsigned) or zeros on idle. The asymmetry (one flag-driven bias, one fixed) is why β keeps both AH and AL blocks even though A's data is gone — see [square_imp.md](../../doc/formulas/square/square_imp.md) §5. Downstream (16 [s_5_bit_sqr](./s_5_bit_sqr.md), two unsigned [cpr_w_n](./cpr_w_n.md) 8:2, high block `<<4`, one unsigned `cpr_w_n` 4:2 → 18-bit) is identical to [dp_8_sqr](./dp_8_sqr.md).
+The high (`<<4`) block subtracts the removed A-**high**'s `−8` via a [gate_n_sqr](./gate_n_sqr.md) driven by `is_signed_a_i`; the low block subtracts a **fixed** `−8` via a [gate_n_beta_sqr](./gate_n_beta_sqr.md) (A-low is structurally always unsigned) or zeros on idle. The asymmetry (one flag-driven bias, one fixed) is why β keeps both AH and AL blocks even though A's data is gone. Downstream (16 [s_5_bit_sqr](./s_5_bit_sqr.md), two unsigned [cpr_w_n](./cpr_w_n.md) 8:2, high block `<<4`, one unsigned `cpr_w_n` 4:2 → 18-bit) is identical to [dp_8_sqr](./dp_8_sqr.md).
 
 Unlike α, the low block's `−8` is fixed and would inject `(−8)² = 64` per lane on a dispatcher-zeroed idle DP8, so `zero_i` forces that block to a real `0` (the high block self-cleans via `is_signed_a = 1`).
 

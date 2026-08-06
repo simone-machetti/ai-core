@@ -21,7 +21,7 @@ make post-syn-dpa PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp \
 
 Clock is 100 MHz on all sides (derived from `CLK_PERIOD_NS`, so simulated and SDC clocks cannot drift); dumping starts after reset deassertion. Annotation is complete on every run (0 unannotated pins). Only 2×2 is measured — gate-level simulation memory grows as N² — so the 8×8 / 16×16 columns are assembled per component and are **projections, not measurements**.
 
-All commands are in [run_syn_mode_pwr.sh](../../scripts/run_syn_mode_pwr.sh). Numbers land in `doc/data/res_syn_mode_pwr.xlsx` and `doc/charts/hist_syn_mode_pwr_{8x8,16x16}.png`.
+All commands are in [run_syn_mode_pwr.sh](../../scripts/run_syn_mode_pwr.sh). Numbers land in `doc/data/res_syn_mode_pwr.xlsx` and `doc/charts/hist_syn_mode_pwr_{8x8,16x16}.png`. The charts are normalized to the baseline **averaged over the 11 modes** — one reference for the whole figure rather than one per mode, so the per-mode spread of the baseline itself stays readable (modes 5 and 6 sit near 0.6 while the rest cluster around 1.1). That reference coincides with the all-mode figure of [Synthesis Power](syn_pwr.md) to a fraction of a percent, so the two power charts share a unit.
 
 ## Results
 

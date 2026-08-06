@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The α/β generators reuse the dispatcher-centered operand (already biased to `[−8,7]`) and must inject the **removed** operand's centering `−8` — the second `−8` that completes the `−16` (both-unsigned) case (see [square_imp.md](../../doc/formulas/square/square_imp.md) §5). This gate is that injection: it subtracts `8` when the removed operand is **unsigned**, else passes the value through (sign-extended). It never builds `−16` itself — the dispatcher already applied the first `−8`, so the gate only ever adds one more, keeping the argument in `[−16,7]`.
+The α/β generators reuse the dispatcher-centered operand (already biased to `[−8,7]`) and must inject the **removed** operand's centering `−8` — the second `−8` that completes the `−16` (both-unsigned) case. This gate is that injection: it subtracts `8` when the removed operand is **unsigned**, else passes the value through (sign-extended). It never builds `−16` itself — the dispatcher already applied the first `−8`, so the gate only ever adds one more, keeping the argument in `[−16,7]`.
 
 Used by [dp_8_alpha_sqr](./dp_8_alpha_sqr.md) (both AH and AL blocks, `is_signed_i = is_signed_b`) and by [dp_8_beta_sqr](./dp_8_beta_sqr.md)'s high (`<<4`) block (`is_signed_i = is_signed_a`). It is the invert-of-behaviour sibling of [gate_n_beta_sqr](./gate_n_beta_sqr.md) (which subtracts unconditionally and idle-zeros).
 

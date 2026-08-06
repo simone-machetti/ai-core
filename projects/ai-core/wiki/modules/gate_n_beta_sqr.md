@@ -4,7 +4,7 @@
 
 ## Purpose
 
-In [dp_8_beta_sqr](./dp_8_beta_sqr.md) the low block compensates `b·A_low`, and A's low nibble is **structurally always unsigned**, so the removed-operand bias is a *fixed* `−8` — there is no signed pass branch. Unlike the flag-driven [gate_n_sqr](./gate_n_sqr.md), that fixed `−8` does **not** vanish on a dispatcher-zeroed idle input: it would inject `(−8)² = 64` per lane. So this gate carries its own `zero_i` to force the block to a genuine `0` on idle DP8s (the high block self-cleans via `is_signed_a = 1`). See [square_imp.md](../../doc/formulas/square/square_imp.md) §3 for the idle-leak analysis.
+In [dp_8_beta_sqr](./dp_8_beta_sqr.md) the low block compensates `b·A_low`, and A's low nibble is **structurally always unsigned**, so the removed-operand bias is a *fixed* `−8` — there is no signed pass branch. Unlike the flag-driven [gate_n_sqr](./gate_n_sqr.md), that fixed `−8` does **not** vanish on a dispatcher-zeroed idle input: it would inject `(−8)² = 64` per lane. So this gate carries its own `zero_i` to force the block to a genuine `0` on idle DP8s (the high block self-cleans via `is_signed_a = 1`).
 
 ## Parameters
 

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Like [disp_array_a_sqr](./disp_array_a_sqr.md) but for B: it centers each nibble at the dispatcher (shared with the column's PEs and its β generator) and idle-zeros whole DP8s. It **drops the complex-mode negate** that [disp_array_b](./disp_array_b.md) did — `gate_b_n`'s `GATE_NEG`/`GATE_NEG_CARRY` and the L→H carry chain are gone; that sign relocates into `pe_array_sqr` ([square_imp.md](../../doc/formulas/square/square_imp.md) §4). New inputs `is_signed_b_i[16]` and `zero_i[16]` come from [ctrl](./ctrl.md).
+Like [disp_array_a_sqr](./disp_array_a_sqr.md) but for B: it centers each nibble at the dispatcher (shared with the column's PEs and its β generator) and idle-zeros whole DP8s. It **drops the complex-mode negate** that [disp_array_b](./disp_array_b.md) did — `gate_b_n`'s `GATE_NEG`/`GATE_NEG_CARRY` and the L→H carry chain are gone; that sign relocates into [pe_array_sqr](./pe_array_sqr.md). New inputs `is_signed_b_i[16]` and `zero_i[16]` come from [ctrl](./ctrl.md).
 
 ## Parameters
 
