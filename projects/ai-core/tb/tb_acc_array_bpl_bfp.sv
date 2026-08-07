@@ -2,10 +2,11 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Self-checking testbench for the full BFP PE datapath, with the integer
-//   datapath alongside as reference: the mantissa dispatchers feed both
-//   pe_array -> acc_array (baseline) and pe_array_bfp -> acc_array_bfp (BFP),
-//   while the exponent dispatchers feed the BFP tree and accumulator. Every
+//   Self-checking testbench for the full bit-plane BFP PE datapath, with the
+//   integer datapath alongside as reference: the mantissa dispatchers feed both
+//   pe_array -> acc_array (baseline) and pe_array_bpl_bfp -> acc_array_bpl_bfp
+//   (bit-plane BFP), while the exponent dispatchers feed the BFP tree and
+//   accumulator. Every
 //   mode runs twice per vector:
 //
 //   Pass A (equal exponents): every BFP aligner is bit-transparent, so the BFP

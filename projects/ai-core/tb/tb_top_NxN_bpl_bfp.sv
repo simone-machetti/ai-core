@@ -2,8 +2,9 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Self-checking, full-throughput (streaming) testbench for the BFP N x N PE
-//   grid, top_NxN_bfp. Drives a fresh operand into every row/column on every
+//   Self-checking, full-throughput (streaming) testbench for the bit-plane BFP
+//   N x N PE grid, top_NxN_bpl_bfp. Drives a fresh operand into every row/column
+//   on every
 //   clock and checks each PE against a pipeline-delayed golden (LAT clocks; the
 //   output at iteration t belongs to the operand driven at t-D, D = LAT-1; a
 //   ring buffer holds the per-cycle golden). Operands are distinct per PE: N
@@ -25,7 +26,7 @@
 //   the per-mode control tables - never a DUT-internal signal - so a fault
 //   anywhere in the chain is caught. The accumulate pattern holds one exponent
 //   per PE across its tiles (the running-max rescale across tiles is covered by
-//   tb_acc_array_bfp), keeping the accumulate window tight and independent.
+//   tb_acc_array_bpl_bfp), keeping the accumulate window tight and independent.
 //
 // Parameters:
 //   N                - grid side; the array is N x N PEs (default 2 for a fast build)

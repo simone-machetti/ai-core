@@ -1,14 +1,14 @@
-# Per-Mode Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP
+# Per-Mode Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane BFP
 
-VCD-annotated dynamic power of the four PE-grid variants measured **once per operating mode** on the complete 2×2 grids and assembled per component for 8×8 and 16×16.
+VCD-annotated dynamic power of the five PE-grid variants measured **once per operating mode** on the complete 2×2 grids and assembled per component for 8×8 and 16×16.
 
 ## Purpose
 
-[Synthesis Power](syn_pwr.md) drove all 11 modes into a single VCD and reported one averaged figure per variant. That average hides an enormous per-mode spread: the square's 8×8 margin runs from **−22.4 % (mode 6) to +1.4 % (mode 1)**, and the square-BFP's from **−14.1 % (mode 6) to +4.8 % (mode 1)** — so a single number both understates the win and hides the modes where the square is a net loss at the target grid size. This experiment measures each mode on its own.
+[Synthesis Power](syn_pwr.md) drove all 11 modes into a single VCD and reported one averaged figure per variant. That average hides an enormous per-mode spread: the square's 8×8 margin runs from **−22.4 % (mode 6) to +1.4 % (mode 1)**, and the square-BFP's from **−14.1 % (mode 6) to +4.8 % (mode 1)** — so a single number both understates the win and hides the modes where the square is a net loss at the target grid size. The bit-plane variant makes the point far more sharply still: its grid-average is a flat −0.3 %, but per mode it runs from **−11.2 % to +23.1 %**. This experiment measures each mode on its own.
 
 ## Method
 
-As [Synthesis Power](syn_pwr.md) — per-component synthesis, blackbox-linked 2×2 grids, gate-level simulation, OpenSTA power with the resulting activity annotated — but pass C is run once per mode, 100 random operand sets in that mode alone. Four variants × 11 modes = **44 gate-level runs**, each reusing its variant's one compiled binary (`MODE_SEL` / `NUM_STREAM` are read from `+mode` / `+vectors` at run time), because the Verilator build takes ~10 min per variant while a simulation takes ~2 s — compiling per mode would turn the sweep into hours.
+As [Synthesis Power](syn_pwr.md) — per-component synthesis, blackbox-linked 2×2 grids, gate-level simulation, OpenSTA power with the resulting activity annotated — but pass C is run once per mode, 100 random operand sets in that mode alone. Five variants × 11 modes = **55 gate-level runs**, each reusing its variant's one compiled binary (`MODE_SEL` / `NUM_STREAM` are read from `+mode` / `+vectors` at run time), because the Verilator build takes ~10 min per variant while a simulation takes ~2 s — compiling per mode would turn the sweep into hours.
 
 ```
 simv +mode=<m> +vectors=100          # one gate-level run per mode, per variant
@@ -27,22 +27,59 @@ All commands are in [run_syn_mode_pwr.sh](../../scripts/run_syn_mode_pwr.sh). Nu
 
 Per-mode margin of each square variant against **its own baseline** (assembled totals; negative = the square wins):
 
-| Mode | Square/Base 8×8 | Square/Base 16×16 | Sqr-BFP/Base-BFP 8×8 | Sqr-BFP/Base-BFP 16×16 |
-| ---- | --------------- | ----------------- | -------------------- | ---------------------- |
-| 1    | **+1.4 %**      | −5.6 %            | **+4.8 %**           | **+0.8 %**             |
-| 2    | −10.9 %         | −17.9 %           | −4.6 %               | −8.5 %                 |
-| 3    | −4.0 %          | −11.4 %           | **+0.9 %**           | −3.0 %                 |
-| 5    | −12.8 %         | −18.9 %           | −5.6 %               | −8.4 %                 |
-| 6    | −22.4 %         | −28.5 %           | −14.1 %              | −17.1 %                |
-| 7    | −6.0 %          | −13.7 %           | **+0.9 %**           | −3.1 %                 |
-| 8    | −11.5 %         | −19.3 %           | −3.0 %               | −7.0 %                 |
-| 9    | −9.2 %          | −16.8 %           | −3.5 %               | −7.5 %                 |
-| 10   | −8.2 %          | −15.3 %           | −3.0 %               | −6.8 %                 |
-| 11   | −10.3 %         | −17.7 %           | −4.4 %               | −8.3 %                 |
-| 12   | −9.0 %          | −16.5 %           | −3.2 %               | −7.1 %                 |
-| mean | −8.8 %          | −16.1 %           | −2.7 %               | −6.5 %                 |
+| Mode | Square/Base 8×8 | Square/Base 16×16 | Sqr-BFP/Base-BFP 8×8 | Sqr-BFP/Base-BFP 16×16 | Bpl-BFP/Base-BFP 8×8 | Bpl-BFP/Base-BFP 16×16 | `sel_shift` |
+| ---- | --------------- | ----------------- | -------------------- | ---------------------- | -------------------- | ---------------------- | ----------- |
+| 1    | **+1.4 %**      | −5.6 %            | **+4.8 %**           | **+0.8 %**             | **+23.1 %**          | **+23.0 %**            | `000`       |
+| 2    | −10.9 %         | −17.9 %           | −4.6 %               | −8.5 %                 | −2.0 %               | −2.5 %                 | `010`       |
+| 3    | −4.0 %          | −11.4 %           | **+0.9 %**           | −3.0 %                 | **+1.2 %**           | **+0.8 %**             | `011`       |
+| 5    | −12.8 %         | −18.9 %           | −5.6 %               | −8.4 %                 | **+22.8 %**          | **+22.9 %**            | `000`       |
+| 6    | −22.4 %         | −28.5 %           | −14.1 %              | −17.1 %                | **+1.9 %**           | **+1.4 %**             | `010`       |
+| 7    | −6.0 %          | −13.7 %           | **+0.9 %**           | −3.1 %                 | **+0.8 %**           | **+0.4 %**             | `011`       |
+| 8    | −11.5 %         | −19.3 %           | −3.0 %               | −7.0 %                 | −11.2 %              | −11.8 %                | `111`       |
+| 9    | −9.2 %          | −16.8 %           | −3.5 %               | −7.5 %                 | −11.2 %              | −11.7 %                | `111`       |
+| 10   | −8.2 %          | −15.3 %           | −3.0 %               | −6.8 %                 | −1.7 %               | −2.2 %                 | `010`       |
+| 11   | −10.3 %         | −17.7 %           | −4.4 %               | −8.3 %                 | −3.7 %               | −4.2 %                 | `010`       |
+| 12   | −9.0 %          | −16.5 %           | −3.2 %               | −7.1 %                 | −11.1 %              | −11.6 %                | `111`       |
+| mean | −8.8 %          | −16.1 %           | −2.7 %               | −6.5 %                 | +0.8 %               | +0.4 %                 |             |
 
-**Square vs baseline:** wins **10 of 11** at 8×8 (loses only mode 1) and **11 of 11** at 16×16. **Square-BFP vs baseline-BFP:** wins **8 of 11** at 8×8 (loses modes 1, 3, 7 — all narrowly) and **10 of 11** at 16×16 (loses only mode 1). The mean margins match the all-mode merged figures of [Synthesis Power](syn_pwr.md) to within 0.3 pp on all four numbers, cross-validating both experiments.
+**Square vs baseline:** wins **10 of 11** at 8×8 (loses only mode 1) and **11 of 11** at 16×16. **Square-BFP vs baseline-BFP:** wins **8 of 11** at 8×8 (loses modes 1, 3, 7 — all narrowly) and **10 of 11** at 16×16 (loses only mode 1). **Bit-plane BFP vs baseline-BFP:** wins **6 of 11** at both sizes, and the spread is by far the widest of the three — a 34-point range against the square's 24 and the square-BFP's 19.
+
+For the two square pairs the mean margins match the all-mode merged figures of [Synthesis Power](syn_pwr.md) to within 0.3 pp, cross-validating both experiments. The bit-plane pair does **not**: its unweighted per-mode mean is +0.8 % / +0.4 % against the merged run's −0.30 % / −0.75 %, a gap of ~1.1 pp. That is a consequence of the spread rather than a discrepancy — the merged VCD weights each mode by its actual toggle activity, and with a ±23 % range the unweighted mean and the activity-weighted one are simply different statistics. It is also a warning that no single number describes this variant.
+
+### The bit-plane margin tracks `sel_shift`, not lane utilization
+
+The `sel_shift` column above is `ctrl`'s per-mode tree shift enables (see [ctrl](../modules/ctrl.md)), and the correlation with the bit-plane margin is almost exact:
+
+| `sel_shift` | shifts enabled | modes | Bpl margin at 8×8 |
+| ----------- | -------------- | ------ | ----------------- |
+| `000`       | 0              | 1, 5   | **+23 %**         |
+| `010`       | 1              | 2, 6, 10, 11 | −3.7 … +1.9 % |
+| `011`       | 2              | 3, 7   | +0.8 … +1.2 %     |
+| `111`       | 3              | 8, 9, 12 | **−11 %**       |
+
+Nothing else in the mode tables sorts the data this cleanly — in particular the lane-utilization measure that explains the *baseline* spread does not (modes 1 and 5 sit at opposite ends of it, 100 % and 50 %, yet give the same +23 %; modes 5 and 6 share a utilization but differ by 21 points).
+
+A plausible mechanism, offered as a hypothesis rather than a measurement: with `sel_shift = 000` the two halves entering a tree node overlap completely in weight, so every bit of every row meets a full adder. The bit-plane DP8 hands up a **22-bit** carry-save row where Booth hands up 20, plus a guard bit at L0 and L1, and in the fully-overlapped case that extra width toggles at every level with nothing to offset it. With all three shifts on, the rows are spread apart in weight, much of each node passes through untouched, and the cheaper selection stage dominates. Confirming this would need a per-section power breakdown inside the PE, which this experiment does not produce.
+
+### Where the bit-plane wins and loses, structurally
+
+Per-tile saving, dispatcher cost per row+column, and the resulting crossover:
+
+| Mode | save/tile [mW] | dispatch per row+col [mW] | crossover N | asymptote |
+| ---- | -------------- | ------------------------- | ----------- | --------- |
+| 1    | **−0.2060**    | 0.0750                    | never       | 1.2287    |
+| 2    | +0.0303        | 0.0705                    | 2.33        | 0.9705    |
+| 3    | −0.0035        | 0.0698                    | never       | 1.0034    |
+| 5    | **−0.1292**    | 0.0505                    | never       | 1.2288    |
+| 6    | −0.0052        | 0.0501                    | never       | 1.0091    |
+| 7    | +0.0006        | 0.0710                    | 129.1       | 0.9994    |
+| 8    | +0.1251        | 0.0680                    | **0.54**    | 0.8763    |
+| 9    | +0.1276        | 0.0680                    | **0.53**    | 0.8769    |
+| 10   | +0.0268        | 0.0714                    | 2.66        | 0.9737    |
+| 11   | +0.0468        | 0.0705                    | 1.51        | 0.9531    |
+| 12   | +0.1251        | 0.0677                    | **0.54**    | 0.8784    |
+
+This is a qualitatively different picture from the square pairs. There, every mode has a positive per-tile saving and the question is only *when* the N term is amortized. Here **four modes (1, 3, 5, 6) have a negative per-tile saving** — the bit-plane PE is simply more expensive in them — so no grid size ever recovers them; mode 7 breaks even. The three `111` modes, conversely, cross over below N = 1: they win at every size including 2×2.
 
 ### Baseline power tracks lane utilization
 
@@ -93,6 +130,7 @@ The crossover ranges **N = 2.56 to 8.93** for the square and **N = 2.18 to 19.97
 The single-number answers from [Synthesis Power](syn_pwr.md) (square wins from 5×5; square-BFP from 6×6) are correct on average but not usable as a design guide.
 
 - If the workload is mode-1 heavy, the square is the wrong choice at both 8×8 and 16×16; the square-BFP additionally loses modes 3 and 7 at 8×8. For the remaining modes both win.
+- **The bit-plane variant is the most workload-sensitive of the three, and the only one with modes it can never win.** A workload dominated by modes 8/9/12 gets a consistent −11 % at any grid size; one dominated by modes 1 or 5 pays +23 % at any grid size. Because those are properties of the *PE*, not of the N overhead, they cannot be engineered away by growing the grid — only by attacking the tree in the no-shift case. Given that its area advantage (−3.3 %) is uniform across modes while its power result is not, the bit-plane variant reads as an area play with a workload-dependent power side effect.
 - The α/β generators are worth attacking **selectively**. They are pure overhead in every mode but cost 2–3× more in the full modes than in modes 5/6, so clock-gating them when a mode does not need full-rate correction moves the crossover most where it currently sits worst. The square-BFP already halves this overhead structurally with its tree-less generators.
 
 ## Caveats
@@ -103,9 +141,9 @@ Everything from [Synthesis Power](syn_pwr.md) applies — hostile uniform-random
 
 | Pass                           | Wall time |
 | ------------------------------ | --------- |
-| A + B — synthesis (4 variants) | ~12 min   |
-| C — 4 Verilator builds         | ~40 min   |
-| C — 44 gate-level simulations  | ~2 min    |
-| D — 44 power runs              | ~25 min   |
+| A + B — synthesis (5 variants) | ~15 min   |
+| C — 5 Verilator builds         | ~50 min   |
+| C — 55 gate-level simulations  | ~3 min    |
+| D — 55 power runs              | ~31 min   |
 
 Each `activity.vcd` is deleted once its power report exists; any one regenerates in ~2 s from the compiled binary.

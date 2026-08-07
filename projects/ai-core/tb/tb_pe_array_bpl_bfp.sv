@@ -36,7 +36,7 @@
 //   the number of cells in the subtree). The exponent path runs the real RTL
 //   end to end: the tb packs the per-block source exponents (4 x 6-bit A
 //   word, 4 x 12-bit B word) and disp_array_exp_a_bfp / disp_array_exp_b_bfp
-//   dispatch them to the two 6-bit per-DP8 inputs of pe_array_bfp, which
+//   dispatch them to the two 6-bit per-DP8 inputs of pe_array_bpl_bfp, which
 //   forms the 7-bit scales. The sideband model (select by SEL_A/SEL_B, H/L
 //   parity, per-side idle zeroing from the CTR zero codes) runs alongside as
 //   the golden: the dispatcher outputs are checked against it every vector,
