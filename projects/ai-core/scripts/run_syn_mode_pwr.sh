@@ -3,7 +3,7 @@
 # Author: Simone Machetti
 #
 # Description:
-#   Per-mode dynamic power runs for the four PE-grid variants - baseline
+#   Per-mode dynamic power runs for the five PE-grid variants - baseline
 #   (top_NxN), square (top_NxN_sqr), BFP (top_NxN_bfp) and square-BFP
 #   (top_NxN_sqr_bfp) - measured on the complete 2x2 grids. Same four
 #   passes as run_syn_pwr.sh, but pass C runs each of the 11 modes on its own
@@ -45,6 +45,9 @@ BB_SQR_BFP="pe_sqr_bfp ctrl_sqr const_sqr_bfp disp_array_a_sqr \
             disp_array_exp_a_sqr_bfp disp_array_b_sqr disp_array_exp_b_sqr_bfp \
             pe_array_alpha_sqr_bfp pe_array_beta_sqr_bfp icg"
 
+BB_BPL_BFP="pe_bpl_bfp ctrl disp_array_a disp_array_exp_a_bfp disp_array_b_bpl_bfp \
+            disp_array_exp_b_bfp icg"
+
 # -----------------------------------------------------------------------------
 # Pass A - per-module runs
 # -----------------------------------------------------------------------------
@@ -78,6 +81,10 @@ make syn PROJECT=ai-core TOP_LEVEL=pe_array_beta_sqr_bfp OUT_DIR=pe_array_beta_s
 make syn PROJECT=ai-core TOP_LEVEL=const_sqr_bfp OUT_DIR=const_sqr_bfp_syn
 make syn PROJECT=ai-core TOP_LEVEL=pe_sqr_bfp OUT_DIR=pe_sqr_bfp_syn
 
+# bit-plane BFP
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_b_bpl_bfp OUT_DIR=disp_array_b_bpl_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_bfp OUT_DIR=pe_bpl_bfp_syn
+
 # -----------------------------------------------------------------------------
 # Pass B - 2x2 grids (blackboxed)
 # -----------------------------------------------------------------------------
@@ -92,6 +99,9 @@ make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bfp OUT_DIR=top_2x2_bfp_syn PARAMS="N
 
 make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_2x2_sqr_bfp_syn PARAMS="N=2" \
     BLACKBOX_MODULES="$BB_SQR_BFP"
+
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bpl_bfp OUT_DIR=top_2x2_bpl_bfp_syn PARAMS="N=2" \
+    BLACKBOX_MODULES="$BB_BPL_BFP"
 
 # -----------------------------------------------------------------------------
 # Passes C and D - one gate-level simulation and one power run per mode
@@ -127,3 +137,4 @@ sweep top_NxN         tb_top_NxN_pwr         top_2x2         "$BB_BAS"
 sweep top_NxN_sqr     tb_top_NxN_sqr_pwr     top_2x2_sqr     "$BB_SQR"
 sweep top_NxN_bfp     tb_top_NxN_bfp_pwr     top_2x2_bfp     "$BB_BFP"
 sweep top_NxN_sqr_bfp tb_top_NxN_sqr_bfp_pwr top_2x2_sqr_bfp "$BB_SQR_BFP"
+sweep top_NxN_bpl_bfp tb_top_NxN_bpl_bfp_pwr top_2x2_bpl_bfp "$BB_BPL_BFP"

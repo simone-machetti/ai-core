@@ -2,9 +2,10 @@
 # Author: Simone Machetti
 #
 # Description:
-#   Line charts of the area and dynamic-power gain of each square variant against
-#   its own baseline as the grid grows - square vs baseline and square-BFP vs
-#   baseline-BFP, from 2x2 up to 128x128. Both curves are the same instance-count
+#   Line charts of the area and dynamic-power gain of each variant against its
+#   own baseline as the grid grows - square vs baseline, and square-BFP and
+#   bit-plane BFP vs baseline-BFP, from 2x2 up to 128x128. The curves are the
+#   same instance-count
 #   model used by hist_syn_area.py and hist_syn_pwr.py (PE = N^2, dispatch and
 #   alpha-beta = N, icg = N^2 + 2N, ctrl/const/glue = 1) evaluated over a range of
 #   N instead of at the two fixed sizes, so the 8x8 and 16x16 bars of those charts
@@ -31,7 +32,9 @@ AREA = {
     "disp_array_exp_a_sqr_bfp": 41.990, "disp_array_exp_b_sqr_bfp": 68.584,
     "pe_array_alpha_sqr": 1962.235, "pe_array_beta_sqr": 1753.682,
     "pe_array_alpha_sqr_bfp": 1226.688, "pe_array_beta_sqr_bfp": 1070.755,
+    "pe_bpl_bfp": 5148.898, "disp_array_b_bpl_bfp": 616.224,
     "glue_bas": 1.779, "glue_sqr": 20.383, "glue_bfp": 1.779, "glue_sqr_bfp": 3.470,
+    "glue_bpl_bfp": 4.753,
 }
 
 VAR_AREA = {
@@ -56,6 +59,11 @@ VAR_AREA = {
                ("disp_array_exp_a_sqr_bfp", "N"), ("disp_array_exp_b_sqr_bfp", "N"),
                ("icg", "2N"), ("ctrl_sqr", "1"), ("const_sqr_bfp", "1"),
                ("glue_sqr_bfp", "1")]},
+    "Bit-Plane-BFP": {
+        "PE": [("pe_bpl_bfp", "N2"), ("icg", "N2")], "AB": [],
+        "OT": [("disp_array_a", "N"), ("disp_array_b_bpl_bfp", "N"),
+               ("disp_array_exp_a_bfp", "N"), ("disp_array_exp_b_bfp", "N"),
+               ("icg", "2N"), ("ctrl", "1"), ("glue_bpl_bfp", "1")]},
 }
 
 VAR_PWR = {
@@ -74,10 +82,15 @@ VAR_PWR = {
         "PE": [(0.82000, "N2"), (0.02620, "N2")], "AB": [(0.29050, "N"), (0.27200, "N")],
         "OT": [(0.12250, "N"), (0.10800, "N"), (0.01020, "N"), (0.01665, "N"),
                (0.00673, "2N"), (0.00162, "1"), (0.00002, "1")]},
+    "Bit-Plane-BFP": {
+        "PE": [(0.90700, "N2"), (0.02620, "N2")], "AB": [],
+        "OT": [(0.12200, "N"), (0.14850, "N"), (0.01370, "N"), (0.01615, "N"),
+               (0.00673, "2N"), (0.00137, "1")]},
 }
 
-PAIRS = [("Square", "Baseline"), ("Square-BFP", "Baseline-BFP")]
-COLORS = {"Square": "#b5793f", "Square-BFP": "#5a7043"}
+PAIRS = [("Square", "Baseline"), ("Square-BFP", "Baseline-BFP"),
+         ("Bit-Plane-BFP", "Baseline-BFP")]
+COLORS = {"Square": "#b5793f", "Square-BFP": "#5a7043", "Bit-Plane-BFP": "#4a6d8c"}
 MARKED = [8, 16]
 TICKS = [2, 4, 8, 16, 32, 64, 128]
 
