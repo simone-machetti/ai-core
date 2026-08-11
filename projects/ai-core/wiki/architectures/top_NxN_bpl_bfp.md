@@ -6,10 +6,10 @@
 
 The grid is where the bit-plane idea pays. Inside a PE, [dp_8_bpl_bfp](../modules/dp_8_bpl_bfp.md) replaces Booth recoding of B with a 4:1 multiplexer per lane pair per bit plane of A. The fourth mux input — the pairwise sum `b₂ⱼ + b₂ⱼ₊₁` — is a function of **B alone**, so it is hoisted into each column's dispatcher and broadcast:
 
-| term | cost | scales as |
-| --- | --- | --- |
-| pair-sum adders | `N` × 16 DP8s × 4 sums | **O(N)** |
-| bit-plane selection + compression | `N²` PEs | **O(N²)** |
+| term                              | cost                   | scales as |
+| --------------------------------- | ---------------------- | --------- |
+| pair-sum adders                   | `N` × 16 DP8s × 4 sums | **O(N)**  |
+| bit-plane selection + compression | `N²` PEs               | **O(N²)** |
 
 That is the same lever the square variant pulls with its α/β generators, but a much cheaper one: the overhead is `+32 %` on one dispatcher (`616.22` vs `466.33` µm²) rather than two extra per-row/per-column arrays, so **the crossover is at N = 1** — the bit-plane grid is smaller than baseline-BFP at every size, including 2×2.
 
@@ -17,24 +17,24 @@ Measured against [top_NxN_bfp](./top_NxN_bfp.md): area **−3.3 %** at 8×8 and 
 
 ## Parameters
 
-| Parameter | Default | Description |
-| --------- | ------- | ----------- |
+| Parameter | Default | Description                                                                    |
+| --------- | ------- | ------------------------------------------------------------------------------ |
 | `N`       | 2       | Grid side — the array is `N × N` PEs. Chip target 8×8; a single PE is `N = 1`. |
 
 ## Interface
 
 **Identical, port for port, to [top_NxN_bfp](./top_NxN_bfp.md)** — the bit-plane operand contract is entirely internal:
 
-| Signal | Dir | Description |
-| ------ | --- | ----------- |
-| `clk_i` / `rst_ni` | in | Clock, asynchronous active-low reset. |
-| `in_a_i[0:N-1]` / `in_b_i[0:N-1]` | in | 256-bit mantissa operand per row / per column. |
-| `in_exp_a_i[0:N-1]` / `in_exp_b_i[0:N-1]` | in | Per-row A format exponents (4 × 6-bit) / per-column B (4 × 2 × 6-bit). |
-| `mode_i` | in | Operating mode (4-bit), decoded once by the shared `ctrl`. |
-| `sel_acc_i` | in | Seed vs feedback for every PE's accumulator. |
-| `acc_i` / `acc_exp_i` | in | Per-PE, per-lane accumulator seed mantissa and scale. |
-| `en_row_i[0:N-1]` / `en_col_i[0:N-1]` | in | Row / column enables — scale the active region to any `rows × cols` rectangle. |
-| `out_q_o` / `out_exp_o` | out | Per-PE, per-lane raw un-normalized result mantissa and scale. |
+| Signal                                    | Dir | Description                                                                    |
+| ----------------------------------------- | --- | ------------------------------------------------------------------------------ |
+| `clk_i` / `rst_ni`                        | in  | Clock, asynchronous active-low reset.                                          |
+| `in_a_i[0:N-1]` / `in_b_i[0:N-1]`         | in  | 256-bit mantissa operand per row / per column.                                 |
+| `in_exp_a_i[0:N-1]` / `in_exp_b_i[0:N-1]` | in  | Per-row A format exponents (4 × 6-bit) / per-column B (4 × 2 × 6-bit).         |
+| `mode_i`                                  | in  | Operating mode (4-bit), decoded once by the shared `ctrl`.                     |
+| `sel_acc_i`                               | in  | Seed vs feedback for every PE's accumulator.                                   |
+| `acc_i` / `acc_exp_i`                     | in  | Per-PE, per-lane accumulator seed mantissa and scale.                          |
+| `en_row_i[0:N-1]` / `en_col_i[0:N-1]`     | in  | Row / column enables — scale the active region to any `rows × cols` rectangle. |
+| `out_q_o` / `out_exp_o`                   | out | Per-PE, per-lane raw un-normalized result mantissa and scale.                  |
 
 ## Instantiation
 
@@ -54,12 +54,12 @@ top_NxN_bpl_bfp #(.N(8)) top_NxN_bpl_bfp_i (
 
 Against [top_NxN_bfp](./top_NxN_bfp.md) exactly **two instances change**:
 
-| per | `top_NxN_bfp` | `top_NxN_bpl_bfp` |
-| --- | --- | --- |
-| grid | `ctrl`, `sel_acc` pipeline | same |
-| row | `disp_array_a`, `disp_array_exp_a_bfp`, `icg` | same |
+| per    | `top_NxN_bfp`                                 | `top_NxN_bpl_bfp`                      |
+| ------ | --------------------------------------------- | -------------------------------------- |
+| grid   | `ctrl`, `sel_acc` pipeline                    | same                                   |
+| row    | `disp_array_a`, `disp_array_exp_a_bfp`, `icg` | same                                   |
 | column | `disp_array_b`, `disp_array_exp_b_bfp`, `icg` | **`disp_array_b_bpl_bfp`**, same, same |
-| tile | `pe_bfp`, `icg` | **`pe_bpl_bfp`**, same |
+| tile   | `pe_bfp`, `icg`                               | **`pe_bpl_bfp`**, same                 |
 
 Each column dispatcher now emits two buses — the 8 × 5-bit resolved B values and the 4 × 6-bit pair sums — both broadcast down the column. Clock-gating structure, pipeline depth and the `en_row`/`en_col` rectangle scaling are untouched.
 

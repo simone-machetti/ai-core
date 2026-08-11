@@ -50,12 +50,12 @@ For the two square pairs the mean margins match the all-mode merged figures of [
 
 The `sel_shift` column above is `ctrl`'s per-mode tree shift enables (see [ctrl](../modules/ctrl.md)), and the correlation with the bit-plane margin is almost exact:
 
-| `sel_shift` | shifts enabled | modes | Bpl margin at 8×8 |
-| ----------- | -------------- | ------ | ----------------- |
-| `000`       | 0              | 1, 5   | **+23 %**         |
-| `010`       | 1              | 2, 6, 10, 11 | −3.7 … +1.9 % |
-| `011`       | 2              | 3, 7   | +0.8 … +1.2 %     |
-| `111`       | 3              | 8, 9, 12 | **−11 %**       |
+| `sel_shift` | shifts enabled | modes        | Bpl margin at 8×8 |
+| ----------- | -------------- | ------------ | ----------------- |
+| `000`       | 0              | 1, 5         | **+23 %**         |
+| `010`       | 1              | 2, 6, 10, 11 | −3.7 … +1.9 %     |
+| `011`       | 2              | 3, 7         | +0.8 … +1.2 %     |
+| `111`       | 3              | 8, 9, 12     | **−11 %**         |
 
 Nothing else in the mode tables sorts the data this cleanly — in particular the lane-utilization measure that explains the *baseline* spread does not (modes 1 and 5 sit at opposite ends of it, 100 % and 50 %, yet give the same +23 %; modes 5 and 6 share a utilization but differ by 21 points).
 

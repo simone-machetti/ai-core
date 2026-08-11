@@ -22,29 +22,29 @@ The trade is visible in the area breakdown: selection gets much cheaper than Boo
 
 None — fixed to the DP8 configuration (8 lanes, 8-bit A).
 
-| Localparam                 | Value | Meaning                                                       |
-| -------------------------- | ----- | ------------------------------------------------------------- |
-| `LANES`                    | 8     | MAC lanes.                                                    |
-| `IN_WIDTH_A`               | 8     | A element — raw int8, as the baseline.                        |
-| `IN_WIDTH_B`               | 5     | **CHANGED** — B element arrives already resolved to signed.   |
-| `SUM_WIDTH`                | 6     | **NEW** — precomputed pair sum width.                         |
-| `NUM_COL`                  | 8     | Bit planes of A (one column each).                            |
-| `MUX_WIDTH` / `MUX_SIZE`   | 6 / 4 | Selection multiplexer per lane pair per plane.                |
-| `COL_WIDTH`  (`COL_EXT` 2) | 8     | Per-column 4:2 output.                                        |
-| `L0_WIDTH`   (`L0_EXT` 2)  | 11    | Column-pair 4:2 output.                                       |
-| `L1_WIDTH`   (`L1_EXT` 2)  | 19    | Final 9:2 output.                                             |
-| `OUT_WIDTH`  (`OUT_EXT` 3) | 22    | Exported carry-save row width.                                |
+| Localparam                 | Value | Meaning                                                     |
+| -------------------------- | ----- | ----------------------------------------------------------- |
+| `LANES`                    | 8     | MAC lanes.                                                  |
+| `IN_WIDTH_A`               | 8     | A element — raw int8, as the baseline.                      |
+| `IN_WIDTH_B`               | 5     | **CHANGED** — B element arrives already resolved to signed. |
+| `SUM_WIDTH`                | 6     | **NEW** — precomputed pair sum width.                       |
+| `NUM_COL`                  | 8     | Bit planes of A (one column each).                          |
+| `MUX_WIDTH` / `MUX_SIZE`   | 6 / 4 | Selection multiplexer per lane pair per plane.              |
+| `COL_WIDTH`  (`COL_EXT` 2) | 8     | Per-column 4:2 output.                                      |
+| `L0_WIDTH`   (`L0_EXT` 2)  | 11    | Column-pair 4:2 output.                                     |
+| `L1_WIDTH`   (`L1_EXT` 2)  | 19    | Final 9:2 output.                                           |
+| `OUT_WIDTH`  (`OUT_EXT` 3) | 22    | Exported carry-save row width.                              |
 
 ## Interface
 
-| Signal          | Dir | Width  | Description                                                                 |
-| --------------- | --- | ------ | --------------------------------------------------------------------------- |
-| `a_i[0:7]`      | in  | 8 each | A elements, raw int8.                                                       |
-| `b_i[0:7]`      | in  | 5 each | **CHANGED** — B elements as exact signed values, from the dispatcher.       |
-| `b_sum_i[0:3]`  | in  | 6 each | **NEW** — precomputed pairwise sums `b₂ⱼ + b₂ⱼ₊₁`, from the dispatcher.    |
-| `is_signed_a_i` | in  | 1      | A signedness; drives the weight-2⁷ correction.                              |
-| `sum_o`         | out | 22     | Carry-save sum row, sign-consistent.                                        |
-| `carry_o`       | out | 22     | Carry-save carry row, sign-consistent.                                      |
+| Signal          | Dir | Width  | Description                                                             |
+| --------------- | --- | ------ | ----------------------------------------------------------------------- |
+| `a_i[0:7]`      | in  | 8 each | A elements, raw int8.                                                   |
+| `b_i[0:7]`      | in  | 5 each | **CHANGED** — B elements as exact signed values, from the dispatcher.   |
+| `b_sum_i[0:3]`  | in  | 6 each | **NEW** — precomputed pairwise sums `b₂ⱼ + b₂ⱼ₊₁`, from the dispatcher. |
+| `is_signed_a_i` | in  | 1      | A signedness; drives the weight-2⁷ correction.                          |
+| `sum_o`         | out | 22     | Carry-save sum row, sign-consistent.                                    |
+| `carry_o`       | out | 22     | Carry-save carry row, sign-consistent.                                  |
 
 **No `is_signed_b_i`** — B's signedness is resolved in [disp_array_b_bpl_bfp](./disp_array_b_bpl_bfp.md) and never reaches here. Combinational.
 
@@ -93,11 +93,11 @@ Why that constant is exactly `2⁸`: one's-complementing a two's-complement valu
 
 ### Reduction: 8 → 4 → 1
 
-| Row | Compressors                       | In → out width | What it merges                                     |
-| --- | --------------------------------- | -------------- | -------------------------------------------------- |
-| 0   | 8 × [cpr_w_n](./cpr_w_n.md) 4:2   | 6 → 8          | the 4 lane-pair partials of one bit plane           |
-| 1   | 4 × `cpr_w_n` 4:2                 | 9 → 11         | a column pair at relative weights 2⁰/2¹             |
-| 2   | 1 × `cpr_w_n` **9:2**             | 17 → 19        | the 4 nodes at 2⁰/2²/2⁴/2⁶ **plus** the constant row |
+| Row | Compressors                     | In → out width | What it merges                                       |
+| --- | ------------------------------- | -------------- | ---------------------------------------------------- |
+| 0   | 8 × [cpr_w_n](./cpr_w_n.md) 4:2 | 6 → 8          | the 4 lane-pair partials of one bit plane            |
+| 1   | 4 × `cpr_w_n` 4:2               | 9 → 11         | a column pair at relative weights 2⁰/2¹              |
+| 2   | 1 × `cpr_w_n` **9:2**           | 17 → 19        | the 4 nodes at 2⁰/2²/2⁴/2⁶ **plus** the constant row |
 
 The final stage is 9:2, not 8:2, because the `+2⁸` correction rides in as a ninth row rather than needing a stage of its own. Static alignment is inline — `L1_IN_WIDTH'($signed(x)) << (SH_L1*g)`, the same idiom [dp_8](./dp_8.md) uses for its own tree; the runtime-selected [shift_n](./shift_n.md) belongs to the array above, not here.
 

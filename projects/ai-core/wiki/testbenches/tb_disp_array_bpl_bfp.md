@@ -10,9 +10,9 @@ Unlike `tb_disp_array`, the negate modes are driven with `ctrl`'s **carry-chaine
 
 ## Parameters
 
-| Parameter  | Default | Description                                 |
-| ---------- | ------- | ------------------------------------------- |
-| `NUM_RAND` | `500`   | Random 256-bit operand vectors per mode.    |
+| Parameter  | Default | Description                              |
+| ---------- | ------- | ---------------------------------------- |
+| `NUM_RAND` | `500`   | Random 256-bit operand vectors per mode. |
 
 ## Run
 
@@ -22,11 +22,11 @@ make sim PROJECT=ai-core TOP_LEVEL=disp_array_bpl_bfp
 
 ## What it checks
 
-| Output | Check |
-| ------ | ----- |
-| `a_dp8[0:15]` | equals the `SEL_A`-selected 64-bit block, duplicated across the pair. |
-| `b_dp8[0:15]` | each of the 8 lanes equals the gated nibble widened by `is_signed_b` to its exact signed 5-bit value. |
-| `b_sum_dp8[0:15]` | each of the 4 sums equals the signed sum of its two adjacent gated 5-bit lanes, at 6 bits. |
+| Output            | Check                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------- |
+| `a_dp8[0:15]`     | equals the `SEL_A`-selected 64-bit block, duplicated across the pair.                                 |
+| `b_dp8[0:15]`     | each of the 8 lanes equals the gated nibble widened by `is_signed_b` to its exact signed 5-bit value. |
+| `b_sum_dp8[0:15]` | each of the 4 sums equals the signed sum of its two adjacent gated 5-bit lanes, at 6 bits.            |
 
 Any mismatch is **fatal**.
 

@@ -6,10 +6,10 @@
 
 ## Parameters
 
-| Parameter  | Default | Description                             |
-| ---------- | ------- | --------------------------------------- |
-| `NUM_RAND` | `2000`  | Random A,B matrix pairs per mode.       |
-| `NUM_ACC`  | `8`     | Iterations in the accumulation pass.    |
+| Parameter  | Default | Description                          |
+| ---------- | ------- | ------------------------------------ |
+| `NUM_RAND` | `2000`  | Random A,B matrix pairs per mode.    |
+| `NUM_ACC`  | `8`     | Iterations in the accumulation pass. |
 
 ## Run
 
@@ -19,10 +19,10 @@ make sim PROJECT=ai-core TOP_LEVEL=acc_array_bpl_bfp
 
 ## What it checks
 
-| Pass | Check |
-| ---- | ----- |
-| A — equal exponents | the bit-plane output equals the baseline at `pe_out` — single-shot **and** through the `seed + NUM_ACC−1` feedback accumulation — while the baseline itself matches the matmul golden (`seed + NUM_ACC · result`); every accumulator exponent equals the common scale. |
-| B — per-mode BFP exponents | the running accumulator scale equals the tap scale, and the accumulator value is exactly `(seed >>> tap_exp) + NUM_ACC · tap`. |
+| Pass                       | Check                                                                                                                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A — equal exponents        | the bit-plane output equals the baseline at `pe_out` — single-shot **and** through the `seed + NUM_ACC−1` feedback accumulation — while the baseline itself matches the matmul golden (`seed + NUM_ACC · result`); every accumulator exponent equals the common scale. |
+| B — per-mode BFP exponents | the running accumulator scale equals the tap scale, and the accumulator value is exactly `(seed >>> tap_exp) + NUM_ACC · tap`.                                                                                                                                         |
 
 **All 8 lanes** of every mode must match — the check is not restricted to the lanes a mode nominally uses. Any mismatch is **fatal**.
 

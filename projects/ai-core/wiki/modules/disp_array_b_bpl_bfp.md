@@ -6,10 +6,10 @@
 
 The bit-plane [dp_8_bpl_bfp](./dp_8_bpl_bfp.md) needs, per lane pair and per bit plane, one of `{0, b₂ⱼ, b₂ⱼ₊₁, b₂ⱼ + b₂ⱼ₊₁}`. The pair sums are a function of **B alone**, so they can be hoisted out of the PE and computed once per grid **column**:
 
-| | adders for the pair sums |
-| --- | --- |
-| inside each PE | `N²` × 16 DP8s × 4 sums |
-| in this dispatcher | `N` × 16 DP8s × 4 sums |
+|                    | adders for the pair sums |
+| ------------------ | ------------------------ |
+| inside each PE     | `N²` × 16 DP8s × 4 sums  |
+| in this dispatcher | `N` × 16 DP8s × 4 sums   |
 
 That `N² → N` move is the amortization the whole variant is built on — the same lever the square variant pulls with its α/β generators. It is paid for in dispatcher area (`616.22` vs `466.33` µm², **+32 %**) and bought back `N²` times over in the PE.
 
@@ -19,30 +19,30 @@ The second thing that moves here is **signedness**. Because the gate resolves ea
 
 None — fixed to the PE configuration, as [disp_array_b](./disp_array_b.md).
 
-| Localparam                  | Value | Meaning                                            |
-| --------------------------- | ----- | -------------------------------------------------- |
-| `NUM_BLK` / `BLK_WIDTH`     | 4 / 64 | Operand blocks in the 256-bit word.               |
-| `NUM_PAIR` / `NUM_DP8`      | 8 / 16 | DP8 pairs and DP8s served by the column.          |
-| `B_ELEM_WIDTH`              | 4     | Raw int4 element.                                  |
-| `B_OUT_WIDTH`               | 5     | **NEW** — resolved signed element (`4 + 1`).       |
-| `B_SUM_WIDTH`               | 6     | **NEW** — pair sum (`4 + 2`), see the gate page.   |
-| `NUM_B_SUM`                 | 4     | **NEW** — pair sums per DP8 (8 lanes / 2).         |
-| `B_DP8_WIDTH`               | 40    | **CHANGED** — 8 × 5, was 8 × 4 = 32.               |
-| `B_SDP8_WIDTH`              | 24    | **NEW** — 4 × 6, the pair-sum bus.                 |
+| Localparam              | Value  | Meaning                                          |
+| ----------------------- | ------ | ------------------------------------------------ |
+| `NUM_BLK` / `BLK_WIDTH` | 4 / 64 | Operand blocks in the 256-bit word.              |
+| `NUM_PAIR` / `NUM_DP8`  | 8 / 16 | DP8 pairs and DP8s served by the column.         |
+| `B_ELEM_WIDTH`          | 4      | Raw int4 element.                                |
+| `B_OUT_WIDTH`           | 5      | **NEW** — resolved signed element (`4 + 1`).     |
+| `B_SUM_WIDTH`           | 6      | **NEW** — pair sum (`4 + 2`), see the gate page. |
+| `NUM_B_SUM`             | 4      | **NEW** — pair sums per DP8 (8 lanes / 2).       |
+| `B_DP8_WIDTH`           | 40     | **CHANGED** — 8 × 5, was 8 × 4 = 32.             |
+| `B_SDP8_WIDTH`          | 24     | **NEW** — 4 × 6, the pair-sum bus.               |
 
 ## Interface
 
-| Signal            | Dir | Width   | Description                                                            |
-| ----------------- | --- | ------- | ---------------------------------------------------------------------- |
-| `clk_i`           | in  | 1       | Clock.                                                                 |
-| `rst_ni`          | in  | 1       | Asynchronous active-low reset.                                         |
-| `pe_in_b_i`       | in  | 256     | Raw B operand word (4 blocks × 64).                                    |
-| `sel_b_i[0:7]`    | in  | 2 each  | Per-pair 4→1 block select, from `ctrl`.                                |
-| `ctr_l_i[0:7]`    | in  | 2 each  | B-gate op for the low half (pass/zero/negate/negate-carry).            |
-| `ctr_h_i[0:7]`    | in  | 2 each  | B-gate op for the high half.                                           |
-| `is_signed_b_i[0:15]` | in | 1 each | **NEW** — per-DP8 B signedness, from `ctrl`; consumed here.           |
-| `b_dp8_o[0:15]`   | out | 40 each | **CHANGED** — 8 × 5-bit exact signed lane values.                      |
-| `b_sum_dp8_o[0:15]` | out | 24 each | **NEW** — 4 × 6-bit pairwise sums.                                   |
+| Signal                | Dir | Width   | Description                                                 |
+| --------------------- | --- | ------- | ----------------------------------------------------------- |
+| `clk_i`               | in  | 1       | Clock.                                                      |
+| `rst_ni`              | in  | 1       | Asynchronous active-low reset.                              |
+| `pe_in_b_i`           | in  | 256     | Raw B operand word (4 blocks × 64).                         |
+| `sel_b_i[0:7]`        | in  | 2 each  | Per-pair 4→1 block select, from `ctrl`.                     |
+| `ctr_l_i[0:7]`        | in  | 2 each  | B-gate op for the low half (pass/zero/negate/negate-carry). |
+| `ctr_h_i[0:7]`        | in  | 2 each  | B-gate op for the high half.                                |
+| `is_signed_b_i[0:15]` | in  | 1 each  | **NEW** — per-DP8 B signedness, from `ctrl`; consumed here. |
+| `b_dp8_o[0:15]`       | out | 40 each | **CHANGED** — 8 × 5-bit exact signed lane values.           |
+| `b_sum_dp8_o[0:15]`   | out | 24 each | **NEW** — 4 × 6-bit pairwise sums.                          |
 
 Both outputs are broadcast to every PE in the column. The operand word is registered on input; the dispatch itself is combinational.
 

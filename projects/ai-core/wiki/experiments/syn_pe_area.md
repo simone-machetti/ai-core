@@ -27,12 +27,12 @@ make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_bfp OUT_DIR=pe_bpl_bfp_hier_syn \
 
 Library is `asap7sc7p5t` RVT TT at the default `CLK_PERIOD_NS`, matching [Synthesis Area](syn_area.md) so the figures are comparable with the component areas measured there. The sections are then
 
-| Section | Derivation |
-| ------- | ----------- |
-| DP8 array | sum of the 16 `dp_8` / `dp_8_sqr` instances |
-| Compression tree | `pe_array*` minus those cores (square-BFP includes [ext_inject_sqr_bfp](../modules/ext_inject_sqr_bfp.md)) |
-| Accumulator | `acc_array*` |
-| PE glue | `pe*` minus `pe_array*` minus `acc_array*` — the `en_i` operand mask and the two `acc` pipeline register banks |
+| Section          | Derivation                                                                                                     |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| DP8 array        | sum of the 16 `dp_8` / `dp_8_sqr` instances                                                                    |
+| Compression tree | `pe_array*` minus those cores (square-BFP includes [ext_inject_sqr_bfp](../modules/ext_inject_sqr_bfp.md))     |
+| Accumulator      | `acc_array*`                                                                                                   |
+| PE glue          | `pe*` minus `pe_array*` minus `acc_array*` — the `en_i` operand mask and the two `acc` pipeline register banks |
 
 All commands are in [run_syn_pe_area.sh](../../scripts/run_syn_pe_area.sh). Numbers land in `doc/data/res_syn_pe_area.xlsx` and `doc/charts/hist_syn_dp_area.png` / `hist_syn_pe_area.png`; both charts are normalized, so they carry ratios rather than absolute µm².
 

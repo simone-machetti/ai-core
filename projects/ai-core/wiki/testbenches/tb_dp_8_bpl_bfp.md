@@ -6,8 +6,8 @@
 
 ## Parameters
 
-| Parameter  | Default | Description                                                     |
-| ---------- | ------- | --------------------------------------------------------------- |
+| Parameter  | Default | Description                                                        |
+| ---------- | ------- | ------------------------------------------------------------------ |
 | `NUM_RAND` | `2000`  | Random `(a, b)` vector pairs, each checked in 4 signedness combos. |
 
 ## Run
@@ -18,11 +18,11 @@ make sim PROJECT=ai-core TOP_LEVEL=dp_8_bpl_bfp
 
 ## What it checks
 
-| Property | Check |
-| -------- | ----- |
-| **resolve** | `sum_o + carry_o == Σₖ aₖ·bₖ` modulo `2^OUT_WIDTH`. |
+| Property             | Check                                                                             |
+| -------------------- | --------------------------------------------------------------------------------- |
+| **resolve**          | `sum_o + carry_o == Σₖ aₖ·bₖ` modulo `2^OUT_WIDTH`.                               |
 | **sign-consistency** | `signext(sum_o) + signext(carry_o) == Σₖ aₖ·bₖ` — the strictly stronger property. |
-| **equivalence** | the value equals that of a `dp_8` given the same raw operands. |
+| **equivalence**      | the value equals that of a `dp_8` given the same raw operands.                    |
 
 Any mismatch is **fatal**.
 

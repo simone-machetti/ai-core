@@ -14,20 +14,20 @@ Contrast [gate_b_n](./gate_b_n.md), the pass/zero/negate conditioning gate that 
 
 ## Parameters
 
-| Parameter | Default | Description                                          |
-| --------- | ------- | ---------------------------------------------------- |
-| `WIDTH`   | 4       | Bit width of each input word.                        |
+| Parameter | Default | Description                                            |
+| --------- | ------- | ------------------------------------------------------ |
+| `WIDTH`   | 4       | Bit width of each input word.                          |
 | `SIZE`    | 8       | Number of input words — even; all share `is_signed_i`. |
 
 Derived: `OUT_WIDTH = WIDTH + 1`, `SUM_WIDTH = WIDTH + 2`, `NUM_SUM = SIZE / 2`.
 
 ## Interface
 
-| Signal        | Dir | Width                | Description                                                                   |
-| ------------- | --- | -------------------- | ----------------------------------------------------------------------------- |
-| `in_i`        | in  | `SIZE` × `WIDTH`     | Input words — unpacked array `[0:SIZE-1]`.                                    |
-| `is_signed_i` | in  | 1                    | Shared signedness: `1` = words are two's complement, `0` = unsigned.          |
-| `out_o`       | out | `SIZE` × `WIDTH+1`   | Each word as its exact signed value — unpacked array `[0:SIZE-1]`.            |
+| Signal        | Dir | Width                | Description                                                                    |
+| ------------- | --- | -------------------- | ------------------------------------------------------------------------------ |
+| `in_i`        | in  | `SIZE` × `WIDTH`     | Input words — unpacked array `[0:SIZE-1]`.                                     |
+| `is_signed_i` | in  | 1                    | Shared signedness: `1` = words are two's complement, `0` = unsigned.           |
+| `out_o`       | out | `SIZE` × `WIDTH+1`   | Each word as its exact signed value — unpacked array `[0:SIZE-1]`.             |
 | `sum_o`       | out | `SIZE/2` × `WIDTH+2` | Pairwise sums (word `2k` plus word `2k+1`), signed — unpacked `[0:NUM_SUM-1]`. |
 
 Combinational — no clock, no storage.

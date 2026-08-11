@@ -37,19 +37,19 @@ Same counts as [Synthesis Area](syn_area.md), except the clock gates are **split
 
 Per-component unit power from the 2×2 runs, mW:
 
-| Component            | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane BFP |
-| -------------------- | -------- | ------- | ------------ | ---------- | ------------- |
-| `ctrl` / `ctrl_sqr`  | 0.00127  | 0.00177 | 0.00136      | 0.00162    | 0.00137       |
-| `const`              | —        | 0.00001 | —            | 0.00002    | —             |
-| `disp_array_a`       | 0.10100  | 0.12300 | 0.10200      | 0.12250    | 0.12200       |
-| `disp_array_b`       | 0.09975  | 0.10700 | 0.10100      | 0.10800    | **0.14850**   |
-| `disp_array_exp_a`   | —        | —       | 0.01380      | 0.01020    | 0.01370       |
-| `disp_array_exp_b`   | —        | —       | 0.01610      | 0.01665    | 0.01615       |
-| `pe_array_alpha`     | —        | 0.40000 | —            | 0.29050    | —             |
-| `pe_array_beta`      | —        | 0.36500 | —            | 0.27200    | —             |
-| `pe` (per variant)   | 0.68225  | 0.51700 | 0.91850      | 0.82000    | **0.90700**   |
-| `icg` (per PE)       | 0.02080  | 0.01970 | 0.02610      | 0.02620    | 0.02620       |
-| `icg` (per row/col)  | 0.00591  | 0.01490 | 0.00673      | 0.00673    | 0.00673       |
+| Component           | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane BFP |
+| ------------------- | -------- | ------- | ------------ | ---------- | ------------- |
+| `ctrl` / `ctrl_sqr` | 0.00127  | 0.00177 | 0.00136      | 0.00162    | 0.00137       |
+| `const`             | —        | 0.00001 | —            | 0.00002    | —             |
+| `disp_array_a`      | 0.10100  | 0.12300 | 0.10200      | 0.12250    | 0.12200       |
+| `disp_array_b`      | 0.09975  | 0.10700 | 0.10100      | 0.10800    | **0.14850**   |
+| `disp_array_exp_a`  | —        | —       | 0.01380      | 0.01020    | 0.01370       |
+| `disp_array_exp_b`  | —        | —       | 0.01610      | 0.01665    | 0.01615       |
+| `pe_array_alpha`    | —        | 0.40000 | —            | 0.29050    | —             |
+| `pe_array_beta`     | —        | 0.36500 | —            | 0.27200    | —             |
+| `pe` (per variant)  | 0.68225  | 0.51700 | 0.91850      | 0.82000    | **0.90700**   |
+| `icg` (per PE)      | 0.02080  | 0.01970 | 0.02610      | 0.02620    | 0.02620       |
+| `icg` (per row/col) | 0.00591  | 0.01490 | 0.00673      | 0.00673    | 0.00673       |
 
 Note `disp_array_a` — the *same* netlist — reports 0.122 mW in the bit-plane grid against 0.102 in the baseline-BFP grid. Its A bus drives 32 bit-plane multiplexer selects per DP8 instead of Booth encoders, a different capacitive load, and OpenSTA charges net switching power to the driver.
 
@@ -72,12 +72,12 @@ The BFP sideband costs ~34 % power on both axes (`Baseline-BFP/Baseline ≈ 1.34
 
 Split by category at 8×8 (PE includes its per-PE clock gate), mW:
 
-| Category   | Baseline | Square | Baseline-BFP | Square-BFP | Bit-Plane BFP |
-| ---------- | -------- | ------ | ------------ | ---------- | ------------- |
-| PE         | 45.00    | 34.35  | 60.45        | 54.16      | 59.72         |
-| α/β        | 0.00     | 6.12   | 0.00         | 4.50       | 0.00          |
-| Dispatch   | 1.61     | 1.84   | 1.86         | 2.06       | 2.40          |
-| Clock      | 0.10     | 0.24   | 0.11         | 0.11       | 0.11          |
+| Category | Baseline | Square | Baseline-BFP | Square-BFP | Bit-Plane BFP |
+| -------- | -------- | ------ | ------------ | ---------- | ------------- |
+| PE       | 45.00    | 34.35  | 60.45        | 54.16      | 59.72         |
+| α/β      | 0.00     | 6.12   | 0.00         | 4.50       | 0.00          |
+| Dispatch | 1.61     | 1.84   | 1.86         | 2.06       | 2.40          |
+| Clock    | 0.10     | 0.24   | 0.11         | 0.11       | 0.11          |
 
 The α/β generators are the whole of the square overhead and are unconditionally active (they run every cycle regardless of mode), which is why the 2×2 penalty exists and why the crossover exists at all — and why the tree-less BFP generators, which toggle less, pull the square-BFP crossover in.
 

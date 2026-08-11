@@ -8,12 +8,12 @@ Structurally the bit-plane counterpart of [tb_top_NxN_bfp](./tb_top_NxN_bfp.md),
 
 ## Parameters
 
-| Parameter          | Default | Description                                              |
-| ------------------ | ------- | -------------------------------------------------------- |
-| `N`                | `2`     | Grid side — `N × N` PEs (2 keeps the build fast).        |
-| `NUM_STREAM`       | `40`    | Operands streamed per mode in the single-shot pass.      |
-| `NUM_ACC`          | `8`     | Distinct tiles accumulated in the accumulation pass.     |
-| `NUM_STREAM_SCALE` | `10`    | Operands streamed per rectangle in the scaling pass.     |
+| Parameter          | Default | Description                                          |
+| ------------------ | ------- | ---------------------------------------------------- |
+| `N`                | `2`     | Grid side — `N × N` PEs (2 keeps the build fast).    |
+| `NUM_STREAM`       | `40`    | Operands streamed per mode in the single-shot pass.  |
+| `NUM_ACC`          | `8`     | Distinct tiles accumulated in the accumulation pass. |
+| `NUM_STREAM_SCALE` | `10`    | Operands streamed per rectangle in the scaling pass. |
 
 ## Run
 
@@ -25,9 +25,9 @@ make sim PROJECT=ai-core TOP_LEVEL=top_NxN_bpl_bfp
 
 Each of the three streaming patterns — **single-shot**, **accumulate**, **rectangle scaling** via `en_row`/`en_col` — runs for every mode with two exponent experiments:
 
-| Experiment | Checks |
-| ---------- | ------ |
-| Equal exponents | `out_q` equals the plain matmul golden **bit-for-bit** (every aligner transparent), and every output exponent equals the common scale. |
+| Experiment                                                   | Checks                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Equal exponents                                              | `out_q` equals the plain matmul golden **bit-for-bit** (every aligner transparent), and every output exponent equals the common scale.                                                                                                                  |
 | Distinct exponents (one per row for A, one per column for B) | each PE's output exponent equals an independent `egold` model built from its row + column source exponents (catches fan-out), and its output mantissa sits inside an independent cascade window from a software model of dispatch + tree + accumulator. |
 
 The mantissa and exponent goldens use **only** the driven operand/exponent words and the per-mode control tables — never a DUT-internal signal — so a fault anywhere in the chain is caught. Any mismatch is **fatal**.

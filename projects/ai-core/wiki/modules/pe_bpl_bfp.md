@@ -15,31 +15,31 @@ Everything else — the register structure, the accumulator seed format, the pip
 
 None — fixed to the PE configuration.
 
-| Localparam                      | Value | Meaning                                             |
-| ------------------------------- | ----- | --------------------------------------------------- |
-| `NUM_DP8` / `LANES`             | 16 / 8 | DP8 cores and MAC lanes per core (128 MACs).       |
-| `A_DP8_WIDTH`                   | 64    | A operand per DP8 (8 × int8).                       |
-| `B_DP8_WIDTH`                   | **40** | B operand per DP8 (8 × 5-bit), was 32.             |
-| `B_SUM_WIDTH`                   | **24** | **NEW** — pair-sum bus per DP8 (4 × 6-bit).        |
-| `PE_WIDTH` / `EXP_WIDTH`        | 20 / 7 | Accumulator lane word and product-domain scale.     |
-| `L0_TAP_WIDTH`…`L3_TAP_WIDTH`   | **18 / 36 / 40 / 40** | Tap widths between array and accumulator. |
+| Localparam                    | Value                 | Meaning                                         |
+| ----------------------------- | --------------------- | ----------------------------------------------- |
+| `NUM_DP8` / `LANES`           | 16 / 8                | DP8 cores and MAC lanes per core (128 MACs).    |
+| `A_DP8_WIDTH`                 | 64                    | A operand per DP8 (8 × int8).                   |
+| `B_DP8_WIDTH`                 | **40**                | B operand per DP8 (8 × 5-bit), was 32.          |
+| `B_SUM_WIDTH`                 | **24**                | **NEW** — pair-sum bus per DP8 (4 × 6-bit).     |
+| `PE_WIDTH` / `EXP_WIDTH`      | 20 / 7                | Accumulator lane word and product-domain scale. |
+| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | **18 / 36 / 40 / 40** | Tap widths between array and accumulator.       |
 
 ## Interface
 
-| Signal                            | Dir | Width   | Description                                                   |
-| --------------------------------- | --- | ------- | ------------------------------------------------------------- |
-| `clk_i` / `rst_ni`                | in  | 1       | Clock, asynchronous active-low reset.                         |
-| `a_dp8_i[0:15]`                   | in  | 64 each | A operand per DP8.                                            |
-| `b_dp8_i[0:15]`                   | in  | 40 each | **CHANGED** — B as exact signed values.                       |
-| `b_sum_dp8_i[0:15]`               | in  | 24 each | **NEW** — pairwise B sums.                                    |
-| `exp_a_dp8_i` / `exp_b_dp8_i[0:15]` | in | 6 each | Per-DP8 format exponents.                                    |
-| `en_i`                            | in  | 1       | PE enable — masks all five operand buses.                     |
-| `en_level_i[2:0]`                 | in  | 1 each  | Per-level tree isolation.                                     |
-| `is_signed_a_i[0:15]`             | in  | 1 each  | Per-DP8 A signedness.                                         |
-| `sel_shift_i[2:0]`                | in  | 1 each  | Per-level shift enable.                                       |
-| `acc_i[0:7]` / `acc_exp_i[0:7]`   | in  | 20 / 7  | Accumulator seed mantissa and scale.                          |
-| `sel_out_i` / `sel_acc_i` / `prop_carry_i` | in | 2 / 1 / 1 | Tap level, seed-vs-feedback, fusion carry.        |
-| `out_o[0:7]` / `out_exp_o[0:7]`   | out | 20 / 7  | Raw un-normalized result mantissa and scale.                  |
+| Signal                                     | Dir | Width     | Description                                  |
+| ------------------------------------------ | --- | --------- | -------------------------------------------- |
+| `clk_i` / `rst_ni`                         | in  | 1         | Clock, asynchronous active-low reset.        |
+| `a_dp8_i[0:15]`                            | in  | 64 each   | A operand per DP8.                           |
+| `b_dp8_i[0:15]`                            | in  | 40 each   | **CHANGED** — B as exact signed values.      |
+| `b_sum_dp8_i[0:15]`                        | in  | 24 each   | **NEW** — pairwise B sums.                   |
+| `exp_a_dp8_i` / `exp_b_dp8_i[0:15]`        | in  | 6 each    | Per-DP8 format exponents.                    |
+| `en_i`                                     | in  | 1         | PE enable — masks all five operand buses.    |
+| `en_level_i[2:0]`                          | in  | 1 each    | Per-level tree isolation.                    |
+| `is_signed_a_i[0:15]`                      | in  | 1 each    | Per-DP8 A signedness.                        |
+| `sel_shift_i[2:0]`                         | in  | 1 each    | Per-level shift enable.                      |
+| `acc_i[0:7]` / `acc_exp_i[0:7]`            | in  | 20 / 7    | Accumulator seed mantissa and scale.         |
+| `sel_out_i` / `sel_acc_i` / `prop_carry_i` | in  | 2 / 1 / 1 | Tap level, seed-vs-feedback, fusion carry.   |
+| `out_o[0:7]` / `out_exp_o[0:7]`            | out | 20 / 7    | Raw un-normalized result mantissa and scale. |
 
 **No `is_signed_b_i`** — this is the one port `pe_bfp` has that `pe_bpl_bfp` does not.
 

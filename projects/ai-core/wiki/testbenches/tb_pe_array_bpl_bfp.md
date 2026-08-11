@@ -20,9 +20,9 @@ make sim PROJECT=ai-core TOP_LEVEL=pe_array_bpl_bfp
 
 ## What it checks
 
-| Pass | Check |
-| ---- | ----- |
-| A — equal exponents | every carry-save tap carries the same **value** as [pe_array](../modules/pe_array.md), which itself matches the matmul golden; every tap exponent equals the subtree max. |
+| Pass                       | Check                                                                                                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A — equal exponents        | every carry-save tap carries the same **value** as [pe_array](../modules/pe_array.md), which itself matches the matmul golden; every tap exponent equals the subtree max.          |
 | B — distinct BFP exponents | every tap exponent equals the max of the per-DP8 scales over its subtree; every node value at the mode's tap level sits inside the truncation window `[ideal − BLO, ideal + BHI]`. |
 
 Any mismatch is **fatal**.

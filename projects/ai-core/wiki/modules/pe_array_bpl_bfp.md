@@ -8,12 +8,12 @@ Everything structural is [pe_array_bfp](./pe_array_bfp.md) — the crossed L0 pa
 
 ## What changes at the interface
 
-| | `pe_array_bfp` | `pe_array_bpl_bfp` |
-| --- | --- | --- |
-| `b_dp8_i` | 32 bits — 8 × raw int4 | **40 bits** — 8 × 5-bit exact signed |
-| `b_sum_dp8_i` | — | **24 bits** — 4 × 6-bit pair sums |
-| `is_signed_b_i` | present | **removed** |
-| `is_signed_a_i` | present | present |
+|                 | `pe_array_bfp`         | `pe_array_bpl_bfp`                   |
+| --------------- | ---------------------- | ------------------------------------ |
+| `b_dp8_i`       | 32 bits — 8 × raw int4 | **40 bits** — 8 × 5-bit exact signed |
+| `b_sum_dp8_i`   | —                      | **24 bits** — 4 × 6-bit pair sums    |
+| `is_signed_b_i` | present                | **removed**                          |
+| `is_signed_a_i` | present                | present                              |
 
 Both B buses come from [disp_array_b_bpl_bfp](./disp_array_b_bpl_bfp.md), formed once per grid column. `is_signed_b_i` is gone because the dispatcher has already resolved B to signed values; `is_signed_a_i` stays, feeding each DP8's weight-2⁷ correction.
 
@@ -21,14 +21,14 @@ Both B buses come from [disp_array_b_bpl_bfp](./disp_array_b_bpl_bfp.md), formed
 
 None — fixed to the PE configuration. Identical to [pe_array_bfp](./pe_array_bfp.md) except for the widths the wider DP8 output drives:
 
-| Localparam                    | `pe_array_bfp` | `pe_array_bpl_bfp` | Meaning                                       |
-| ----------------------------- | -------------- | ------------------- | --------------------------------------------- |
-| `DP8_WIDTH`                   | 20             | **22**              | each DP8 carry-save row (sign-consistent).    |
-| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8      | 8 / 4 / 8           | per-level left shift (L3 has none).           |
-| `L0_EXT`…`L3_EXT`             | 0 / 0 / 0 / 0  | **1 / 1 / 0 / 0**   | guard bits added by each level's `cpr_w_n`.   |
-| `L0_WIDTH`…`L3_WIDTH`         | 28/32/40/40    | **31/36/44/44**     | internal node width at each level.            |
-| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18/29/37/38    | **18/36/40/40**     | tap width exported to the accumulator.        |
-| `EXP_IN_WIDTH` / `EXP_WIDTH`  | 6 / 7          | 6 / 7               | dispatched format exponent / product scale.   |
+| Localparam                    | `pe_array_bfp` | `pe_array_bpl_bfp` | Meaning                                     |
+| ----------------------------- | -------------- | ------------------ | ------------------------------------------- |
+| `DP8_WIDTH`                   | 20             | **22**             | each DP8 carry-save row (sign-consistent).  |
+| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8      | 8 / 4 / 8          | per-level left shift (L3 has none).         |
+| `L0_EXT`…`L3_EXT`             | 0 / 0 / 0 / 0  | **1 / 1 / 0 / 0**  | guard bits added by each level's `cpr_w_n`. |
+| `L0_WIDTH`…`L3_WIDTH`         | 28/32/40/40    | **31/36/44/44**    | internal node width at each level.          |
+| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18/29/37/38    | **18/36/40/40**    | tap width exported to the accumulator.      |
+| `EXP_IN_WIDTH` / `EXP_WIDTH`  | 6 / 7          | 6 / 7              | dispatched format exponent / product scale. |
 
 The nodes follow `L0 = DP8 + SH0 + L0_EXT`, `L1 = L0 + SH1 + L1_EXT`, `L2 = L1 + SH2 + L2_EXT`, `L3 = L2 + L3_EXT`. The **L1 tap carries its node in full** (36 = 36); L0, L2 and L3 truncate to the accumulator's tap format.
 
@@ -40,20 +40,20 @@ The nodes follow `L0 = DP8 + SH0 + L0_EXT`, `L1 = L0 + SH1 + L1_EXT`, `L2 = L1 +
 
 As [pe_array_bfp](./pe_array_bfp.md), with the three changes above:
 
-| Signal                       | Dir | Width   | Description                                                                 |
-| ---------------------------- | --- | ------- | --------------------------------------------------------------------------- |
-| `clk_i` / `rst_ni`           | in  | 1       | Clock, asynchronous active-low reset.                                       |
-| `a_dp8_i[0:15]`              | in  | 64 each | A operand per DP8 (8 × int8), from `disp_array_a`.                          |
-| `b_dp8_i[0:15]`              | in  | 40 each | **CHANGED** — B as 8 × 5-bit exact signed values.                           |
-| `b_sum_dp8_i[0:15]`          | in  | 24 each | **NEW** — 4 × 6-bit pairwise B sums.                                        |
-| `is_signed_a_i[0:15]`        | in  | 1 each  | Per-DP8 A signedness, from `ctrl` (idle-masked in the grid).                |
-| `exp_a_dp8_i` / `exp_b_dp8_i[0:15]` | in | 6 each | Per-DP8 format exponents, from the BFP exponent dispatchers.          |
-| `sel_shift_i[2:0]`           | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`.     |
-| `en_level_i[2:0]`            | in  | 1 each  | Operand-isolation enable per tree branch; masks below the tap.              |
-| `l0_sum_o`/`l0_carry_o[0:7]` | out | 18 each | L0 taps (carry-save), `l0_exp_o` 7-bit alongside.                           |
-| `l1_sum_o`/`l1_carry_o[0:3]` | out | 36 each | **CHANGED** — L1 taps, `l1_exp_o` alongside.                                |
-| `l2_sum_o`/`l2_carry_o[0:1]` | out | 40 each | **CHANGED** — L2 taps, `l2_exp_o` alongside.                                |
-| `l3_sum_o`/`l3_carry_o`      | out | 40      | **CHANGED** — L3 tap, `l3_exp_o` alongside.                                 |
+| Signal                              | Dir | Width   | Description                                                             |
+| ----------------------------------- | --- | ------- | ----------------------------------------------------------------------- |
+| `clk_i` / `rst_ni`                  | in  | 1       | Clock, asynchronous active-low reset.                                   |
+| `a_dp8_i[0:15]`                     | in  | 64 each | A operand per DP8 (8 × int8), from `disp_array_a`.                      |
+| `b_dp8_i[0:15]`                     | in  | 40 each | **CHANGED** — B as 8 × 5-bit exact signed values.                       |
+| `b_sum_dp8_i[0:15]`                 | in  | 24 each | **NEW** — 4 × 6-bit pairwise B sums.                                    |
+| `is_signed_a_i[0:15]`               | in  | 1 each  | Per-DP8 A signedness, from `ctrl` (idle-masked in the grid).            |
+| `exp_a_dp8_i` / `exp_b_dp8_i[0:15]` | in  | 6 each  | Per-DP8 format exponents, from the BFP exponent dispatchers.            |
+| `sel_shift_i[2:0]`                  | in  | 1 each  | Per-level shift enable: `[0]`=L0 `<<8`, `[1]`=L1 `<<4`, `[2]`=L2 `<<8`. |
+| `en_level_i[2:0]`                   | in  | 1 each  | Operand-isolation enable per tree branch; masks below the tap.          |
+| `l0_sum_o`/`l0_carry_o[0:7]`        | out | 18 each | L0 taps (carry-save), `l0_exp_o` 7-bit alongside.                       |
+| `l1_sum_o`/`l1_carry_o[0:3]`        | out | 36 each | **CHANGED** — L1 taps, `l1_exp_o` alongside.                            |
+| `l2_sum_o`/`l2_carry_o[0:1]`        | out | 40 each | **CHANGED** — L2 taps, `l2_exp_o` alongside.                            |
+| `l3_sum_o`/`l3_carry_o`             | out | 40      | **CHANGED** — L3 tap, `l3_exp_o` alongside.                             |
 
 ## Instantiation
 

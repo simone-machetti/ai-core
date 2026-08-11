@@ -12,12 +12,12 @@ This module exists only so the port widths match. Every internal mechanism is do
 
 None — fixed to the PE configuration. The only deltas against [acc_array_bfp](./acc_array_bfp.md):
 
-| Localparam  | `acc_array_bfp` | `acc_array_bpl_bfp` | Meaning                       |
-| ----------- | --------------- | ------------------- | ----------------------------- |
-| `L0_WIDTH`  | 18              | 18                  | L0 tap width (unchanged).     |
-| `L1_WIDTH`  | 29              | **36**              | L1 tap width.                 |
-| `L2_WIDTH`  | 37              | **40** (`FUSE`)     | L2 tap width.                 |
-| `L3_WIDTH`  | 38              | **40** (`FUSE`)     | L3 tap width.                 |
+| Localparam | `acc_array_bfp` | `acc_array_bpl_bfp` | Meaning                   |
+| ---------- | --------------- | ------------------- | ------------------------- |
+| `L0_WIDTH` | 18              | 18                  | L0 tap width (unchanged). |
+| `L1_WIDTH` | 29              | **36**              | L1 tap width.             |
+| `L2_WIDTH` | 37              | **40** (`FUSE`)     | L2 tap width.             |
+| `L3_WIDTH` | 38              | **40** (`FUSE`)     | L3 tap width.             |
 
 `PE_WIDTH = 20`, `FUSE = 40`, `EXP_WIDTH = 7`, `NUM_LANE = 8` are all as the baseline-BFP.
 
@@ -25,19 +25,19 @@ None — fixed to the PE configuration. The only deltas against [acc_array_bfp](
 
 Port-for-port [acc_array_bfp](./acc_array_bfp.md), with `l1_*_i` at 36 bits and `l2_*_i` / `l3_*_i` at 40:
 
-| Signal                        | Dir | Width   | Description                                        |
-| ----------------------------- | --- | ------- | -------------------------------------------------- |
-| `clk_i` / `rst_ni`            | in  | 1       | Clock, asynchronous active-low reset.              |
-| `l0_sum_i` / `l0_carry_i[0:7]` | in | 18 each | L0 taps (carry-save).                             |
-| `l1_sum_i` / `l1_carry_i[0:3]` | in | **36** each | L1 taps.                                      |
-| `l2_sum_i` / `l2_carry_i[0:1]` | in | **40** each | L2 taps.                                      |
-| `l3_sum_i` / `l3_carry_i`      | in | **40**  | L3 tap.                                           |
-| `l0_exp_i` … `l3_exp_i`        | in | 7 each  | Per-tap scales.                                   |
-| `acc_i[0:7]` / `acc_exp_i[0:7]` | in | 20 / 7 | Accumulator seed mantissa and scale.              |
-| `sel_out_i`                    | in | 2       | Which level to read.                              |
-| `sel_acc_i`                    | in | 1       | Seed vs feedback.                                 |
-| `prop_carry_i`                 | in | 1       | Lane-pair fusion carry propagate.                 |
-| `pe_out_o[0:7]` / `pe_exp_o[0:7]` | out | 20 / 7 | Per-lane result mantissa and scale.            |
+| Signal                            | Dir | Width       | Description                           |
+| --------------------------------- | --- | ----------- | ------------------------------------- |
+| `clk_i` / `rst_ni`                | in  | 1           | Clock, asynchronous active-low reset. |
+| `l0_sum_i` / `l0_carry_i[0:7]`    | in  | 18 each     | L0 taps (carry-save).                 |
+| `l1_sum_i` / `l1_carry_i[0:3]`    | in  | **36** each | L1 taps.                              |
+| `l2_sum_i` / `l2_carry_i[0:1]`    | in  | **40** each | L2 taps.                              |
+| `l3_sum_i` / `l3_carry_i`         | in  | **40**      | L3 tap.                               |
+| `l0_exp_i` … `l3_exp_i`           | in  | 7 each      | Per-tap scales.                       |
+| `acc_i[0:7]` / `acc_exp_i[0:7]`   | in  | 20 / 7      | Accumulator seed mantissa and scale.  |
+| `sel_out_i`                       | in  | 2           | Which level to read.                  |
+| `sel_acc_i`                       | in  | 1           | Seed vs feedback.                     |
+| `prop_carry_i`                    | in  | 1           | Lane-pair fusion carry propagate.     |
+| `pe_out_o[0:7]` / `pe_exp_o[0:7]` | out | 20 / 7      | Per-lane result mantissa and scale.   |
 
 ## Instantiation
 
