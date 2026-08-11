@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# Author: Simone Machetti
+#
+# Description:
+#   Yosys shim for the sv-pathfinder schematic viewer: rewrites the extension's
+#   `plugin -i slang` into a full-path load of the slang plugin, then execs the
+#   real Yosys. Point sv-pathfinder.ossCadSuitePath at this shim's parent dir.
+# -----------------------------------------------------------------------------
+
+real_yosys="${EDA_HOME:-/my_tools}/yosys/bin/yosys"
+slang_so="${YOSYS_SLANG_HOME:-/my_tools/yosys-slang}/bin/slang.so"
+
+args=()
+for a in "$@"; do
+    a="${a//plugin -i slang/plugin -i ${slang_so}}"
+    args+=("$a")
+done
+
+exec "$real_yosys" "${args[@]}"
