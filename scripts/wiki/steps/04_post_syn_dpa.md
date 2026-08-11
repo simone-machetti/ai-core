@@ -1,6 +1,6 @@
 # Post-synthesis dynamic power analysis
 
-Power estimation from real switching activity: the gate-level simulation's VCD is annotated onto the netlist and every cell's energy is summed. The pre-layout member of the pair — its post-route sibling ([17_post_pnr_dpa.md](17_post_pnr_dpa.md)) adds real wire capacitances.
+Power estimation from real switching activity: the gate-level simulation's VCD is annotated onto the netlist and every cell's energy is summed. The pre-layout member of the pair — its post-route sibling ([14_post_pnr_dpa.md](14_post_pnr_dpa.md)) adds real wire capacitances.
 
 ## Inputs and outputs
 
@@ -30,7 +30,7 @@ The known systematic bias at this stage: the VCD comes from a **zero-delay** sim
 
 ## Implementation walkthrough
 
-`scripts/post-syn-dpa/run.tcl`, block by block (loading and constraints are as in [06_post_syn_sta.md](06_post_syn_sta.md) / [02_constraints.md](02_constraints.md)):
+`scripts/post-syn-dpa/run.tcl`, block by block (loading and constraints are as in [03_post_syn_sta.md](03_post_syn_sta.md) / [02_constraints.md](../concepts/constraints.md)):
 
 ```tcl
 set REPORT_DIR $env(REPO_HOME)/projects/$env(SEL_PROJECT)/imp/$env(SEL_OUT_DIR)/report
@@ -123,3 +123,5 @@ The summary table (internal/switching/leakage × sequential/combinational/clock/
 ## Commercial perspective
 
 PrimePower (and Voltus for implementation-side power) are the commercial versions, with the same activity-annotated methodology plus glitch propagation from SDF simulations, RTL-stage power estimation, and vector profiling across long workloads. The summary/per-instance report structure translates directly.
+
+Source: [run.tcl](../../post-syn-dpa/run.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

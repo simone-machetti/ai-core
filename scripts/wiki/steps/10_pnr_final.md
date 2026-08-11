@@ -19,7 +19,7 @@ Every routed net is a distributed RC network: resistance along each segment and 
 
 ### Abstracts: making the block reusable
 
-Two generated views turn a finished block into a component ([18_hierarchical.md](18_hierarchical.md)): an **abstract LEF** (`write_abstract_lef` — the outline, boundary pins, and obstruction summary of the real layout) and a **liberty timing model** (`write_timing_model` — port-to-port arcs condensed from the full timing graph, setup/hold at the pins, internal clock latency folded in). Together they let a parent flow place, route around, and time through the block without ever loading its contents. What the timing model does *not* carry: power tables — the reason parent-level power analysis links the block's real netlist instead ([17_post_pnr_dpa.md](17_post_pnr_dpa.md)).
+Two generated views turn a finished block into a component ([18_hierarchical.md](../concepts/hierarchical.md)): an **abstract LEF** (`write_abstract_lef` — the outline, boundary pins, and obstruction summary of the real layout) and a **liberty timing model** (`write_timing_model` — port-to-port arcs condensed from the full timing graph, setup/hold at the pins, internal clock latency folded in). Together they let a parent flow place, route around, and time through the block without ever loading its contents. What the timing model does *not* carry: power tables — the reason parent-level power analysis links the block's real netlist instead ([14_post_pnr_dpa.md](14_post_pnr_dpa.md)).
 
 ### The netlist contract, again
 
@@ -80,7 +80,7 @@ report_power      > $REPORT_DIR/power.rpt
 report_design_area_file $REPORT_DIR/design_area.rpt
 ```
 
-The definitive in-flow measurement set: worst paths (named to match the STA steps' reports for easy comparison), the WNS/TNS scalars, the clock tree's achieved skew, a power snapshot (static-probability activity — the vector-accurate number comes from [17_post_pnr_dpa.md](17_post_pnr_dpa.md)), and area/utilization via the helper from [08_pnr_overview.md](08_pnr_overview.md).
+The definitive in-flow measurement set: worst paths (named to match the STA steps' reports for easy comparison), the WNS/TNS scalars, the clock tree's achieved skew, a power snapshot (static-probability activity — the vector-accurate number comes from [14_post_pnr_dpa.md](14_post_pnr_dpa.md)), and area/utilization via the helper from [05_pnr_overview.md](05_pnr_overview.md).
 
 ```tcl
 # -----------------------------------------------------------------------------
@@ -100,7 +100,7 @@ The deliverables: the layout as DEF (interchange; input to the GDS merge) and as
 
 - **Decap density**: replacing plain fillers with more/larger decaps trades leakage for supply-noise margin; IR-drop-driven flows place decap deliberately near aggressors rather than as gap-filler.
 - **Extraction fidelity**: multi-corner extraction (C-worst/RC-worst...), coupling-preserving SPEF for SI analysis, or signoff extractors (StarRC, Quantus) calibrated to the foundry deck — the ladder above single-pattern-corner OpenRCX.
-- **Abstract quality**: `write_abstract_lef` options (bloating/merging obstructions) trade abstract precision for parent-tool robustness — with real consequences on parent-level routing and PDN (a fully-covered layer blocks the parent's via stacks; see [18_hierarchical.md](18_hierarchical.md)).
+- **Abstract quality**: `write_abstract_lef` options (bloating/merging obstructions) trade abstract precision for parent-tool robustness — with real consequences on parent-level routing and PDN (a fully-covered layer blocks the parent's via stacks; see [18_hierarchical.md](../concepts/hierarchical.md)).
 - **Extra outputs**: SDF (delay annotation for event-driven GLS) is one `write_sdf` away when a consuming simulator exists; some flows also emit an LEF+lib+GDS "IP package" per block release.
 
 ## Knobs
@@ -121,3 +121,5 @@ The deliverables: the layout as DEF (interchange; input to the GDS merge) and as
 ## Commercial perspective
 
 Same checklist under commercial flows — filler/decap insertion, signoff extraction, and "model generation" (abstract LEF + ETM/ILM timing models; ETMs are the direct analog of `write_timing_model`). The additions: metal fill (density-rule dummy metal, usually with the GDS step), signoff-grade extraction decks, and formal IP packaging conventions around the same set of views.
+
+Source: [5_final.tcl](../../pnr/5_final.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

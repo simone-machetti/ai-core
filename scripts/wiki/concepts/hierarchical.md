@@ -16,12 +16,12 @@ Three forces push implementation hierarchical: **capacity** — flat P&R runtime
 
 ### The two blackbox regimes
 
-The flow's synthesis already had blackboxing ([04_syn.md](04_syn.md)) — but with the netlists *linked back* at the end: a logical-reuse device producing a self-contained netlist. Hierarchical P&R needs the opposite: the parent netlist must keep the blackboxed modules **empty**, because OpenROAD resolves an instance whose module has no definition against the loaded LEF/liberty *by name* — that unresolved-ness is the binding mechanism. One flag separates the regimes: `LINK_BLACKBOXES=0`.
+The flow's synthesis already had blackboxing ([01_syn.md](../steps/01_syn.md)) — but with the netlists *linked back* at the end: a logical-reuse device producing a self-contained netlist. Hierarchical P&R needs the opposite: the parent netlist must keep the blackboxed modules **empty**, because OpenROAD resolves an instance whose module has no definition against the loaded LEF/liberty *by name* — that unresolved-ness is the binding mechanism. One flag separates the regimes: `LINK_BLACKBOXES=0`.
 
 ### What each abstract carries
 
 - **`abstract.lef`** — the physical contract: outline, boundary pin shapes/layers (including power pins — the block's top PDN straps exported at the boundary), and obstruction geometry summarizing the interior. The parent places it, cuts rows under it, routes to its pins and around its body.
-- **`timing_model.lib`** — the timing contract: port-to-port arcs, setup/hold requirements at input pins, clock-to-output arcs with the internal tree latency folded in. The parent's timer prices paths *through* the block without seeing inside. Not included: power tables ([17_post_pnr_dpa.md](17_post_pnr_dpa.md)) and SI/aggressor information.
+- **`timing_model.lib`** — the timing contract: port-to-port arcs, setup/hold requirements at input pins, clock-to-output arcs with the internal tree latency folded in. The parent's timer prices paths *through* the block without seeing inside. Not included: power tables ([14_post_pnr_dpa.md](../steps/14_post_pnr_dpa.md)) and SI/aggressor information.
 - **`design.gds`** — the geometric truth, substituted at the parent's GDS merge.
 
 ### The parent's special duties
@@ -98,11 +98,11 @@ define_pdn_grid -name {MacroGrid} -voltage_domains {CORE} -macro -default -halo 
 add_pdn_connect -grid {MacroGrid} -layers {M5 M6}
 ```
 
-(The platform's default strategy instead assumes SRAM-style M4 pins — its macro grid finds no shapes on our blocks and `pdngen` aborts; the layer pair must match what the block actually exports. The rest of `pdn_macro.tcl` is the standard grid of [09_pnr_floorplan.md](09_pnr_floorplan.md).)
+(The platform's default strategy instead assumes SRAM-style M4 pins — its macro grid finds no shapes on our blocks and `pdngen` aborts; the layer pair must match what the block actually exports. The rest of `pdn_macro.tcl` is the standard grid of [06_pnr_floorplan.md](../steps/06_pnr_floorplan.md).)
 
-**GDS merge** (`scripts/pnr/6_gds.sh`): each block's abstract joins the reader setup and its GDS joins the merge, as quoted in [14_pnr_gds.md](14_pnr_gds.md) — the final GDS contains the blocks' real polygons.
+**GDS merge** (`scripts/pnr/6_gds.sh`): each block's abstract joins the reader setup and its GDS joins the merge, as quoted in [11_pnr_gds.md](../steps/11_pnr_gds.md) — the final GDS contains the blocks' real polygons.
 
-**Analyses**: STA loads the timing models ([16_post_pnr_sta.md](16_post_pnr_sta.md)); gate-level simulation compiles the blocks' routed netlists ([15_post_pnr_sim.md](15_post_pnr_sim.md)); power analysis goes full-view — block netlists linked, per-instance SPEF, per-macro report ([17_post_pnr_dpa.md](17_post_pnr_dpa.md)).
+**Analyses**: STA loads the timing models ([13_post_pnr_sta.md](../steps/13_post_pnr_sta.md)); gate-level simulation compiles the blocks' routed netlists ([12_post_pnr_sim.md](../steps/12_post_pnr_sim.md)); power analysis goes full-view — block netlists linked, per-instance SPEF, per-macro report ([14_post_pnr_dpa.md](../steps/14_post_pnr_dpa.md)).
 
 ### The recipe, end to end
 
@@ -124,11 +124,11 @@ make post-pnr-sta ... NETLIST_DIR=<top_pnr> MACRO_DIRS="<block_pnr> ..."
 make post-pnr-dpa ... NETLIST_DIR=<top_pnr> VCD_DIR=... MACRO_DIRS="<block_pnr> ..."
 ```
 
-Combinational blocks harden cleanly (the CTS stage skips itself for clockless designs — [11_pnr_cts.md](11_pnr_cts.md)); clocked blocks carry their own internal tree, and the parent's CTS reaches only their clock *pin*.
+Combinational blocks harden cleanly (the CTS stage skips itself for clockless designs — [08_pnr_cts.md](../steps/08_pnr_cts.md)); clocked blocks carry their own internal tree, and the parent's CTS reaches only their clock *pin*.
 
 ## Design space
 
-- **Hardening utilization**: the block's `CORE_UTIL` at hardening sets its footprint forever. Low utilization eases the block's own routing but pays rent in the parent — area and measurably higher wire power ([09_pnr_floorplan.md](09_pnr_floorplan.md)'s notes). Blocks meant for dense tiling deserve the highest utilization they close at.
+- **Hardening utilization**: the block's `CORE_UTIL` at hardening sets its footprint forever. Low utilization eases the block's own routing but pays rent in the parent — area and measurably higher wire power ([06_pnr_floorplan.md](../steps/06_pnr_floorplan.md)'s notes). Blocks meant for dense tiling deserve the highest utilization they close at.
 - **Pin planning**: a block's pin placement quality becomes the *parent's* routing problem multiplied by instance count. Constraining block pins (edges, layers, ordering) to match the parent's dataflow is the natural refinement (`place_pins` options at hardening time).
 - **Depth**: the mechanism composes — a hardened parent is itself macro-ready (its run emits the same three views). Multi-level hierarchies need only discipline in directory bookkeeping.
 - **Abutment**: the zero-channel style (tiles touching, pins aligned edge-to-edge) eliminates parent routing between neighbors but demands pin-position contracts this flow doesn't yet automate; halo'd placement with parent routing is the general-purpose mode implemented.
@@ -149,10 +149,12 @@ Combinational blocks harden cleanly (the CTS stage skips itself for clockless de
 
 - **The abstract-DRC artifact**: detailed routing against abstracts can leave a few `Lef58EolKeepOut` markers at macro pins in the parent's `route_drc.rpt`. Diagnosis: the router's wire end faces an obstruction shape that is, in reality, the *same net's* continuation inside the block — the abstract cannot express "this OBS is my pin's own net". The markers are translation-invariant (they move with the macro) and insensitive to pin depth; coarse-obstruction abstracts are not a fix (full-layer covers block the parent PDN's via stacks). They are false positives: the merged GDS metal is continuous there.
 - **`place_macro` self-overlap**: re-placing an already-placed macro at an overlapping location errors ("overlap with other macros: itself"); in interactive sessions, unplace first or move in two hops. The flow never hits it — stage 1 always starts from an unplaced floorplan.
-- **Power abstraction**: `timing_model.lib` has no power tables — the reason parent DPA links real netlists ([17_post_pnr_dpa.md](17_post_pnr_dpa.md)). A parent STA, by contrast, is complete with the timing models alone.
+- **Power abstraction**: `timing_model.lib` has no power tables — the reason parent DPA links real netlists ([14_post_pnr_dpa.md](../steps/14_post_pnr_dpa.md)). A parent STA, by contrast, is complete with the timing models alone.
 - **Boundary optimization stops at the wall**: paths through a macro use its frozen arcs; the parent can buffer *up to* the pins only. Generous input margins at hardening time are the block designer's courtesy to the integrator.
 - The block-and-parent runs must stay consistent: re-hardening a block invalidates the parent (abstract, timing, GDS all change) — rerun from parent P&R onward.
 
 ## Commercial perspective
 
 This is the classic **hierarchical/block-based** methodology of every large SoC: blocks hardened with ILM/ETM timing abstracts and LEF physical abstracts, assembled by a top-level flow that places macros, builds the shared PDN, and closes boundary timing; power via block models or flattened analysis. Commercial suites add machinery this flow does without — automatic macro placers, boundary-timing budgeting tools, abstract generators with pin-net awareness (avoiding the DRC artifact above), and formal interface checks — but the contract (LEF + timing model + GDS per block, name-bound at the parent) is exactly the one implemented here.
+
+Source: [run.tcl](../../syn/run.tcl) — [init_tech.tcl](../../pnr/init_tech.tcl) — [1_floorplan.tcl](../../pnr/1_floorplan.tcl) — [pdn_macro.tcl](../../pnr/pdn_macro.tcl) — [6_gds.sh](../../pnr/6_gds.sh) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

@@ -20,7 +20,7 @@ The most accurate power number the flow produces: measured switching activity on
 
 ## Theory
 
-All the power theory of [07_post_syn_dpa.md](07_post_syn_dpa.md) applies; the post-route upgrades:
+All the power theory of [04_post_syn_dpa.md](04_post_syn_dpa.md) applies; the post-route upgrades:
 
 - **Wire capacitance is real.** The SPEF supplies each net's extracted C, so switching power includes the wires — at advanced nodes frequently the *majority* of dynamic power. The post-syn→post-pnr power increase on the same design is genuine physics: wires, clock tree, repair buffers.
 - **The clock tree exists.** Its buffers and wiring, a top-3 consumer in most synchronous designs, are now in the netlist and the report's "Clock" group.
@@ -29,13 +29,13 @@ All the power theory of [07_post_syn_dpa.md](07_post_syn_dpa.md) applies; the po
 
 A parent netlist from a hierarchical P&R contains macros as *named instances only*; the generated `timing_model.lib` provides timing arcs but **no power tables** (power characterization is a different discipline requiring transistor-level simulation). Linked that way, a macro contributes zero internal/switching power — silently wrong totals.
 
-The full-view mode dissolves the abstraction *for analysis only*: read each block's routed **netlist** together with the parent's (the macro instance then elaborates into its real gates, which all have liberty power data), annotate each instance's internals with the block's own **SPEF** (per-instance annotation), and use the GLS VCD — which already contains macro-internal activity, since simulation compiles the blocks too ([15_post_pnr_sim.md](15_post_pnr_sim.md)). Every gate then has real power tables, real wire caps, and measured activity: exact totals, plus a per-macro breakdown for free. The implementation stays hierarchical; only the power computation sees the whole.
+The full-view mode dissolves the abstraction *for analysis only*: read each block's routed **netlist** together with the parent's (the macro instance then elaborates into its real gates, which all have liberty power data), annotate each instance's internals with the block's own **SPEF** (per-instance annotation), and use the GLS VCD — which already contains macro-internal activity, since simulation compiles the blocks too ([12_post_pnr_sim.md](12_post_pnr_sim.md)). Every gate then has real power tables, real wire caps, and measured activity: exact totals, plus a per-macro breakdown for free. The implementation stays hierarchical; only the power computation sees the whole.
 
 Its natural limit is the VCD: full-chip gate-level simulation bounds the design size this works for. Beyond it, the compositional method applies — per-macro in-system power measured on a smaller configuration, scaled by instance count, plus the parent-level logic measured with the abstract view.
 
 ## Implementation walkthrough
 
-`scripts/post-pnr-dpa/run.tcl` — loading, constraints and VCD blocks are as in the post-syn version ([07_post_syn_dpa.md](07_post_syn_dpa.md), [02_constraints.md](02_constraints.md)); the hierarchical machinery is what's new:
+`scripts/post-pnr-dpa/run.tcl` — loading, constraints and VCD blocks are as in the post-syn version ([04_post_syn_dpa.md](04_post_syn_dpa.md), [02_constraints.md](../concepts/constraints.md)); the hierarchical machinery is what's new:
 
 ```tcl
 if {$env(SEL_MACRO_DIRS) ne "none"} {
@@ -128,3 +128,5 @@ The summary — true totals, macros included — and, when macros exist, the per
 ## Commercial perspective
 
 PrimePower on a routed design with SPEF and simulation activity is the direct equivalent; hierarchical designs there use either flattened analysis (this step's full-view) or characterized block power models when available. The per-instance macro breakdown corresponds to standard block-level power reporting in those tools.
+
+Source: [run.tcl](../../post-pnr-dpa/run.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

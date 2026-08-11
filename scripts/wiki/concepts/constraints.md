@@ -38,7 +38,7 @@ if {[llength [get_ports -quiet clk_i]] > 0} {
 create_clock -name vclk -period $CLK_PERIOD_PS
 ```
 
-The ns→ps conversion happens here, once ([01_technology.md](01_technology.md): liberty is in ps). The real clock is created **only if the port `clk_i` exists** — the flow's convention for "the clock input" — so purely combinational blocks pass through the same scripts without error (`-quiet` suppresses the not-found complaint). The **virtual clock** `vclk` is always created, same period, and serves as the reference for all I/O timing: it stands for the registers of the surrounding system that launch our inputs and capture our outputs.
+The ns→ps conversion happens here, once ([01_technology.md](technology.md): liberty is in ps). The real clock is created **only if the port `clk_i` exists** — the flow's convention for "the clock input" — so purely combinational blocks pass through the same scripts without error (`-quiet` suppresses the not-found complaint). The **virtual clock** `vclk` is always created, same period, and serves as the reference for all I/O timing: it stands for the registers of the surrounding system that launch our inputs and capture our outputs.
 
 ```tcl
 set data_in {}
@@ -74,7 +74,7 @@ if {$::env(SEL_CLK_UNCERTAINTY_PS) > 0} {
 
 Optional margin (default 0 = off), applied to all clocks so I/O and internal checks stay consistent.
 
-Two placement details of the scheme: in P&R the file is re-sourced after every checkpoint load because the ODB database does not persist SDC ([08_pnr_overview.md](08_pnr_overview.md)); and `set_propagated_clock [all_clocks]` is issued by the stages/steps that own a real clock tree — CTS onwards and the post-P&R analyses (a virtual clock cannot be propagated; the tool notes it with a benign warning).
+Two placement details of the scheme: in P&R the file is re-sourced after every checkpoint load because the ODB database does not persist SDC ([05_pnr_overview.md](../steps/05_pnr_overview.md)); and `set_propagated_clock [all_clocks]` is issued by the stages/steps that own a real clock tree — CTS onwards and the post-P&R analyses (a virtual clock cannot be propagated; the tool notes it with a benign warning).
 
 ## Design space
 
@@ -103,3 +103,5 @@ Two placement details of the scheme: in P&R the file is re-sourced after every c
 ## Commercial perspective
 
 SDC is the lingua franca — the same commands drive Design Compiler, PrimeTime and Innovus. Production constraint decks add what integration demands: per-mode constraint sets (functional/test/scan) with mode merging, exhaustive exceptions (multicycle paths, logically-exclusive clock groups), I/O budgets negotiated per interface, and OCV/POCV derating in place of a single uncertainty number. The virtual-clock I/O scheme and the boundary-hold deferral used here are standard block-level practice in those flows too.
+
+Source: [constraints.tcl](../../pnr/constraints.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

@@ -19,9 +19,9 @@ The definitive timing measurement: the routed netlist with extracted parasitics 
 
 ## Theory
 
-All STA theory from [06_post_syn_sta.md](06_post_syn_sta.md) carries over; two upgrades change the numbers:
+All STA theory from [03_post_syn_sta.md](03_post_syn_sta.md) carries over; two upgrades change the numbers:
 
-- **Extracted parasitics.** `read_spef` replaces "zero-delay nets" with each net's real RC network from the routed geometry ([13_pnr_final.md](13_pnr_final.md)). Wire delay and its effect on cell delay (output load, input slew degradation) now come from the layout. This is why post-route WNS is worse than pre-layout WNS on the same design at the same clock — the delta *is* the wires.
+- **Extracted parasitics.** `read_spef` replaces "zero-delay nets" with each net's real RC network from the routed geometry ([10_pnr_final.md](10_pnr_final.md)). Wire delay and its effect on cell delay (output load, input slew degradation) now come from the layout. This is why post-route WNS is worse than pre-layout WNS on the same design at the same clock — the delta *is* the wires.
 - **Propagated clocks.** With the netlist containing the actual clock tree and the SPEF its wires, `set_propagated_clock` makes every check use measured clock arrivals: insertion delay appears explicitly in path reports ("clock network delay (propagated)"), and skew between flops is real. Hold analysis is now meaningful — though this step, like its pre-layout sibling, reports setup (`-path_delay max`); the flow's hold enforcement happened in routing's repair, and a hold report is one `-path_delay min` away when wanted.
 
 Why this step exists at all when stage 5 already reported timing: separation of concerns — an analysis step that consumes only the run directory's *files* (netlist + SPEF), independent of the P&R session. Its agreement with the in-flow reports is a consistency check of the whole file contract, and the step works identically on any P&R run, current or archived.
@@ -80,7 +80,7 @@ if {[llength [all_outputs]] > 0} {
 }
 ```
 
-The shared scheme ([02_constraints.md](02_constraints.md)), unchanged — same period, same I/O modeling, so pre- and post-layout reports are comparable path-for-path.
+The shared scheme ([02_constraints.md](../concepts/constraints.md)), unchanged — same period, same I/O modeling, so pre- and post-layout reports are comparable path-for-path.
 
 ```tcl
 # -----------------------------------------------------------------------------
@@ -125,9 +125,11 @@ The same four reports as post-syn STA — by design: reading the two runs' `crit
 
 - Analyzing at a period different from the implementation's is legitimate *exploration* (measuring margin), but the routed design was optimized for its own target — slack at other periods is descriptive, not a design promise.
 - This step's WNS reproducing the P&R's final report is the expected consistency check; disagreement means the run directory's files are stale or mixed.
-- In hierarchical mode the macro timing models carry timing only — fine here; power is the other step's problem ([17_post_pnr_dpa.md](17_post_pnr_dpa.md)).
+- In hierarchical mode the macro timing models carry timing only — fine here; power is the other step's problem ([14_post_pnr_dpa.md](14_post_pnr_dpa.md)).
 - The clock-network-delay line in each path is the visible signature of propagated analysis — its absence means the SPEF/propagation block didn't run.
 
 ## Commercial perspective
 
 This is the role PrimeTime/Tempus play as *the* signoff gate, with SI, multi-corner-multi-mode scenarios, POCV, and ECO generation on top. The structural pattern — implementation tool reports during the flow, independent timer re-verifies from files — is exactly the industrial signoff separation, reproduced here open-source.
+
+Source: [run.tcl](../../post-pnr-sta/run.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

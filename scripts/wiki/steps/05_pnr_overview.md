@@ -74,7 +74,7 @@ for stage in ${STAGES}; do
 done
 ```
 
-A loop over the stage list (or the single requested stage). Each OpenROAD stage runs batch (`-exit`), ignoring any user config (`-no_init`) for reproducibility, teeing its transcript to a per-stage log; `set -o pipefail` makes a failing stage abort the whole run despite the `tee`. Stage 6 is not an OpenROAD script — the GDS merge is KLayout's job ([14_pnr_gds.md](14_pnr_gds.md)) — so the sequencer dispatches to its shell script.
+A loop over the stage list (or the single requested stage). Each OpenROAD stage runs batch (`-exit`), ignoring any user config (`-no_init`) for reproducibility, teeing its transcript to a per-stage log; `set -o pipefail` makes a failing stage abort the whole run despite the `tee`. Stage 6 is not an OpenROAD script — the GDS merge is KLayout's job ([11_pnr_gds.md](11_pnr_gds.md)) — so the sequencer dispatches to its shell script.
 
 ### Context — `scripts/pnr/init_tech.tcl` (sourced first by every stage)
 
@@ -154,7 +154,7 @@ proc load_checkpoint {tag} {
 }
 ```
 
-The persistence contract in code: saving is just `write_db`; loading is `read_db` **plus the three context re-applications** — constraints ([02_constraints.md](02_constraints.md)), wire RC estimates, and the optimizer blacklist — precisely the things ODB does not store. Keeping that knowledge in one proc is what makes six independent processes behave like one continuous session.
+The persistence contract in code: saving is just `write_db`; loading is `read_db` **plus the three context re-applications** — constraints ([02_constraints.md](../concepts/constraints.md)), wire RC estimates, and the optimizer blacklist — precisely the things ODB does not store. Keeping that knowledge in one proc is what makes six independent processes behave like one continuous session.
 
 ### Reports — `scripts/pnr/reports.tcl`
 
@@ -212,3 +212,5 @@ Every stage ends with the same snapshot: worst path with slews/caps, WNS, TNS, a
 ## Commercial perspective
 
 Commercial P&R (Innovus, Fusion Compiler) is one long-lived session over a proprietary database, with the same conceptual checkpoints (`saveDesign`/restore) and the same stage vocabulary. The one-process-per-stage discipline here is closer to how those tools are *scripted in production* anyway — reference flows save and restore between named steps for exactly the restartability reasons above.
+
+Source: [run.sh](../../pnr/run.sh) — [init_tech.tcl](../../pnr/init_tech.tcl) — [checkpoint.tcl](../../pnr/checkpoint.tcl) — [reports.tcl](../../pnr/reports.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

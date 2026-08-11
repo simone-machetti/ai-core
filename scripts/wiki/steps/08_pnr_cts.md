@@ -13,7 +13,7 @@ Until now the clock has been a fiction — an ideal signal arriving everywhere a
 
 A clock net drives thousands of flip-flop clock pins — electrically impossible from one driver, so it must be buffered; and *how* it is buffered defines two quantities that dominate sequential timing:
 
-- **Insertion delay** (latency): the delay from clock source to a flop's clock pin — typically ~100 ps for small blocks, growing with die size. Shared latency mostly cancels in setup checks between same-tree flops, but shows up at boundaries and in any analysis that mixes ideal and propagated domains ([02_constraints.md](02_constraints.md)'s hold-artifact discussion).
+- **Insertion delay** (latency): the delay from clock source to a flop's clock pin — typically ~100 ps for small blocks, growing with die size. Shared latency mostly cancels in setup checks between same-tree flops, but shows up at boundaries and in any analysis that mixes ideal and propagated domains ([02_constraints.md](../concepts/constraints.md)'s hold-artifact discussion).
 - **Skew**: the *difference* in insertion delay between two flops. Setup skew (capture later than launch) can help or hurt; hold violations are *created* by skew — which is why hold repair only makes sense after CTS.
 
 CTS algorithms cluster nearby sinks, place buffers to drive each cluster, and recursively build levels upward, balancing the branches so all sinks see similar latency. The classic geometric ideal is the H-tree; practical tools use clustered balancing driven by the placement.
@@ -24,7 +24,7 @@ An **integrated clock gate** (ICG) — a latch-plus-AND cell that stops the cloc
 
 ### After the tree: propagated clocks and the timing shift
 
-Once the tree exists, `set_propagated_clock` switches analysis from ideal to measured arrival times. Consequences: insertion delay becomes visible in reports (the "clock network delay (propagated)" line), skew starts affecting every check, and **hold analysis becomes meaningful** — CTS is therefore always followed by re-repair: first setup here (the tree perturbed placement and added load), hold later with routed parasitics ([12_pnr_route.md](12_pnr_route.md)).
+Once the tree exists, `set_propagated_clock` switches analysis from ideal to measured arrival times. Consequences: insertion delay becomes visible in reports (the "clock network delay (propagated)" line), skew starts affecting every check, and **hold analysis becomes meaningful** — CTS is therefore always followed by re-repair: first setup here (the tree perturbed placement and added load), hold later with routed parasitics ([09_pnr_route.md](09_pnr_route.md)).
 
 ## Implementation walkthrough
 
@@ -83,7 +83,7 @@ The tree's buffers and repair's cells are legalized into the rows, the invariant
 - **Buffer selection**: pinning the tree to explicit masters (`-buf_list`, `-root_buf`) trades the tool's freedom for predictability; leaving it free (this flow) matches reference-flow practice and adapts to the library.
 - **Skew targeting**: bounded-skew CTS is the default goal; **useful skew** deliberately *unbalances* the tree to donate time to critical paths — powerful, and coupled tightly to setup optimization.
 - **Tree topology**: buffered clustered trees (here) vs H-trees/fishbones (regular, low-skew, higher power) vs **clock meshes** (shorted grid — lowest skew, highest power, standard for CPUs).
-- **Clock routing rules**: production flows route clocks with widened/shielded wires (NDRs — non-default rules) for SI immunity; this flow's clock nets use standard rules on the restricted layer window ([12_pnr_route.md](12_pnr_route.md): clock min-layer M4).
+- **Clock routing rules**: production flows route clocks with widened/shielded wires (NDRs — non-default rules) for SI immunity; this flow's clock nets use standard rules on the restricted layer window ([09_pnr_route.md](09_pnr_route.md): clock min-layer M4).
 - **ICG sizing**: with `ICG*` blacklisted the resizer cannot up-size an overloaded clock gate (the library offers a full size family); a design whose gated-clock nets fail repair would motivate relaxing that entry for this stage.
 - **Multi-corner CTS**: balancing trees across corners is the signoff-grade refinement; single-corner TT here.
 
@@ -97,7 +97,7 @@ The tree's buffers and repair's cells are legalized into the rows, the invariant
 
 ## Notes and caveats
 
-- The clockless guard makes this stage safe for combinational blocks — a property the hierarchical flow depends on ([18_hierarchical.md](18_hierarchical.md)).
+- The clockless guard makes this stage safe for combinational blocks — a property the hierarchical flow depends on ([18_hierarchical.md](../concepts/hierarchical.md)).
 - ICG cells present in the netlist are fully honored as clock-tree nodes; `set_dont_use ICG*` restricts only tool-initiated insertion/swap. The residual effect — no automatic ICG up-sizing — is a deliberate conservatism.
 - Expect this stage's report to show *worse* WNS than stage 2's before repair wins some back: propagated clocks re-price every path (insertion delay asymmetries, real tree load). That step down is bookkeeping honesty, not regression.
 - The "virtual clock can not be propagated" warning is expected and harmless.
@@ -106,3 +106,5 @@ The tree's buffers and repair's cells are legalized into the rows, the invariant
 ## Commercial perspective
 
 Commercial CTS (`ccopt` in Innovus — "concurrent clock and datapath optimization") merges tree building with useful-skew setup optimization in one engine, applies NDR routing rules to clocks natively, and balances across all corners simultaneously. The structure here — build balanced tree, propagate, repair setup — is the same loop with the concurrency unrolled into visible steps.
+
+Source: [3_cts.tcl](../../pnr/3_cts.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

@@ -20,7 +20,7 @@ The first step of the pipeline: proving the RTL functionally correct before anyt
 
 Two families of logic simulators exist. **Event-driven** simulators (the classic commercial tools) schedule every signal change as an event, support the full IEEE 4-state semantics (`0/1/X/Z`) and delay annotation. **Compiled/cycle-oriented** simulators translate the design into optimized C++ and evaluate it clock by clock — orders of magnitude faster, at the cost of restricted semantics. Verilator is the leading open-source member of the second family; in its modern `--timing` mode it also handles delays and event controls in *testbench* code (`#(...)` waits, `@(posedge ...)`), which is what allows a plain SystemVerilog bench to drive it without a C++ harness.
 
-A **VCD** (value change dump) records every transition of the traced signals over time. It is both a debugging artifact (waveform viewing) and, in this flow, the input to dynamic power analysis: transition counts per net are exactly what power estimation needs ([07_post_syn_dpa.md](07_post_syn_dpa.md)). Tracing is expensive — it can dominate runtime and produce very large files — hence off by default.
+A **VCD** (value change dump) records every transition of the traced signals over time. It is both a debugging artifact (waveform viewing) and, in this flow, the input to dynamic power analysis: transition counts per net are exactly what power estimation needs ([04_post_syn_dpa.md](04_post_syn_dpa.md)). Tracing is expensive — it can dominate runtime and produce very large files — hence off by default.
 
 The testbench convention this flow assumes: a self-checking bench named `tb_<top_level>` that instantiates the design, generates stimuli, checks responses against a golden model, ends with `$finish`, and (for the power path) names its DUT instance `dut` and dumps `activity.vcd` under `` `ifdef VCD ``.
 
@@ -102,7 +102,7 @@ Runs the simulation, teeing the bench's output to `run.log`. Extra arguments pas
 
 ## Design space
 
-- **Simulator choice.** Event-driven simulators (Icarus open-source; Questa/VCS/Xcelium commercial) offer 4-state X-propagation semantics and SDF back-annotation, at far lower speed. Verilator's 2-state model means uninitialized-signal bugs may hide; the flow accepts this for speed and revisits X-behavior at gate level ([05_post_syn_sim.md](05_post_syn_sim.md)).
+- **Simulator choice.** Event-driven simulators (Icarus open-source; Questa/VCS/Xcelium commercial) offer 4-state X-propagation semantics and SDF back-annotation, at far lower speed. Verilator's 2-state model means uninitialized-signal bugs may hide; the flow accepts this for speed and revisits X-behavior at gate level ([02_post_syn_sim.md](02_post_syn_sim.md)).
 - **Tracing format.** FST (Verilator's `--trace-fst`) is far smaller than VCD and loads faster in viewers — but the power-analysis step consumes VCD, so VCD stays the flow's interchange format.
 - **Scope-limited tracing** (dumping only the DUT rather than everything) trades debug visibility for speed/size; the bench's `$dumpvars` target controls it.
 - **Verification depth.** The flow's convention is directed + constrained-random self-checking benches; the natural extensions are seed management for regression randomization, functional coverage, and assertion use — all orthogonal to the flow plumbing.
@@ -126,3 +126,5 @@ Runs the simulation, teeing the bench's output to `run.log`. Extra arguments pas
 ## Commercial perspective
 
 The same step under commercial tools (Questa/VCS/Xcelium) differs mainly in semantics (4-state, SDF-annotatable, UVM ecosystems) rather than in flow position. A common industrial pattern mirrors this repo exactly: Verilator for fast functional regression, an event-driven simulator for X-accurate and back-annotated runs.
+
+Source: [run.sh](../../sim/run.sh) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

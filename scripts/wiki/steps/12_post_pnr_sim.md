@@ -19,7 +19,7 @@ The functional check of the *implemented* design: the routed netlist — reshape
 
 ## Theory
 
-Everything from [05_post_syn_sim.md](05_post_syn_sim.md) applies unchanged — same zero-delay functional model, same cell-model story, same bench branch. What is *new* is the netlist under test: place-and-route rebuilt it (buffers inserted and removed, cells resized, a clock tree added, tie fanouts split), and this step proves that none of that surgery changed the function. It works at all because stage 5 stripped the physical-only cells — fillers and taps have no simulation models — while everything electrical (tie cells, clock buffers, hold buffers) is ordinary modeled logic.
+Everything from [02_post_syn_sim.md](02_post_syn_sim.md) applies unchanged — same zero-delay functional model, same cell-model story, same bench branch. What is *new* is the netlist under test: place-and-route rebuilt it (buffers inserted and removed, cells resized, a clock tree added, tie fanouts split), and this step proves that none of that surgery changed the function. It works at all because stage 5 stripped the physical-only cells — fillers and taps have no simulation models — while everything electrical (tie cells, clock buffers, hold buffers) is ordinary modeled logic.
 
 For hierarchical results one addition: the parent netlist instantiates hard macros *by name only* — no module content. Simulation therefore needs each block's own routed netlist compiled alongside, exactly like a cell-model library: that is what `MACRO_DIRS` provides here. The resulting simulation covers the full gate-level hierarchy — parent logic and macro internals — which also makes its VCD the complete-activity input the hierarchical power analysis requires.
 
@@ -59,7 +59,7 @@ $(PDK_HOME)/asap7/asap7sc7p5t_27/Verilog/asap7sc7p5t_OA_RVT_TT_201020.v
 $(REPO_HOME)/projects/$(SEL_PROJECT)/imp/$(SEL_NETLIST_DIR)/output/netlist.v
 ```
 
-Everything else — strict mode, parameter/waiver plumbing, the Verilator options (`-DPOST_SYN_SIM`, X-handling, output splitting), run and log handling — is identical to [05_post_syn_sim.md](05_post_syn_sim.md) and explained there.
+Everything else — strict mode, parameter/waiver plumbing, the Verilator options (`-DPOST_SYN_SIM`, X-handling, output splitting), run and log handling — is identical to [02_post_syn_sim.md](02_post_syn_sim.md) and explained there.
 
 ## Design space
 
@@ -84,3 +84,5 @@ As for the post-syn step, plus the specifically post-route option: **SDF-annotat
 ## Commercial perspective
 
 Identical positioning to post-syn GLS in commercial flows, with the post-route variant usually run SDF-annotated at signoff corners as the classic "tapeout gate sim". The zero-delay functional form used here is their fast-regression mode.
+
+Source: [run.sh](../../post-pnr-sim/run.sh) — [filelist.f](../../post-pnr-sim/filelist.f) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

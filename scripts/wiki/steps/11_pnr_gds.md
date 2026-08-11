@@ -70,7 +70,7 @@ Headless KLayout (`-zz`), parameterized (`-rd name=value`) and running `def2stre
 ## Design space
 
 - **Chip finishing**: a tapeout adds steps this flow deliberately omits — **metal fill** (dummy geometry for density rules), **seal ring** (the die-edge structure; the `seal_file` hook), logos/markers — all KLayout-scriptable in the same framework.
-- **Physical verification**: the merged GDS is what DRC and LVS run against (KLayout has a DRC engine and rule decks exist for ASAP7; commercial signoff uses Calibre/Pegasus). This flow's "DRC" is the router's own check ([12_pnr_route.md](12_pnr_route.md)); polygon-level verification is the next rigor step.
+- **Physical verification**: the merged GDS is what DRC and LVS run against (KLayout has a DRC engine and rule decks exist for ASAP7; commercial signoff uses Calibre/Pegasus). This flow's "DRC" is the router's own check ([09_pnr_route.md](09_pnr_route.md)); polygon-level verification is the next rigor step.
 - **OASIS** is GDSII's denser modern successor — a format switch, same content.
 - **Layer mapping** (`layer_map`): translating tool layer numbers to foundry mask numbers — identity for ASAP7, a real map at any foundry.
 
@@ -93,3 +93,5 @@ Headless KLayout (`-zz`), parameterized (`-rd name=value`) and running `def2stre
 ## Commercial perspective
 
 In commercial flows the same merge happens inside the P&R tool (`streamOut`) or in signoff data-prep, followed by the full finishing/verification chain: metal fill, DRC/LVS with foundry decks, and mask data preparation. The DEF+LEF+GDS-libraries → merged-GDS pattern is identical; only the executor differs.
+
+Source: [6_gds.sh](../../pnr/6_gds.sh) — [def2stream.py](../../pnr/def2stream.py) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

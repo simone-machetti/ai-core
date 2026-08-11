@@ -230,7 +230,7 @@ if {$env(SEL_LINK_BLACKBOXES) ne "0"} {
 }
 ```
 
-Blackbox linking, part two: the real gate-level content of each blackboxed module is read back in, replacing the stubs — the final netlist is self-contained. Unless `LINK_BLACKBOXES=0`: then the stubs stay empty, which is what a hierarchical P&R needs to bind them to hard macros by name ([18_hierarchical.md](18_hierarchical.md)).
+Blackbox linking, part two: the real gate-level content of each blackboxed module is read back in, replacing the stubs — the final netlist is self-contained. Unless `LINK_BLACKBOXES=0`: then the stubs stay empty, which is what a hierarchical P&R needs to bind them to hard macros by name ([18_hierarchical.md](../concepts/hierarchical.md)).
 
 ```tcl
 yosys "tee -o $env(REPO_HOME)/projects/$env(SEL_PROJECT)/imp/$env(SEL_OUT_DIR)/report/area.rpt stat -hierarchy \
@@ -259,7 +259,7 @@ Default runs flatten fully here (`rename -hide` replaces internal names with com
 
 - **Hierarchy modes** (the flow's four): flat (default — best optimization, what P&R wants), `KEEP_HIERARCHY=1` (all boundaries — per-module reporting), `KEEP_MODULES` (selected boundaries), `BLACKBOX_MODULES` (reuse of prior runs — constant per-component results, fast top-level runs; boundaries block cross-optimization, so timing across them is pessimistic and boundary nets go unbuffered). `LINK_BLACKBOXES=0` converts the last mode into macro-ready stubs.
 - **Timing-driven strategy.** The `{D}` target with classic `map` is one point; ABC's modern `&nf`-based flows use the target more aggressively (and are the natural experiment if synthesis QoR ever becomes the bottleneck). Retiming (`abc -dff` style flows) would move registers across logic — a much deeper intervention.
-- **Constants**: Yosys can map constants to tie cells itself (`hilomap`); this flow leaves them as `assign` statements and inserts tie cells in P&R instead ([09_pnr_floorplan.md](09_pnr_floorplan.md)) — either point is valid, exactly once.
+- **Constants**: Yosys can map constants to tie cells itself (`hilomap`); this flow leaves them as `assign` statements and inserts tie cells in P&R instead ([06_pnr_floorplan.md](06_pnr_floorplan.md)) — either point is valid, exactly once.
 - **Alternative frontends/tools**: Yosys's native SV reader (limited), or entirely different synthesis (commercial) feeding the same downstream flow — the netlist contract is the only interface.
 
 ## Knobs
@@ -275,7 +275,7 @@ Default runs flatten fully here (`rename -hide` replaces internal names with com
 
 ## Notes and caveats
 
-- ABC treats flip-flop outputs as primary inputs of the combinational network and **does not buffer their fanout** — a synthesized netlist can carry huge-fanout register-driven nets with correspondingly bad pre-layout slews. This is a known property, repaired in P&R (`repair_design`), and the reason pre-layout STA of large flat/linked netlists must be read with care ([06_post_syn_sta.md](06_post_syn_sta.md)).
+- ABC treats flip-flop outputs as primary inputs of the combinational network and **does not buffer their fanout** — a synthesized netlist can carry huge-fanout register-driven nets with correspondingly bad pre-layout slews. This is a known property, repaired in P&R (`repair_design`), and the reason pre-layout STA of large flat/linked netlists must be read with care ([03_post_syn_sta.md](03_post_syn_sta.md)).
 - Yosys substitutes `{D}` only in inline ABC scripts; a literal `{D}` inside a `-script` file reaches ABC unexpanded and corrupts `map`'s option parsing — the reason this flow resolves the template itself and archives `output/abc.script`.
 - Measured on this flow, explicit delay targets produce mapping identical to the default across a wide target range: classic `map` is already delay-oriented. Synthesis-side timing leverage is therefore limited; real timing QoR comes from P&R repair.
 - Blackbox linking requires the component run to predate the top run — and a component RTL change requires re-running the component first (the error message encodes the discipline).
@@ -284,3 +284,5 @@ Default runs flatten fully here (`rename -hide` replaces internal names with com
 ## Commercial perspective
 
 The commercial equivalents (Design Compiler, Genus) integrate the same pipeline with full SDC awareness end-to-end: mapping, sizing and even placement-aware synthesis (physical synthesis) driven by the real constraint set, plus DFT insertion (scan chains) and UPF-driven power intent. The Yosys/ABC split — generic optimization vs AIG-based mapping — mirrors their internal architecture more closely than the tool names suggest.
+
+Source: [run.tcl](../../syn/run.tcl) — [compile.tcl](../../syn/compile.tcl) — [abc.tcl](../../syn/abc.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

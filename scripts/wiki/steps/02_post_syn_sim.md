@@ -27,7 +27,7 @@ Two structural consequences of simulating a netlist:
 
 ## Implementation walkthrough
 
-`scripts/post-syn-sim/run.sh` shares its skeleton with the RTL sim script ([03_sim.md](03_sim.md)); the differences carry the meaning:
+`scripts/post-syn-sim/run.sh` shares its skeleton with the RTL sim script ([00_sim.md](00_sim.md)); the differences carry the meaning:
 
 ```bash
 verilator \
@@ -102,3 +102,5 @@ Combinational cell models come from the PDK (the OA group from a sibling PDK tre
 ## Commercial perspective
 
 Industrial flows run GLS with commercial event-driven simulators, usually SDF-annotated at signoff corners, and lean on formal equivalence as the primary functional guarantee — GLS surviving mainly for X-propagation, reset, and timing-anomaly hunting. The zero-delay functional GLS used here corresponds to their "fast functional netlist regression" mode.
+
+Source: [run.sh](../../post-syn-sim/run.sh) — [filelist.f](../../post-syn-sim/filelist.f) — [asap7_seq_behav.v](../../post-syn-sim/asap7_seq_behav.v) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

@@ -22,7 +22,7 @@ Two policies shape where wires may go. The **layer window** (`set_routing_layers
 
 ### Timing repair with real wires
 
-After global routing, parasitics can be estimated *from the guides* — much closer to reality than placement estimates. This is where the flow performs its final optimization: setup repair (with real wire RC, some paths got slower) and the first **hold repair** — real now because clock skew (CTS) and true data-path delays (routing) both exist; the fix is inserting small delay buffers on too-fast paths. I/O hold is excluded by the constraint scheme ([02_constraints.md](02_constraints.md)) precisely so this step spends buffers only on real, internal races.
+After global routing, parasitics can be estimated *from the guides* — much closer to reality than placement estimates. This is where the flow performs its final optimization: setup repair (with real wire RC, some paths got slower) and the first **hold repair** — real now because clock skew (CTS) and true data-path delays (routing) both exist; the fix is inserting small delay buffers on too-fast paths. I/O hold is excluded by the constraint scheme ([02_constraints.md](../concepts/constraints.md)) precisely so this step spends buffers only on real, internal races.
 
 ### The antenna effect (and why this flow skips its repair)
 
@@ -106,7 +106,7 @@ TritonRoute consumes the guides and produces DRC-clean metal, iterating (`Comple
 
 ## Notes and caveats
 
-- **`route_drc.rpt` must be empty** — the flow's definition of routed success. Exception documented in [18_hierarchical.md](18_hierarchical.md): a few `Lef58EolKeepOut` markers at hard-macro pins are known false positives of abstract-based routing (the "obstruction" is the same net's continuation inside the block).
+- **`route_drc.rpt` must be empty** — the flow's definition of routed success. Exception documented in [18_hierarchical.md](../concepts/hierarchical.md): a few `Lef58EolKeepOut` markers at hard-macro pins are known false positives of abstract-based routing (the "obstruction" is the same net's continuation inside the block).
 - Detailed routing dominates the whole flow's runtime (tens of minutes for ~50 k instances; hours at hundreds of thousands) and memory (its peak scales with parallel workers — `PNR_THREADS` is the relief valve).
 - Hold repair *increases* area and power by design (delay buffers); its insertion counts in the log are worth watching — an explosion usually points at a constraint modeling problem, not a design problem.
 - No antenna repair is performed (no diode in the platform) — a flow property to remember when reading DRC expectations elsewhere.
@@ -115,3 +115,5 @@ TritonRoute consumes the guides and produces DRC-clean metal, iterating (`Comple
 ## Commercial perspective
 
 The same two-resolution architecture under commercial names (Innovus `routeDesign`/NanoRoute, Fusion Compiler/ICC2 Zroute), with production additions: signal-integrity-aware routing (crosstalk avoidance and SI timing), non-default rules for clocks/buses, timing-driven track assignment, and integrated antenna/metal-fill handling. TritonRoute's iterate-to-zero-DRC loop is the same convergence model those routers run.
+
+Source: [4_route.tcl](../../pnr/4_route.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

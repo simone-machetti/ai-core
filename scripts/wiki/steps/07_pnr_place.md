@@ -21,7 +21,7 @@ Global placement's output is physically illegal (overlaps, off-site positions). 
 
 ### Design repair
 
-Between the two placement phases sits the first *netlist surgery* of the backend. The synthesized netlist arrives with two classes of electrical problems: high-fanout nets that synthesis never buffered (ABC does not buffer register outputs — [04_syn.md](04_syn.md)) and drive strengths chosen without knowledge of real wire loads. **`repair_design`** walks every net with estimated placement parasitics, inserting buffers and resizing drivers until slew, capacitance and fanout limits from the liberty are met. This is the step that turns "netlist that simulates" into "netlist that can meet electrical rules on silicon".
+Between the two placement phases sits the first *netlist surgery* of the backend. The synthesized netlist arrives with two classes of electrical problems: high-fanout nets that synthesis never buffered (ABC does not buffer register outputs — [01_syn.md](01_syn.md)) and drive strengths chosen without knowledge of real wire loads. **`repair_design`** walks every net with estimated placement parasitics, inserting buffers and resizing drivers until slew, capacitance and fanout limits from the liberty are met. This is the step that turns "netlist that simulates" into "netlist that can meet electrical rules on silicon".
 
 ## Implementation walkthrough
 
@@ -35,7 +35,7 @@ source $::env(REPO_HOME)/scripts/pnr/reports.tcl
 load_checkpoint 1_floorplan
 ```
 
-Standard prologue ([08_pnr_overview.md](08_pnr_overview.md)): context + the floorplan database.
+Standard prologue ([05_pnr_overview.md](05_pnr_overview.md)): context + the floorplan database.
 
 ```tcl
 # -----------------------------------------------------------------------------
@@ -93,7 +93,7 @@ Legalization of everything — including the cells repair just created — follo
 - **Mode selection**: `-timing_driven`/`-routability_driven` cost runtime (internal STA and trial routing per iteration) and are worth it for anything beyond trivial blocks. Skew-aware and cluster-guided variants exist upstream for special structures.
 - **Cell padding** (`set_placement_padding`) reserves empty sites next to selected cells — a pre-emptive congestion/ECO-space tool this flow doesn't need yet.
 - **Incremental placement**: re-legalizing after small netlist edits instead of re-running global placement — the pattern later stages use when their repairs add cells.
-- **The repair-here-vs-repair-later split**: this flow repairs electrical rules now and timing after CTS ([11_pnr_cts.md](11_pnr_cts.md)) — matching the information available at each point (no real clock yet, so setup repair now would chase provisional numbers).
+- **The repair-here-vs-repair-later split**: this flow repairs electrical rules now and timing after CTS ([08_pnr_cts.md](08_pnr_cts.md)) — matching the information available at each point (no real clock yet, so setup repair now would chase provisional numbers).
 
 ## Knobs
 
@@ -114,3 +114,5 @@ Legalization of everything — including the cells repair just created — follo
 ## Commercial perspective
 
 Commercial placers (Innovus `place_opt_design`, Fusion Compiler) fuse placement, buffering and sizing into one timing-driven mega-step with concurrent clock planning at the high end. The decomposition here — global placement, pin refinement, electrical repair, legalization — is exactly what that mega-step performs internally, just visible and separately controllable.
+
+Source: [2_place.tcl](../../pnr/2_place.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)

@@ -52,11 +52,11 @@ Design currents flow from the top of this hierarchy downward; sizing (strap widt
 
 ### Macros
 
-When the design instantiates hard macros (hardened blocks, SRAMs), the floorplan also fixes their positions, cuts the std-cell rows beneath them, keeps a **halo** (a keep-out margin so std cells don't hug the macro and block its pin access), and gives the PDN a rule for connecting their power pins. This flow's macro mechanics are covered in [18_hierarchical.md](18_hierarchical.md); the walkthrough below shows where they hook in.
+When the design instantiates hard macros (hardened blocks, SRAMs), the floorplan also fixes their positions, cuts the std-cell rows beneath them, keeps a **halo** (a keep-out margin so std cells don't hug the macro and block its pin access), and gives the PDN a rule for connecting their power pins. This flow's macro mechanics are covered in [18_hierarchical.md](../concepts/hierarchical.md); the walkthrough below shows where they hook in.
 
 ## Implementation walkthrough
 
-The stage script is `scripts/pnr/1_floorplan.tcl`, run as an independent `openroad -exit` process by `scripts/pnr/run.sh` ([08_pnr_overview.md](08_pnr_overview.md)).
+The stage script is `scripts/pnr/1_floorplan.tcl`, run as an independent `openroad -exit` process by `scripts/pnr/run.sh` ([05_pnr_overview.md](05_pnr_overview.md)).
 
 ```tcl
 source $::env(REPO_HOME)/scripts/pnr/init_tech.tcl
@@ -80,7 +80,7 @@ set TIEHI_PORT      TIEHIx1_ASAP7_75t_R/H
 set TIELO_PORT      TIELOx1_ASAP7_75t_R/L
 ```
 
-(`checkpoint.tcl` provides `save_checkpoint`/`load_checkpoint`, `reports.tcl` provides `report_stage`; both are dissected in [08_pnr_overview.md](08_pnr_overview.md).)
+(`checkpoint.tcl` provides `save_checkpoint`/`load_checkpoint`, `reports.tcl` provides `report_stage`; both are dissected in [05_pnr_overview.md](05_pnr_overview.md).)
 
 ```tcl
 # -----------------------------------------------------------------------------
@@ -96,7 +96,7 @@ if {$::env(SEL_MACRO_DIRS) ne "none"} {
 }
 ```
 
-The **technology LEF** is read first: it defines the layer stack (M1–M9 plus the Pad layer), each layer's preferred direction and design rules, the via definitions, the manufacturing grid, and the `asap7sc7p5t` site — everything else refers to these definitions. The **cell LEF** then provides the physical abstract of all 212 RVT standard cells: footprint in sites, pin shapes and layers, internal obstructions. P&R never sees transistors; it works entirely on these abstracts (the real polygons only appear at the GDS merge, [14_pnr_gds.md](14_pnr_gds.md)). In hierarchical runs, each hardened block's `abstract.lef` is read the same way — from here on a macro is just a very large cell.
+The **technology LEF** is read first: it defines the layer stack (M1–M9 plus the Pad layer), each layer's preferred direction and design rules, the via definitions, the manufacturing grid, and the `asap7sc7p5t` site — everything else refers to these definitions. The **cell LEF** then provides the physical abstract of all 212 RVT standard cells: footprint in sites, pin shapes and layers, internal obstructions. P&R never sees transistors; it works entirely on these abstracts (the real polygons only appear at the GDS merge, [11_pnr_gds.md](11_pnr_gds.md)). In hierarchical runs, each hardened block's `abstract.lef` is read the same way — from here on a macro is just a very large cell.
 
 ```tcl
 # -----------------------------------------------------------------------------
@@ -119,7 +119,7 @@ set_dont_use $DONT_USE
 
 Three pieces of *analysis context*, needed even at floorplan time because later stages re-derive everything from checkpoints and this stage's report already includes timing:
 
-- `constraints.tcl` creates the clock and I/O constraints from `CLK_PERIOD_NS` — the full scheme (real clock `clk_i`, virtual clock for I/O, hold false-paths) is the subject of [02_constraints.md](02_constraints.md).
+- `constraints.tcl` creates the clock and I/O constraints from `CLK_PERIOD_NS` — the full scheme (real clock `clk_i`, virtual clock for I/O, hold false-paths) is the subject of [02_constraints.md](../concepts/constraints.md).
 - `setRC.tcl` (platform file) sets per-layer wire resistance/capacitance and the default wire RC used to *estimate* parasitics before routing exists — without it, pre-route timing would assume zero-delay wires.
 - `set_dont_use` blacklists cells the optimization engines may not insert or swap to: `{*x1p*_ASAP7* *xp*_ASAP7* SDF* ICG*}` — fractional-drive cells (poor repair choices), scan flops (no DFT flow), and clock gates (gating is an architectural decision; the ICGs already in the netlist are untouched and fully used). This is an engine restriction, not a netlist filter.
 
@@ -166,7 +166,7 @@ if {$::env(SEL_FLOORPLAN) ne "none"} {
 }
 ```
 
-The hierarchical hook: the project-owned `FLOORPLAN` file (one `place_macro -macro_name <inst> -location {x y} -orientation R0` per macro — *the* place where a component's position is decided) is sourced, then `cut_rows` removes the standard-cell rows under each macro and 1 µm of **halo** around it, so no cell can be legalized against the macro's edge and its pin access stays clear. Skipped entirely in flat runs. Details and the validated `top_dummy`+`dp_8` example: [18_hierarchical.md](18_hierarchical.md).
+The hierarchical hook: the project-owned `FLOORPLAN` file (one `place_macro -macro_name <inst> -location {x y} -orientation R0` per macro — *the* place where a component's position is decided) is sourced, then `cut_rows` removes the standard-cell rows under each macro and 1 µm of **halo** around it, so no cell can be legalized against the macro's edge and its pin access stays clear. Skipped entirely in flat runs. Details and the validated `top_dummy`+`dp_8` example: [18_hierarchical.md](../concepts/hierarchical.md).
 
 ```tcl
 # -----------------------------------------------------------------------------
@@ -176,7 +176,7 @@ set_pin_length -hor_length 0.24 -ver_length 0.24
 place_pins -hor_layers $PIN_LAYER_HOR -ver_layers $PIN_LAYER_VER
 ```
 
-`place_pins` distributes every port on the core boundary: M4 shapes on the left/right edges (horizontal-direction layer), M5 on top/bottom (vertical). `set_pin_length` makes each pin a 0.24 µm-deep stub instead of a minimal square — five track-pitches of landing area for whoever routes to it; the value came out of hierarchical bring-up, where macro-pin access proved to be the fragile spot. This placement is *provisional*: ports are placed again after global placement ([10_pnr_place.md](10_pnr_place.md)) once the tool knows where each port's loads actually ended up; doing a first pass now gives the placer sane anchor positions instead of unplaced ports.
+`place_pins` distributes every port on the core boundary: M4 shapes on the left/right edges (horizontal-direction layer), M5 on top/bottom (vertical). `set_pin_length` makes each pin a 0.24 µm-deep stub instead of a minimal square — five track-pitches of landing area for whoever routes to it; the value came out of hierarchical bring-up, where macro-pin access proved to be the fragile spot. This placement is *provisional*: ports are placed again after global placement ([07_pnr_place.md](07_pnr_place.md)) once the tool knows where each port's loads actually ended up; doing a first pass now gives the placer sane anchor positions instead of unplaced ports.
 
 ```tcl
 # -----------------------------------------------------------------------------
@@ -249,7 +249,7 @@ The standard stage epilogue: a timing/area snapshot into `report/1_floorplan.rpt
 
 **PDN sizing** is the classic IR-drop-vs-routability dial. Denser/wider straps (smaller `-pitch`, larger `-width`) lower IR drop and EM stress but consume signal tracks on M5/M6 — each 0.12 µm M5 strap pair at 5.4 µm pitch already takes ~5 % of M5's capacity. Real flows close this loop with IR analysis (OpenROAD: `analyze_power_grid`, an experimental static IR solver; commercial: Voltus/RedHawk) and iterate the strategy. Other structural choices: a **core ring** as the interface to a pad ring; straps on M3/M4 for very small blocks; different layer pairs matching where the current actually enters the block. The strategy-file format makes all of this declarative — swapping the `PDN` parameter is enough to experiment.
 
-**Macro floorplanning** (halos, channels between macros, orientation) is deferred to [18_hierarchical.md](18_hierarchical.md); the one principle worth stating here is that *manual* macro placement — our `FLOORPLAN` hook — is the norm, not a limitation: macro positions encode dataflow knowledge (which tile talks to which neighbor) that automatic macro placers only approximate.
+**Macro floorplanning** (halos, channels between macros, orientation) is deferred to [18_hierarchical.md](../concepts/hierarchical.md); the one principle worth stating here is that *manual* macro placement — our `FLOORPLAN` hook — is the norm, not a limitation: macro positions encode dataflow knowledge (which tile talks to which neighbor) that automatic macro placers only approximate.
 
 ## Knobs
 
@@ -270,7 +270,7 @@ The standard stage epilogue: a timing/area snapshot into `report/1_floorplan.rpt
 ## Notes and caveats
 
 - **The PDN macro grid must match the macro's power pins.** The platform's default macro grids connect `{M4 M5}` — written for ORFS's SRAM macros. Blocks hardened by this flow expose their **M6 straps** as power pins, so the first hierarchical run died with `PDN-0233 Failed to generate full power grid` after building an empty macro grid. The fix is `scripts/pnr/pdn_macro.tcl` (auto-selected with `MACRO_DIRS`), whose macro grid connects `{M5 M6}` — top-level M5 straps dropped straight onto the block's M6 pins.
-- **Pin depth is not cosmetic.** The 0.24 µm `set_pin_length` came from debugging macro-pin access; even with it, abstract-based routing can flag `Lef58EolKeepOut` markers at a macro pin — analyzed as false positives (the "obstruction" is the same net's continuation inside the block). Full story in [18_hierarchical.md](18_hierarchical.md).
+- **Pin depth is not cosmetic.** The 0.24 µm `set_pin_length` came from debugging macro-pin access; even with it, abstract-based routing can flag `Lef58EolKeepOut` markers at a macro pin — analyzed as false positives (the "obstruction" is the same net's continuation inside the block). Full story in [18_hierarchical.md](../concepts/hierarchical.md).
 - **Utilization drifts upward through the flow**: the floorplan sets it by construction, but placement, CTS and routing repair all add buffers and up-sized cells — a few percent of growth is normal, and the knob should leave room for it.
 - **Utilization is also a power knob**: a block hardened as a macro at low utilization carries longer internal wires than the same logic implemented flat, and the switching power of those wires is a measurable overhead. Harden blocks at higher utilization when power matters.
 - **Snapping is normal**: a requested margin coming back slightly larger in the log is the tool aligning the core to sites and the manufacturing grid, not an error.
@@ -279,3 +279,4 @@ The standard stage epilogue: a timing/area snapshot into `report/1_floorplan.rpt
 
 Commercial floorplanning (Innovus `create_floorplan`/`floorPlan`, Fusion Compiler equivalents) covers the same objects with the same vocabulary — die/core, rows, tracks, utilization — plus a *power planning* step (`add_rings`, `add_stripes`) that mirrors `pdngen`'s strategy files. The additions of a production flow are chip-level: pad-ring and bump planning driven by an I/O assignment file, multi-domain floorplans with power switches and level shifters (UPF), macro placement assisted by dedicated engines, and signoff-grade IR/EM analysis closing the PDN loop. Conceptually, everything in this stage transfers one-to-one.
 
+Source: [1_floorplan.tcl](../../pnr/1_floorplan.tcl) — [pdn_tile.tcl](../../pnr/pdn_tile.tcl) — [pdn_macro.tcl](../../pnr/pdn_macro.tcl) — Reference: [asic_flow.md](../../asic_flow.md) — Index: [index.md](../index.md)
