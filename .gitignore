@@ -4,6 +4,7 @@
 
 /projects/*/sim
 /projects/*/imp
+/projects/*/doc/slides.pdf
 __pycache__
 .direnv
 .envrc
