@@ -1,6 +1,6 @@
-# Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane BFP
+# Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane-A BFP
 
-VCD-annotated dynamic-power comparison of the five PE-grid variants — [top_NxN](../architectures/top_NxN.md), [top_NxN_sqr](../architectures/top_NxN_sqr.md), [top_NxN_bfp](../architectures/top_NxN_bfp.md), [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md), [top_NxN_bpl_bfp](../architectures/top_NxN_bpl_bfp.md) — measured on the complete synthesized 2×2 grids and assembled from per-component unit power for 8×8 and 16×16.
+VCD-annotated dynamic-power comparison of the five PE-grid variants — [top_NxN](../architectures/top_NxN.md), [top_NxN_sqr](../architectures/top_NxN_sqr.md), [top_NxN_bfp](../architectures/top_NxN_bfp.md), [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md), [top_NxN_bpl_a_bfp](../architectures/top_NxN_bpl_a_bfp.md) — measured on the complete synthesized 2×2 grids and assembled from per-component unit power for 8×8 and 16×16.
 
 ## Purpose
 
@@ -31,13 +31,13 @@ Verilator elaborates every instance of a gate-level netlist, so gate-level simul
 
 ## Instance counts
 
-Same counts as [Synthesis Area](syn_area.md), except the clock gates are **split by position** — a per-PE gate (N²) and a per-row/column gate (2N) are the same cell but see different enable activity, so they are reported separately. The BFP variants add the per-row/column exponent dispatchers ([disp_array_exp_a_bfp](../modules/disp_array_exp_a_bfp.md) / `_b` and their `_sqr_bfp` forms, ×N each); the square variants add the α/β generators (×N) and `const` (×1). The bit-plane variant adds **nothing** — it is the baseline-BFP count with `disp_array_b` swapped for [disp_array_b_bpl_bfp](../modules/disp_array_b_bpl_bfp.md).
+Same counts as [Synthesis Area](syn_area.md), except the clock gates are **split by position** — a per-PE gate (N²) and a per-row/column gate (2N) are the same cell but see different enable activity, so they are reported separately. The BFP variants add the per-row/column exponent dispatchers ([disp_array_exp_a_bfp](../modules/disp_array_exp_a_bfp.md) / `_b` and their `_sqr_bfp` forms, ×N each); the square variants add the α/β generators (×N) and `const` (×1). The bit-plane variant adds **nothing** — it is the baseline-BFP count with `disp_array_b` swapped for [disp_array_b_bpl_a_bfp](../modules/disp_array_b_bpl_a_bfp.md).
 
 ## Results
 
 Per-component unit power from the 2×2 runs, mW:
 
-| Component           | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane BFP |
+| Component           | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane-A BFP |
 | ------------------- | -------- | ------- | ------------ | ---------- | ------------- |
 | `ctrl` / `ctrl_sqr` | 0.00127  | 0.00177 | 0.00136      | 0.00162    | 0.00137       |
 | `const`             | —        | 0.00001 | —            | 0.00002    | —             |
@@ -55,7 +55,7 @@ Note `disp_array_a` — the *same* netlist — reports 0.122 mW in the bit-plane
 
 Grid totals, mW:
 
-| Grid  | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane BFP | Square/Base | Sqr-BFP/Base-BFP | Bpl-BFP/Base-BFP | Basis     |
+| Grid  | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane-A BFP | Square/Base | Sqr-BFP/Base-BFP | Bpl-A-BFP/Base-BFP | Basis     |
 | ----- | -------- | ------- | ------------ | ---------- | ------------- | ----------- | ---------------- | ---------------- | --------- |
 | 2×2   | 3.240    | 4.200   | 4.272        | 5.053      | 4.362         | +29.6 %     | +18.3 %          | +2.1 %           | measured  |
 | 8×8   | 46.698   | 42.551  | 62.427       | 60.825     | 62.237        | −8.9 %      | −2.6 %           | −0.30 %          | assembled |
@@ -72,7 +72,7 @@ The BFP sideband costs ~34 % power on both axes (`Baseline-BFP/Baseline ≈ 1.34
 
 Split by category at 8×8 (PE includes its per-PE clock gate), mW:
 
-| Category | Baseline | Square | Baseline-BFP | Square-BFP | Bit-Plane BFP |
+| Category | Baseline | Square | Baseline-BFP | Square-BFP | Bit-Plane-A BFP |
 | -------- | -------- | ------ | ------------ | ---------- | ------------- |
 | PE       | 45.00    | 34.35  | 60.45        | 54.16      | 59.72         |
 | α/β      | 0.00     | 6.12   | 0.00         | 4.50       | 0.00          |

@@ -4,10 +4,10 @@
 # Description:
 #   Stacked-bar chart of synthesized cell area at the PE level for the five PE
 #   variants - baseline (pe), square (pe_sqr), BFP (pe_bfp), square-BFP
-#   (pe_sqr_bfp) and bit-plane BFP (pe_bpl_bfp) - split into DP8-Array /
+#   (pe_sqr_bfp) and bit-plane-A BFP (pe_bpl_a_bfp) - split into DP8-Array /
 #   CPR-Tree / ACC-Array / PE glue. The composition comes from runs with the
 #   internal module boundaries preserved
-#   (imp/{pe,pe_sqr,pe_bfp,pe_sqr_bfp,pe_bpl_bfp}_hier_syn, produced by
+#   (imp/{pe,pe_sqr,pe_bfp,pe_sqr_bfp,pe_bpl_a_bfp}_hier_syn, produced by
 #   scripts/run_syn_pe_area.sh): DP8-Array is the sum of the 16 dot-product
 #   cores, CPR-Tree is pe_array* minus those cores, ACC-Array is acc_array*, and
 #   PE glue is the remainder (operand mask + the two acc pipeline register
@@ -35,16 +35,16 @@ HIER = {
                      "ACC-Array":  861.036, "PE glue":   333.824},
     "Square-BFP":   {"DP8-Array": 1892.601, "CPR-Tree": 2747.936,
                      "ACC-Array":  848.848, "PE glue":   434.601},
-    "Bit-Plane-BFP":{"DP8-Array": 2904.803, "CPR-Tree": 1874.828,
+    "Bit-Plane-A-BFP":{"DP8-Array": 2904.803, "CPR-Tree": 1874.828,
                      "ACC-Array":  884.831, "PE glue":   378.613},
 }
 
 FLAT = {"Baseline": 3816.519, "Square": 3320.303, "Baseline-BFP": 5345.990, "Square-BFP": 5204.929,
-        "Bit-Plane-BFP": 5148.898}
+        "Bit-Plane-A-BFP": 5148.898}
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-BFP"]
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
 SECTIONS = ["DP8-Array", "CPR-Tree", "ACC-Array", "PE glue"]
-CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-BFP": "Baseline-BFP"}
+CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-A-BFP": "Baseline-BFP"}
 COLORS = {
     "DP8-Array": "#d4a480cc",
     "CPR-Tree":  "#778d5ecc",

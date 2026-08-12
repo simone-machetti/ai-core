@@ -4,12 +4,12 @@
 # Description:
 #   Bar chart of synthesized cell area at the DOT-PRODUCT level for the five PE
 #   variants - baseline (dp_8), square (dp_8_sqr), BFP (dp_8), square-BFP
-#   (dp_8_sqr) and bit-plane BFP (dp_8_bpl_bfp). Scope is the array of 16
+#   (dp_8_sqr) and bit-plane-A BFP (dp_8_bpl_a_bfp). Scope is the array of 16
 #   dot-product cores inside one PE, i.e. the arithmetic core alone, with no
 #   reduction tree and no accumulator. Values are the sum of the 16 instances
 #   measured inside each PE with the module boundaries preserved
-#   (imp/{pe,pe_sqr,pe_bfp,pe_sqr_bfp,pe_bpl_bfp}_hier_syn, produced by
-#   scripts/run_syn_pe_area.sh); the standalone dp_8 / dp_8_sqr / dp_8_bpl_bfp
+#   (imp/{pe,pe_sqr,pe_bfp,pe_sqr_bfp,pe_bpl_a_bfp}_hier_syn, produced by
+#   scripts/run_syn_pe_area.sh); the standalone dp_8 / dp_8_sqr / dp_8_bpl_a_bfp
 #   runs cross-check them. Bars are NORMALIZED to the baseline DP8 array so the
 #   chart carries the
 #   ratio and not the absolute micron figure. The BFP variants reuse the integer
@@ -29,11 +29,11 @@ AREA = {
     "Square":       1892.601,
     "Baseline-BFP": 3091.572,
     "Square-BFP":   1892.601,
-    "Bit-Plane-BFP":2904.803,
+    "Bit-Plane-A-BFP":2904.803,
 }
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-BFP"]
-CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-BFP": "Baseline-BFP"}
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
+CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-A-BFP": "Baseline-BFP"}
 COLORS = {"DP8-Array": "#d4a480cc"}
 
 PITCH, WIDTH = 0.80, 0.72

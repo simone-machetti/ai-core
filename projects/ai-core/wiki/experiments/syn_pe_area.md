@@ -1,6 +1,6 @@
-# Intra-PE Area — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane BFP
+# Intra-PE Area — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane-A BFP
 
-Cell-area breakdown *inside* one processing element for the five variants — [pe](../modules/pe.md), [pe_sqr](../modules/pe_sqr.md), [pe_bfp](../modules/pe_bfp.md), [pe_sqr_bfp](../modules/pe_sqr_bfp.md) and [pe_bpl_bfp](../modules/pe_bpl_bfp.md) — split into the DP8 array, the compression tree and the accumulator.
+Cell-area breakdown *inside* one processing element for the five variants — [pe](../modules/pe.md), [pe_sqr](../modules/pe_sqr.md), [pe_bfp](../modules/pe_bfp.md), [pe_sqr_bfp](../modules/pe_sqr_bfp.md) and [pe_bpl_a_bfp](../modules/pe_bpl_a_bfp.md) — split into the DP8 array, the compression tree and the accumulator.
 
 ## Purpose
 
@@ -16,13 +16,13 @@ Pass A synthesizes the two dot-product cores standalone, as an independent cross
 # pass A - standalone dot-product cores
 make syn PROJECT=ai-core TOP_LEVEL=dp_8         OUT_DIR=dp_8_syn
 make syn PROJECT=ai-core TOP_LEVEL=dp_8_sqr     OUT_DIR=dp_8_sqr_syn
-make syn PROJECT=ai-core TOP_LEVEL=dp_8_bpl_bfp OUT_DIR=dp_8_bpl_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=dp_8_bpl_a_bfp OUT_DIR=dp_8_bpl_a_bfp_syn
 
 # pass B - PEs with the internal module boundaries preserved
 make syn PROJECT=ai-core TOP_LEVEL=pe_sqr_bfp OUT_DIR=pe_sqr_bfp_hier_syn \
     KEEP_MODULES="pe_array_sqr_bfp acc_array_sqr_bfp dp_8_sqr ext_inject_sqr_bfp"
-make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_bfp OUT_DIR=pe_bpl_bfp_hier_syn \
-    KEEP_MODULES="pe_array_bpl_bfp acc_array_bpl_bfp dp_8_bpl_bfp"
+make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_a_bfp OUT_DIR=pe_bpl_a_bfp_hier_syn \
+    KEEP_MODULES="pe_array_bpl_a_bfp acc_array_bpl_bfp dp_8_bpl_a_bfp"
 ```
 
 Library is `asap7sc7p5t` RVT TT at the default `CLK_PERIOD_NS`, matching [Synthesis Area](syn_area.md) so the figures are comparable with the component areas measured there. The sections are then
@@ -46,7 +46,7 @@ Standalone cores and the same cores in context, µm²:
 | -------------- | ---------- | -------------------- | ----------- |
 | `dp_8`         | 202.414    | 191.233              | 3059.730    |
 | `dp_8_sqr`     | 129.427    | 118.288              | 1892.601    |
-| `dp_8_bpl_bfp` | 190.630    | 181.550              | 2904.803    |
+| `dp_8_bpl_a_bfp` | 190.630    | 181.550              | 2904.803    |
 
 | Variant       | DP8 array [µm²] | Normalized | vs own baseline |
 | ------------- | --------------- | ---------- | --------------- |
@@ -54,13 +54,13 @@ Standalone cores and the same cores in context, µm²:
 | Square        | 1892.601        | 0.619      | **−38.1 %**     |
 | Baseline-BFP  | 3091.572        | 1.010      | —               |
 | Square-BFP    | 1892.601        | 0.619      | **−38.8 %**     |
-| Bit-Plane BFP | 2904.803        | 0.949      | **−6.0 %**      |
+| Bit-Plane-A BFP | 2904.803        | 0.949      | **−6.0 %**      |
 
 Three readings:
 
 - **The squarer is ~38 % smaller than the multiplier** at the arithmetic core. Standalone the ratio is −36.1 %; both cores shrink 5–9 % once placed inside the PE, but the ratio barely moves, so the in-context figure is not an artefact of boundary optimization.
 - **BFP costs nothing here.** The plain and square BFP variants reuse the integer core unchanged, so their bars land on their integer counterparts (the 1.010 is instance-level uniquification, not a design difference). The entire BFP overhead is downstream, in the tree and the accumulator.
-- **The bit-plane core is 6 % smaller than Booth**, standalone −5.8 % (190.63 vs 202.41) and −6.0 % in context — the two agreeing, as for the squarer. Modest next to the squarer's −38 %, and for a different reason: the squarer removes arithmetic outright, whereas the bit-plane variant only *moves* the B-side arithmetic out of the PE into [disp_array_b_bpl_bfp](../modules/disp_array_b_bpl_bfp.md) and trades Booth partial-product generation for 32 multiplexers. Note this core alone is not the whole story — its extra rows land in the tree, next section.
+- **The bit-plane core is 6 % smaller than Booth**, standalone −5.8 % (190.63 vs 202.41) and −6.0 % in context — the two agreeing, as for the squarer. Modest next to the squarer's −38 %, and for a different reason: the squarer removes arithmetic outright, whereas the bit-plane variant only *moves* the B-side arithmetic out of the PE into [disp_array_b_bpl_a_bfp](../modules/disp_array_b_bpl_a_bfp.md) and trades Booth partial-product generation for 32 multiplexers. Note this core alone is not the whole story — its extra rows land in the tree, next section.
 
 ## Results — PE level
 
@@ -72,7 +72,7 @@ Hierarchical synthesis, µm², with the flat total for reference:
 | Square        | 1892.601  | 694.183  | 796.491   | 405.091 | 3788.365    | 3320.303   | +14.1 %   |
 | Baseline-BFP  | 3091.572  | 1698.322 | 861.036   | 333.824 | 5984.755    | 5345.990   | +11.9 %   |
 | Square-BFP    | 1892.601  | 2747.936 | 848.848   | 434.601 | 5923.985    | 5204.929   | +13.8 %   |
-| Bit-Plane BFP | 2904.803  | 1874.828 | 884.831   | 378.613 | 6043.075    | 5148.898   | +17.4 %   |
+| Bit-Plane-A BFP | 2904.803  | 1874.828 | 884.831   | 378.613 | 6043.075    | 5148.898   | +17.4 %   |
 
 Measured shares scaled to the flat totals, normalized to the baseline PE — this is what the chart plots:
 
@@ -82,7 +82,7 @@ Measured shares scaled to the flat totals, normalized to the baseline PE — thi
 | Square        | 0.435     | 0.159    | 0.183     | 0.093   | 0.870 | **−13.0 %**     |
 | Baseline-BFP  | 0.724     | 0.398    | 0.202     | 0.078   | 1.401 | —               |
 | Square-BFP    | 0.436     | 0.633    | 0.195     | 0.100   | 1.364 | **−2.6 %**      |
-| Bit-Plane BFP | 0.648     | 0.419    | 0.198     | 0.085   | 1.349 | **−3.7 %**      |
+| Bit-Plane-A BFP | 0.648     | 0.419    | 0.198     | 0.085   | 1.349 | **−3.7 %**      |
 
 - **The −38 % core saving becomes −13 % at PE level.** The squarer's reconstruction moves work into the accumulator: [acc_array_sqr](../modules/acc_array_sqr.md) is **2.4× larger** than [acc_array](../modules/acc_array.md) (0.076 → 0.183 of the baseline PE), because the all-additive resolve carries a triple tap mux, a wider CPR and the `½`.
 - **Inside BFP the dilution is stronger**, leaving −2.6 %. There the reconstruction has to happen at a common exponent scale, so it loads the *tree* instead (0.398 → 0.633) — that section is where [ext_inject_sqr_bfp](../modules/ext_inject_sqr_bfp.md) lives, 0.223 of the baseline PE on its own.

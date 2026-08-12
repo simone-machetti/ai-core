@@ -1,6 +1,6 @@
 # Accumulator Array (Bit-Plane BFP)
 
-`acc_array_bpl_bfp` — the accumulator of the bit-plane variant. Structurally and behaviourally identical to [acc_array_bfp](./acc_array_bfp.md); **only the input tap widths differ**, resized for [pe_array_bpl_bfp](./pe_array_bpl_bfp.md)'s tree.
+`acc_array_bpl_bfp` — the accumulator of the bit-plane variant. Structurally and behaviourally identical to [acc_array_bfp](./acc_array_bfp.md); **only the input tap widths differ**, resized for [pe_array_bpl_a_bfp](./pe_array_bpl_a_bfp.md)'s tree.
 
 ## Purpose
 
@@ -69,6 +69,6 @@ Measured cost of the wider inputs: `884.83` vs `861.04` µm² inside the PE, **+
 
 ## Verification
 
-[tb_acc_array_bpl_bfp](../testbenches/tb_acc_array_bpl_bfp.md) runs the whole bit-plane datapath (dispatchers → [pe_array_bpl_bfp](./pe_array_bpl_bfp.md) → this) against the integer path and a matmul golden: Pass A equal-exponent agreement at `pe_out` across single-shot and accumulation, Pass B the min-scale-seed closed form. All 11 modes, all 8 lanes, 0 mismatches.
+[tb_acc_array_bpl_a_bfp](../testbenches/tb_acc_array_bpl_a_bfp.md) runs the whole bit-plane datapath (dispatchers → [pe_array_bpl_a_bfp](./pe_array_bpl_a_bfp.md) → this) against the integer path and a matmul golden: Pass A equal-exponent agreement at `pe_out` across single-shot and accumulation, Pass B the min-scale-seed closed form. All 11 modes, all 8 lanes, 0 mismatches.
 
-Source: [acc_array_bpl_bfp.sv](../../rtl/acc_array_bpl_bfp.sv) — Testbench: [tb_acc_array_bpl_bfp.sv](../../tb/tb_acc_array_bpl_bfp.sv)
+Source: [acc_array_bpl_bfp.sv](../../rtl/acc_array_bpl_bfp.sv) — Testbench: [tb_acc_array_bpl_a_bfp.sv](../../tb/tb_acc_array_bpl_a_bfp.sv)

@@ -1,4 +1,4 @@
-# Grid Scaling — Square vs Baseline, Square-BFP and Bit-Plane BFP vs Baseline-BFP
+# Grid Scaling — Square vs Baseline, Square-BFP and Bit-Plane-A BFP vs Baseline-BFP
 
 Area and dynamic-power gain of each variant against its own baseline as the grid grows, from 2×2 to 128×128 — the crossover, and the limit the design converges to.
 
@@ -48,7 +48,7 @@ Crossovers and asymptotes:
 | ----------------------------- | -------------- | -------------- | --------------- | --------------- |
 | Square vs Baseline            | N = 7.40       | −13.0 %        | N = 4.88        | −23.7 %         |
 | Square-BFP vs Baseline-BFP    | N = 15.92      | −2.6 %         | N = 5.97        | −10.4 %         |
-| Bit-Plane BFP vs Baseline-BFP | **N = 1.00**   | −3.7 %         | N = 5.92        | −1.2 %          |
+| Bit-Plane-A BFP vs Baseline-BFP | **N = 1.00**   | −3.7 %         | N = 5.92        | −1.2 %          |
 
 Four readings:
 

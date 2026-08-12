@@ -3,7 +3,7 @@
 //
 // Description:
 //   Accumulator array, bit-plane build - the acc_array_bfp variant whose tap
-//   inputs are sized for pe_array_bpl_bfp. Identical structure and behaviour:
+//   inputs are sized for pe_array_bpl_a_bfp. Identical structure and behaviour:
 //   it resolves the selected tap, accumulates it, and fuses lane pairs into the
 //   wide results, with the BFP alignment in the accumulate loop.
 //

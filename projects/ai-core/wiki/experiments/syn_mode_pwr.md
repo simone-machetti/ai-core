@@ -1,4 +1,4 @@
-# Per-Mode Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane BFP
+# Per-Mode Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane-A BFP
 
 VCD-annotated dynamic power of the five PE-grid variants measured **once per operating mode** on the complete 2×2 grids and assembled per component for 8×8 and 16×16.
 
@@ -27,7 +27,7 @@ All commands are in [run_syn_mode_pwr.sh](../../scripts/run_syn_mode_pwr.sh). Nu
 
 Per-mode margin of each square variant against **its own baseline** (assembled totals; negative = the square wins):
 
-| Mode | Square/Base 8×8 | Square/Base 16×16 | Sqr-BFP/Base-BFP 8×8 | Sqr-BFP/Base-BFP 16×16 | Bpl-BFP/Base-BFP 8×8 | Bpl-BFP/Base-BFP 16×16 | `sel_shift` |
+| Mode | Square/Base 8×8 | Square/Base 16×16 | Sqr-BFP/Base-BFP 8×8 | Sqr-BFP/Base-BFP 16×16 | Bpl-A-BFP/Base-BFP 8×8 | Bpl-A-BFP/Base-BFP 16×16 | `sel_shift` |
 | ---- | --------------- | ----------------- | -------------------- | ---------------------- | -------------------- | ---------------------- | ----------- |
 | 1    | **+1.4 %**      | −5.6 %            | **+4.8 %**           | **+0.8 %**             | **+23.1 %**          | **+23.0 %**            | `000`       |
 | 2    | −10.9 %         | −17.9 %           | −4.6 %               | −8.5 %                 | −2.0 %               | −2.5 %                 | `010`       |

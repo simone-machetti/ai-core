@@ -5,7 +5,7 @@
 # Description:
 #   Area synthesis runs for the five PE-grid variants - baseline (top_NxN),
 #   square (top_NxN_sqr), BFP (top_NxN_bfp), square-BFP (top_NxN_sqr_bfp) and
-#   bit-plane BFP (top_NxN_bpl_bfp).
+#   bit-plane-A BFP (top_NxN_bpl_a_bfp).
 #   Every run is at 2x2 only: pass A synthesizes each component once on its own
 #   (netlist -> projects/ai-core/imp/<module>/output/netlist.v, area ->
 #   report/area.rpt), pass B synthesizes the 2x2 grids linking those netlists via
@@ -32,7 +32,7 @@ BB_SQR_BFP="pe_sqr_bfp ctrl_sqr const_sqr_bfp disp_array_a_sqr \
             disp_array_exp_a_sqr_bfp disp_array_b_sqr disp_array_exp_b_sqr_bfp \
             pe_array_alpha_sqr_bfp pe_array_beta_sqr_bfp icg"
 
-BB_BPL_BFP="pe_bpl_bfp ctrl disp_array_a disp_array_exp_a_bfp disp_array_b_bpl_bfp \
+BB_BPL_A_BFP="pe_bpl_a_bfp ctrl disp_array_a disp_array_exp_a_bfp disp_array_b_bpl_a_bfp \
             disp_array_exp_b_bfp icg"
 
 # -----------------------------------------------------------------------------
@@ -68,9 +68,9 @@ make syn PROJECT=ai-core TOP_LEVEL=pe_array_beta_sqr_bfp OUT_DIR=pe_array_beta_s
 make syn PROJECT=ai-core TOP_LEVEL=const_sqr_bfp OUT_DIR=const_sqr_bfp_syn
 make syn PROJECT=ai-core TOP_LEVEL=pe_sqr_bfp OUT_DIR=pe_sqr_bfp_syn
 
-# bit-plane BFP
-make syn PROJECT=ai-core TOP_LEVEL=disp_array_b_bpl_bfp OUT_DIR=disp_array_b_bpl_bfp_syn
-make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_bfp OUT_DIR=pe_bpl_bfp_syn
+# bit-plane-A BFP
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_b_bpl_a_bfp OUT_DIR=disp_array_b_bpl_a_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_a_bfp OUT_DIR=pe_bpl_a_bfp_syn
 
 # -----------------------------------------------------------------------------
 # Pass B - 2x2 grids (blackboxed)
@@ -87,5 +87,5 @@ make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bfp OUT_DIR=top_2x2_bfp_syn PARAMS="N
 make syn PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_2x2_sqr_bfp_syn PARAMS="N=2" \
     BLACKBOX_MODULES="$BB_SQR_BFP"
 
-make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bpl_bfp OUT_DIR=top_2x2_bpl_bfp_syn PARAMS="N=2" \
-    BLACKBOX_MODULES="$BB_BPL_BFP"
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bpl_a_bfp OUT_DIR=top_2x2_bpl_a_bfp_syn PARAMS="N=2" \
+    BLACKBOX_MODULES="$BB_BPL_A_BFP"

@@ -1,6 +1,6 @@
-# Synthesis Area — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane BFP
+# Synthesis Area — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane-A BFP
 
-Cell-area comparison of the five PE-grid variants — [top_NxN](../architectures/top_NxN.md) (baseline), [top_NxN_sqr](../architectures/top_NxN_sqr.md) (square), [top_NxN_bfp](../architectures/top_NxN_bfp.md) (baseline-BFP), [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md) (square-BFP) and [top_NxN_bpl_bfp](../architectures/top_NxN_bpl_bfp.md) (bit-plane BFP) — at 8×8 and 16×16, assembled from per-component measurements.
+Cell-area comparison of the five PE-grid variants — [top_NxN](../architectures/top_NxN.md) (baseline), [top_NxN_sqr](../architectures/top_NxN_sqr.md) (square), [top_NxN_bfp](../architectures/top_NxN_bfp.md) (baseline-BFP), [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md) (square-BFP) and [top_NxN_bpl_a_bfp](../architectures/top_NxN_bpl_a_bfp.md) (bit-plane-A BFP) — at 8×8 and 16×16, assembled from per-component measurements.
 
 ## Purpose
 
@@ -29,26 +29,26 @@ All commands are in [run_syn_area.sh](../../scripts/run_syn_area.sh). Numbers la
 
 ## Instance counts
 
-| Component                                                                                               | Baseline | Square | Baseline-BFP | Square-BFP     | Bit-Plane BFP | ×count  |
+| Component                                                                                               | Baseline | Square | Baseline-BFP | Square-BFP     | Bit-Plane-A BFP | ×count  |
 | ------------------------------------------------------------------------------------------------------- | -------- | ------ | ------------ | -------------- | ------------- | ------- |
 | [ctrl](../modules/ctrl.md) / [ctrl_sqr](../modules/ctrl_sqr.md)                                         | ✓        | ✓      | ✓ (`ctrl`)   | ✓ (`ctrl_sqr`) | ✓ (`ctrl`)    | 1       |
 | [const_sqr](../modules/const_sqr.md) / [const_sqr_bfp](../modules/const_sqr_bfp.md)                     |          | ✓      |              | ✓              |               | 1       |
 | [disp_array_a](../modules/disp_array_a.md) / `_sqr`                                                     | ✓        | ✓      | ✓            | ✓              | ✓             | N       |
-| [disp_array_b](../modules/disp_array_b.md) / `_sqr` / [`_bpl_bfp`](../modules/disp_array_b_bpl_bfp.md)  | ✓        | ✓      | ✓            | ✓              | ✓             | N       |
+| [disp_array_b](../modules/disp_array_b.md) / `_sqr` / [`_bpl_a_bfp`](../modules/disp_array_b_bpl_a_bfp.md)  | ✓        | ✓      | ✓            | ✓              | ✓             | N       |
 | [disp_array_exp_a_bfp](../modules/disp_array_exp_a_bfp.md) / `_sqr_bfp`                                 |          |        | ✓            | ✓              | ✓             | N       |
 | [disp_array_exp_b_bfp](../modules/disp_array_exp_b_bfp.md) / `_sqr_bfp`                                 |          |        | ✓            | ✓              | ✓             | N       |
 | [pe_array_alpha_sqr](../modules/pe_array_alpha_sqr.md) / [`_bfp`](../modules/pe_array_alpha_sqr_bfp.md) |          | ✓      |              | ✓              |               | N       |
 | [pe_array_beta_sqr](../modules/pe_array_beta_sqr.md) / [`_bfp`](../modules/pe_array_beta_sqr_bfp.md)    |          | ✓      |              | ✓              |               | N       |
-| [pe](../modules/pe.md) / `_sqr` / `_bfp` / `_sqr_bfp` / [`_bpl_bfp`](../modules/pe_bpl_bfp.md)          | ✓        | ✓      | ✓            | ✓              | ✓             | N²      |
+| [pe](../modules/pe.md) / `_sqr` / `_bfp` / `_sqr_bfp` / [`_bpl_a_bfp`](../modules/pe_bpl_a_bfp.md)          | ✓        | ✓      | ✓            | ✓              | ✓             | N²      |
 | [icg](../modules/icg.md)                                                                                | ✓        | ✓      | ✓            | ✓              | ✓             | N² + 2N |
 
-The bit-plane column is the plain BFP column with `disp_array_b` swapped for the larger [disp_array_b_bpl_bfp](../modules/disp_array_b_bpl_bfp.md) — it has **no N-term array of its own**, which is what makes its crossover so early. The clock-gate count is identical on all five sides — one per PE, one per row, one per column: 80 at 8×8, 288 at 16×16 (each [icg](../modules/icg.md) carries a real 0.262 µm²). The square-BFP PE folds its `−α`/`−β`/`C` per DP8 in [ext_inject_sqr_bfp](../modules/ext_inject_sqr_bfp.md), which is inside `pe_sqr_bfp` (counted in the PE, not separately). Top-level glue — the `sel_acc`/const pipeline and the operand/control fan-out — is the only term measured rather than linked.
+The bit-plane column is the plain BFP column with `disp_array_b` swapped for the larger [disp_array_b_bpl_a_bfp](../modules/disp_array_b_bpl_a_bfp.md) — it has **no N-term array of its own**, which is what makes its crossover so early. The clock-gate count is identical on all five sides — one per PE, one per row, one per column: 80 at 8×8, 288 at 16×16 (each [icg](../modules/icg.md) carries a real 0.262 µm²). The square-BFP PE folds its `−α`/`−β`/`C` per DP8 in [ext_inject_sqr_bfp](../modules/ext_inject_sqr_bfp.md), which is inside `pe_sqr_bfp` (counted in the PE, not separately). Top-level glue — the `sel_acc`/const pipeline and the operand/control fan-out — is the only term measured rather than linked.
 
 ## Results
 
 Per-component unit areas from pass A, µm²:
 
-| Component           | Baseline | Square   | Baseline-BFP | Square-BFP | Bit-Plane BFP |
+| Component           | Baseline | Square   | Baseline-BFP | Square-BFP | Bit-Plane-A BFP |
 | ------------------- | -------- | -------- | ------------ | ---------- | ------------- |
 | `ctrl` / `ctrl_sqr` | 8.879    | 9.769    | 8.879        | 9.769      | 8.879         |
 | `const`             | —        | 3.747    | —            | 4.184      | —             |
@@ -63,7 +63,7 @@ Per-component unit areas from pass A, µm²:
 
 Grid totals, µm²:
 
-| Grid  | Baseline  | Square    | Baseline-BFP | Square-BFP | Bit-Plane BFP | Square/Base | Sqr-BFP/Base-BFP | Bpl-BFP/Base-BFP |
+| Grid  | Baseline  | Square    | Baseline-BFP | Square-BFP | Bit-Plane-A BFP | Square/Base | Sqr-BFP/Base-BFP | Bpl-A-BFP/Base-BFP |
 | ----- | --------- | --------- | ------------ | ---------- | ------------- | ----------- | ---------------- | ---------------- |
 | 8×8   | 250241.37 | 247872.09 | 349072.30    | 358008.45  | 337660.54     | −0.9 %      | **+2.6 %**       | **−3.3 %**       |
 | 16×16 | 989020.11 | 920742.70 | 1382454.30   | 1382263.94 | 1334399.96    | −6.9 %      | **−0.0 %**       | **−3.5 %**       |
@@ -73,7 +73,7 @@ Three readings, each against its own baseline:
 - **Square vs baseline** — 1.5 %→0.9 % smaller at 8×8, 7.3 %→6.9 % at 16×16 (the re-run trims the old figures slightly). The per-PE saving is an N² term (496.22 µm²/tile) against the α/β generators' N term (3670.66 µm²/row+col), so 8×8 is the crossover and the ratio tends to `pe_sqr/pe = 0.870`.
 - **Square-BFP vs baseline-BFP** — the square identity **still pays inside BFP**, but the crossover moves out to **N ≈ 16**: +2.6 % at 8×8, exact **parity at 16×16**, tending to `pe_sqr_bfp/pe_bfp = 0.974` (−2.6 %). Two things push the crossover from 8 to 16: the BFP sideband inflates the PE ~40 % (`pe_bfp` is 5345.99 vs `pe` 3816.52), so the squarer's absolute per-tile saving shrinks to 141.06 µm²/tile; but the **tree-less** α/β generators ([pe_array_alpha_sqr_bfp](../modules/pe_array_alpha_sqr_bfp.md) 1226.69, [`_beta`](../modules/pe_array_beta_sqr_bfp.md) 1070.76 — 37–39 % smaller than the square's tree'd generators) cut the N overhead to 2244.66 µm²/row+col. Crossover `N ≈ 2244.66 / 141.06 ≈ 16`.
 
-- **Bit-plane BFP vs baseline-BFP** — **smaller at every grid size**, −3.3 % at 8×8 and −3.5 % at 16×16, tending to `pe_bpl_bfp/pe_bfp = 0.963` (−3.7 %). It is the only variant whose crossover is at **N = 1**, and the reason is the shape of its overhead rather than the size of its saving: the per-tile saving is 197.09 µm² (`pe_bpl_bfp` 5148.90 vs `pe_bfp` 5345.99, −3.7 %) against an N term of just **149.90 µm²/column** — the extra area of [disp_array_b_bpl_bfp](../modules/disp_array_b_bpl_bfp.md) over `disp_array_b` (616.22 vs 466.33, **+32 %**). Crossover `N ≈ 149.90 / 197.09 ≈ 0.76`, i.e. already paid off at 2×2. Where the square variants add whole per-row/per-column *arrays*, the bit-plane variant only widens a dispatcher that already existed.
+- **Bit-plane BFP vs baseline-BFP** — **smaller at every grid size**, −3.3 % at 8×8 and −3.5 % at 16×16, tending to `pe_bpl_a_bfp/pe_bfp = 0.963` (−3.7 %). It is the only variant whose crossover is at **N = 1**, and the reason is the shape of its overhead rather than the size of its saving: the per-tile saving is 197.09 µm² (`pe_bpl_a_bfp` 5148.90 vs `pe_bfp` 5345.99, −3.7 %) against an N term of just **149.90 µm²/column** — the extra area of [disp_array_b_bpl_a_bfp](../modules/disp_array_b_bpl_a_bfp.md) over `disp_array_b` (616.22 vs 466.33, **+32 %**). Crossover `N ≈ 149.90 / 197.09 ≈ 0.76`, i.e. already paid off at 2×2. Where the square variants add whole per-row/per-column *arrays*, the bit-plane variant only widens a dispatcher that already existed.
 
 The parity is the payoff of the **per-DP8 7:2 reconstruction** ([ext_inject_sqr_bfp](../modules/ext_inject_sqr_bfp.md)): folding `{PE, −α, −β, C}` to `2·P` *before* the crossed tree lets the tree revert to baseline-BFP's narrow 2-row alignment, which is what brings `pe_sqr_bfp` (5204.93) **below** `pe_bfp` (5345.99) at all — the earlier fused 14:2-alignment build made the square-BFP PE larger than the plain BFP PE.
 

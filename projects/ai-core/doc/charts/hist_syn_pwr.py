@@ -4,7 +4,7 @@
 # Description:
 #   Stacked-bar chart of VCD-annotated dynamic power for the five PE-grid
 #   variants - baseline (top_NxN), square (top_NxN_sqr), BFP (top_NxN_bfp),
-#   square-BFP (top_NxN_sqr_bfp) and bit-plane BFP (top_NxN_bpl_bfp) - at 8x8
+#   square-BFP (top_NxN_sqr_bfp) and bit-plane-A BFP (top_NxN_bpl_a_bfp) - at 8x8
 #   and 16x16, split into PE / Alpha-Beta / Dispatch / Clock (ICG) / Others.
 #   Every bar is assembled from the per-component unit powers measured on the
 #   complete 2x2 grids at 100 vectors (imp/dpa_2x2*/report/power_hierarchy.rpt)
@@ -53,8 +53,8 @@ UNIT = {
         "Clock":      {"icg_rowcol": 0.00673},
         "Others":     {"ctrl_sqr":   0.00162, "const_sqr_bfp": 0.00002, "glue": 0.00000},
     },
-    "Bit-Plane-BFP": {
-        "PE":         {"pe_bpl_bfp": 0.90700, "icg_pe": 0.02620},
+    "Bit-Plane-A-BFP": {
+        "PE":         {"pe_bpl_a_bfp": 0.90700, "icg_pe": 0.02620},
         "Dispatch":   {"disp_a":     0.12200, "disp_b_bpl": 0.14850,
                        "disp_exp_a": 0.01370, "disp_exp_b": 0.01615},
         "Alpha-Beta": {},
@@ -65,7 +65,7 @@ UNIT = {
 
 COUNT = {
     "pe": "N2", "pe_sqr": "N2", "pe_bfp": "N2", "pe_sqr_bfp": "N2",
-    "pe_bpl_bfp": "N2", "icg_pe": "N2",
+    "pe_bpl_a_bfp": "N2", "icg_pe": "N2",
     "disp_a": "N", "disp_b": "N", "disp_a_sqr": "N", "disp_b_sqr": "N",
     "disp_b_bpl": "N",
     "disp_exp_a": "N", "disp_exp_b": "N",
@@ -73,7 +73,7 @@ COUNT = {
     "ctrl": "1", "ctrl_sqr": "1", "const_sqr": "1", "const_sqr_bfp": "1", "glue": "1",
 }
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-BFP"]
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
 
 def assemble(variant, n):
     mult = {"1": 1, "N": n, "2N": 2 * n, "N2": n * n}
@@ -117,7 +117,7 @@ for xi, (_, _, cat) in zip(x, bars):
 
 pad = 0.012 * max(tot)
 CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP",
-           "Bit-Plane-BFP": "Baseline-BFP"}
+           "Bit-Plane-A-BFP": "Baseline-BFP"}
 total_of = {(v, sz): sum(cat.values()) for v, sz, cat in bars}
 for (v, sz, _), xi, t_ in zip(bars, x, tot):
     label = f"{t_:.3f}"

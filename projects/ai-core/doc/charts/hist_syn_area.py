@@ -4,7 +4,7 @@
 # Description:
 #   Stacked-bar chart of synthesized cell area for the five PE-grid variants -
 #   baseline (top_NxN), square (top_NxN_sqr), BFP (top_NxN_bfp), square-BFP
-#   (top_NxN_sqr_bfp) and bit-plane BFP (top_NxN_bpl_bfp) - at 8x8 and 16x16,
+#   (top_NxN_sqr_bfp) and bit-plane-A BFP (top_NxN_bpl_a_bfp) - at 8x8 and 16x16,
 #   split into PE / Alpha-Beta / Dispatch / Clock (ICG) / Others (matching
 #   hist_syn_pwr.py). Every bar is assembled analytically from the per-component
 #   standalone cell areas and a per-N count model; the fixed top-level glue is
@@ -27,7 +27,7 @@ AREA = {
     "pe_sqr":                   3320.303,
     "pe_bfp":                   5345.990,
     "pe_sqr_bfp":               5204.929,
-    "pe_bpl_bfp":               5148.898,
+    "pe_bpl_a_bfp":               5148.898,
     "icg":                         0.262,
     "ctrl":                        8.879,
     "ctrl_sqr":                    9.769,
@@ -35,7 +35,7 @@ AREA = {
     "const_sqr_bfp":               4.184,
     "disp_array_a":              277.734,
     "disp_array_b":              466.327,
-    "disp_array_b_bpl_bfp":      616.224,
+    "disp_array_b_bpl_a_bfp":      616.224,
     "disp_array_a_sqr":          366.118,
     "disp_array_b_sqr":          332.686,
     "disp_array_exp_a_bfp":       42.924,
@@ -49,7 +49,7 @@ AREA = {
 }
 
 GLUE = {"Baseline": 1.779, "Square": 20.383, "Baseline-BFP": 1.779, "Square-BFP": 3.470,
-        "Bit-Plane-BFP": 4.753}
+        "Bit-Plane-A-BFP": 4.753}
 
 VAR = {
     "Baseline": {
@@ -78,16 +78,16 @@ VAR = {
                        ("disp_array_exp_a_sqr_bfp", "N"), ("disp_array_exp_b_sqr_bfp", "N")],
         "Clock":      [("icg", "2N")],
         "Others":     [("ctrl_sqr", "1"), ("const_sqr_bfp", "1")]},
-    "Bit-Plane-BFP": {
-        "PE":         [("pe_bpl_bfp", "N2"), ("icg", "N2")],
+    "Bit-Plane-A-BFP": {
+        "PE":         [("pe_bpl_a_bfp", "N2"), ("icg", "N2")],
         "Alpha-Beta": [],
-        "Dispatch":   [("disp_array_a", "N"), ("disp_array_b_bpl_bfp", "N"),
+        "Dispatch":   [("disp_array_a", "N"), ("disp_array_b_bpl_a_bfp", "N"),
                        ("disp_array_exp_a_bfp", "N"), ("disp_array_exp_b_bfp", "N")],
         "Clock":      [("icg", "2N")],
         "Others":     [("ctrl", "1")]},
     }
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-BFP"]
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
 SECTIONS = ["PE", "Alpha-Beta", "Dispatch", "Clock", "Others"]
 
 def mult(k, n):
@@ -139,7 +139,7 @@ for xi, (_, _, cat) in zip(x, bars):
 
 pad = 0.012 * max(tot)
 CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP",
-           "Bit-Plane-BFP": "Baseline-BFP"}
+           "Bit-Plane-A-BFP": "Baseline-BFP"}
 total_of = {(v, sz): sum(cat.values()) for v, sz, cat in bars}
 for (v, sz, _), xi, t_ in zip(bars, x, tot):
     label = f"{t_:.3f}"
