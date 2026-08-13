@@ -15,12 +15,14 @@
 //               which does not fit WIDTH+1 bits of two's complement, while the
 //               signed pair reaches -2^WIDTH. WIDTH+2 covers both.
 //
-//   The pairwise sums are a function of B alone, so this gate lives in the
-//   per-column dispatch (disp_array_b_bpl_a_bfp) and its cost is amortized over
-//   every PE in the column, while the bit-plane multiplexers it feeds stay
-//   inside each PE. Emitting both operand sets already resolved to signed
-//   values is what lets dp_8_bpl_a_bfp drop its is_signed_b_i port entirely.
-//   Combinational.
+//   The pairwise sums are a function of the tabulated operand alone, so this
+//   gate lives in the shared dispatch - the per-column B dispatch of the
+//   bit-plane A build (disp_array_b_bpl_a_bfp) and the per-row A dispatch of
+//   the bit-plane B build (disp_array_a_bpl_b_bfp) - and its cost is amortized
+//   over every PE in that column or row, while the bit-plane multiplexers it
+//   feeds stay inside each PE. Emitting both operand sets already resolved to
+//   signed values is what lets the DP8 core drop the signedness port for that
+//   operand entirely. Combinational.
 //
 // Parameters:
 //   WIDTH - bit width of each input word

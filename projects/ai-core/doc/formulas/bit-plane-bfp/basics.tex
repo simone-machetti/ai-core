@@ -1,0 +1,74 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\setlength{\mathindent}{1.5em}
+
+\newcommand{\Rf}{R\bigl(B_{2i}^{\,j},\, B_{2i+1}^{\,j}\bigr)}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Bit-Plane B}}\\[4pt]
+{\large DP8 (8$\times$4) --- decomposition over the bit planes of $B$}
+\end{center}
+
+\vspace{3em}
+
+\noindent\textbf{Step 1 --- the dot product}
+\[
+\sum_{i=0}^{7} A_i \, B_i
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- expand $B$ into its bit planes and exchange the sums}
+
+\noindent Each $B_i$ is a 4-bit value, $B_i = \sum_{j=0}^{3} 2^{j} B_i^{\,j}$, so
+\[
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{i=0}^{7} \Biggl[\, \sum_{j=0}^{3} 2^{j} B_i^{\,j} \Biggr] A_i
+  \;=\; \sum_{j=0}^{3} 2^{j} \sum_{i=0}^{7} B_i^{\,j} \, A_i
+\]
+
+\noindent $B_i^{\,j} A_i$ is a selection, not a product.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 3 --- pair the lanes}
+\[
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{j=0}^{3} 2^{j} \sum_{i=0}^{3}
+        \underbrace{\Bigl[\, B_{2i}^{\,j} \, A_{2i} \;+\; B_{2i+1}^{\,j} \, A_{2i+1} \Bigr]}_{\textstyle \Rf}
+\]
+
+\noindent $\Rf$ depends on the two bits $B_{2i}^{\,j}$, $B_{2i+1}^{\,j}$ and takes one of
+four values:
+
+\vspace{1em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{c c | l}
+$B_{2i}^{\,j}$ & $B_{2i+1}^{\,j}$ & \multicolumn{1}{c}{$\Rf$} \\
+\hline
+$0$ & $0$ & $0$ \\
+$0$ & $1$ & $A_{2i+1}$ \\
+$1$ & $0$ & $A_{2i}$ \\
+$1$ & $1$ & $A_{2i} + A_{2i+1}$ \\
+\end{tabular}
+\end{center}
+
+\vspace{1.5em}
+
+\noindent\textbf{Step 4 --- split the work}
+
+\noindent Every entry of the table is a function of $A$ alone, so the table is built
+outside the PE and only the selection stays inside:
+\[
+\underbrace{\bigl\{\, 0,\; A_{2i},\; A_{2i+1},\; A_{2i} + A_{2i+1} \,\bigr\}}_{\textstyle \text{dispatcher}}
+\qquad\longrightarrow\qquad
+\underbrace{\sum_{j=0}^{3} 2^{j} \sum_{i=0}^{3} \Rf}_{\textstyle \text{PE}}
+\]
+
+\end{document}

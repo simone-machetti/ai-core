@@ -23,32 +23,35 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
 AREA = {
-    "pe":                       3816.519,
-    "pe_sqr":                   3320.303,
-    "pe_bfp":                   5345.990,
-    "pe_sqr_bfp":               5204.929,
-    "pe_bpl_a_bfp":               5148.898,
-    "icg":                         0.262,
-    "ctrl":                        8.879,
-    "ctrl_sqr":                    9.769,
-    "const_sqr":                   3.747,
-    "const_sqr_bfp":               4.184,
-    "disp_array_a":              277.734,
-    "disp_array_b":              466.327,
-    "disp_array_b_bpl_a_bfp":      616.224,
-    "disp_array_a_sqr":          366.118,
-    "disp_array_b_sqr":          332.686,
-    "disp_array_exp_a_bfp":       42.924,
-    "disp_array_exp_b_bfp":       75.174,
-    "disp_array_exp_a_sqr_bfp":   41.990,
-    "disp_array_exp_b_sqr_bfp":   68.584,
-    "pe_array_alpha_sqr":       1962.235,
-    "pe_array_beta_sqr":        1753.682,
-    "pe_array_alpha_sqr_bfp":   1226.688,
-    "pe_array_beta_sqr_bfp":    1070.755,
+    "pe":                      3816.519,
+    "pe_sqr":                  3320.303,
+    "pe_bfp":                  5345.990,
+    "pe_sqr_bfp":              5204.929,
+    "pe_bpl_a_bfp":            5148.898,
+    "pe_bpl_b_bfp":            4585.206,
+    "icg":                        0.262,
+    "ctrl":                       8.879,
+    "ctrl_sqr":                   9.769,
+    "const_sqr":                  3.747,
+    "const_sqr_bfp":              4.184,
+    "disp_array_a":             277.734,
+    "disp_array_b":             466.327,
+    "disp_array_b_bpl_a_bfp":   616.224,
+    "disp_array_a_bpl_b_bfp":   397.495,
+    "disp_array_a_sqr":         366.118,
+    "disp_array_b_sqr":         332.686,
+    "disp_array_exp_a_bfp":      42.924,
+    "disp_array_exp_b_bfp":      75.174,
+    "disp_array_exp_a_sqr_bfp":  41.990,
+    "disp_array_exp_b_sqr_bfp":  68.584,
+    "pe_array_alpha_sqr":      1962.235,
+    "pe_array_beta_sqr":       1753.682,
+    "pe_array_alpha_sqr_bfp":  1226.688,
+    "pe_array_beta_sqr_bfp":   1070.755,
 }
 
 GLUE = {"Baseline": 1.779, "Square": 20.383, "Baseline-BFP": 1.779, "Square-BFP": 3.470,
+        "Bit-Plane-B-BFP": 4.755,
         "Bit-Plane-A-BFP": 4.753}
 
 VAR = {
@@ -85,9 +88,17 @@ VAR = {
                        ("disp_array_exp_a_bfp", "N"), ("disp_array_exp_b_bfp", "N")],
         "Clock":      [("icg", "2N")],
         "Others":     [("ctrl", "1")]},
+    "Bit-Plane-B-BFP": {
+        "PE":         [("pe_bpl_b_bfp", "N2"), ("icg", "N2")],
+        "Alpha-Beta": [],
+        "Dispatch":   [("disp_array_a_bpl_b_bfp", "N"), ("disp_array_b", "N"),
+                       ("disp_array_exp_a_bfp", "N"), ("disp_array_exp_b_bfp", "N")],
+        "Clock":      [("icg", "2N")],
+        "Others":     [("ctrl", "1")]},
     }
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP",
+            "Bit-Plane-B-BFP"]
 SECTIONS = ["PE", "Alpha-Beta", "Dispatch", "Clock", "Others"]
 
 def mult(k, n):
@@ -101,7 +112,6 @@ def assemble(variant, n):
             tot += GLUE[variant] * mult("1", n)
         out[s] = tot
     return out
-
 
 COLORS = {
     "PE":         "#d4a480cc",
@@ -139,7 +149,7 @@ for xi, (_, _, cat) in zip(x, bars):
 
 pad = 0.012 * max(tot)
 CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP",
-           "Bit-Plane-A-BFP": "Baseline-BFP"}
+           "Bit-Plane-A-BFP": "Baseline-BFP", "Bit-Plane-B-BFP": "Baseline-BFP"}
 total_of = {(v, sz): sum(cat.values()) for v, sz, cat in bars}
 for (v, sz, _), xi, t_ in zip(bars, x, tot):
     label = f"{t_:.3f}"

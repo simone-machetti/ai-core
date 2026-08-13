@@ -25,15 +25,18 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
 AREA = {
-    "Baseline":     3059.730,
-    "Square":       1892.601,
-    "Baseline-BFP": 3091.572,
-    "Square-BFP":   1892.601,
+    "Baseline":       3059.730,
+    "Square":         1892.601,
+    "Baseline-BFP":   3091.572,
+    "Square-BFP":     1892.601,
     "Bit-Plane-A-BFP":2904.803,
+    "Bit-Plane-B-BFP":1871.605,
 }
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
-CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-A-BFP": "Baseline-BFP"}
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP",
+            "Bit-Plane-B-BFP"]
+CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-A-BFP": "Baseline-BFP",
+           "Bit-Plane-B-BFP": "Baseline-BFP"}
 COLORS = {"DP8-Array": "#d4a480cc"}
 
 PITCH, WIDTH = 0.80, 0.72

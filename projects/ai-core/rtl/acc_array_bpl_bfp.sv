@@ -3,9 +3,11 @@
 //
 // Description:
 //   Accumulator array, bit-plane build - the acc_array_bfp variant whose tap
-//   inputs are sized for pe_array_bpl_a_bfp. Identical structure and behaviour:
-//   it resolves the selected tap, accumulates it, and fuses lane pairs into the
-//   wide results, with the BFP alignment in the accumulate loop.
+//   inputs are sized for the bit-plane PE arrays, pe_array_bpl_a_bfp and
+//   pe_array_bpl_b_bfp, which carry the same node and tap widths and so share
+//   this accumulator. Identical structure and behaviour: it resolves the
+//   selected tap, accumulates it, and fuses lane pairs into the wide results,
+//   with the BFP alignment in the accumulate loop.
 //
 //   Only the tap widths differ - L1, L2 and L3 come in at 36, 40 and 40 bits
 //   rather than 29, 37 and 38 - because the bit-plane tree carries its nodes at

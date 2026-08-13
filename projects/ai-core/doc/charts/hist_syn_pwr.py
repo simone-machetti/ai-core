@@ -61,19 +61,28 @@ UNIT = {
         "Clock":      {"icg_rowcol": 0.00673},
         "Others":     {"ctrl":       0.00137, "glue":   0.00000},
     },
+    "Bit-Plane-B-BFP": {
+        "PE":         {"pe_bpl_b_bfp": 0.77125, "icg_pe": 0.02620},
+        "Dispatch":   {"disp_a_bpl": 0.13200, "disp_b":     0.11500,
+                       "disp_exp_a": 0.01340, "disp_exp_b": 0.01610},
+        "Alpha-Beta": {},
+        "Clock":      {"icg_rowcol": 0.00673},
+        "Others":     {"ctrl":       0.00130, "glue":   0.00000},
+    },
 }
 
 COUNT = {
     "pe": "N2", "pe_sqr": "N2", "pe_bfp": "N2", "pe_sqr_bfp": "N2",
-    "pe_bpl_a_bfp": "N2", "icg_pe": "N2",
+    "pe_bpl_a_bfp": "N2", "pe_bpl_b_bfp": "N2", "icg_pe": "N2",
     "disp_a": "N", "disp_b": "N", "disp_a_sqr": "N", "disp_b_sqr": "N",
-    "disp_b_bpl": "N",
+    "disp_b_bpl": "N", "disp_a_bpl": "N",
     "disp_exp_a": "N", "disp_exp_b": "N",
     "alpha": "N", "beta": "N", "icg_rowcol": "2N",
     "ctrl": "1", "ctrl_sqr": "1", "const_sqr": "1", "const_sqr_bfp": "1", "glue": "1",
 }
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP",
+            "Bit-Plane-B-BFP"]
 
 def assemble(variant, n):
     mult = {"1": 1, "N": n, "2N": 2 * n, "N2": n * n}
@@ -117,7 +126,8 @@ for xi, (_, _, cat) in zip(x, bars):
 
 pad = 0.012 * max(tot)
 CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP",
-           "Bit-Plane-A-BFP": "Baseline-BFP"}
+           "Bit-Plane-A-BFP": "Baseline-BFP",
+           "Bit-Plane-B-BFP": "Baseline-BFP"}
 total_of = {(v, sz): sum(cat.values()) for v, sz, cat in bars}
 for (v, sz, _), xi, t_ in zip(bars, x, tot):
     label = f"{t_:.3f}"

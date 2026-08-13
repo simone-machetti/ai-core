@@ -2,63 +2,31 @@
 // Author: Simone Machetti
 //
 // Description:
-//   Global 3-way equivalence testbench: it instantiates BOTH the BFP grid
-//   top_NxN_bfp AND the bit-plane B BFP grid top_NxN_bpl_b_bfp, drives the two
-//   with the exact same inputs every clock, and on every check compares three
-//   results - the golden model, the baseline-BFP out_q, and the bit-plane-B
-//   out_q - so both DUTs are proven to produce the same output for the same
-//   input (golden == baseline-BFP == bit-plane-B).
+//   Self-checking, full-throughput (streaming) testbench for the bit-plane-B BFP
+//   N x N PE grid, top_NxN_bpl_b_bfp. Drives a fresh operand into every
+//   row/column on every clock and checks each PE against a pipeline-delayed
+//   golden (LAT clocks; the
+//   output at iteration t belongs to the operand driven at t-D, D = LAT-1; a
+//   ring buffer holds the per-cycle golden). Operands are distinct per PE: N
+//   independent A matrices (one per row) and N independent B matrices (one per
+//   column), so PE[r][c] evaluates A[r] . B[c] and any wrong row/column
+//   fan-out shows up as a mismatch.
 //
-//   This closes the one gap the per-variant benches leave: each of those checks
-//   its variant against the plain INTEGER baseline, so equivalence between the
-//   two BFP grids was only ever transitive. Here they are compared directly,
-//   RTL against RTL, on identical stimulus.
-//
-//   Passes 1-3 drive EQUAL exponents on every block (EXP_VAL in each 6-bit
-//   field), so every BFP aligner is bit-transparent and both grids must
-//   reproduce the plain integer matmul exactly; each PE's out_exp must equal the
-//   common product scale 2*EXP_VAL on both grids.
-//
-//   Pass 4 drives DISTINCT exponents (per row for A, per column for B, varied
-//   per block) so the aligners really shift. There is no plain-matmul golden
-//   there - alignment truncates - so instead the two grids are compared directly
-//   against each other and the divergence is measured. A VALIDITY line reports
-//   how many results were actually altered by alignment; if that is zero the
-//   scan proves nothing and says so. The shift amounts are identical by
-//   construction (the exponent logic is untouched between the two variants and
-//   is data-independent); what pass 4 measures is whether the two different
-//   carry-save encodings survive the truncating right shift identically.
-//
-//   This is the existing full-pipeline (streaming) grid bench with the two DUTs
-//   merged in: unlike a present-one-operand-then-wait bench, it drives a fresh
-//   operand into every row/column on every clock, exactly like a real streaming
-//   application, and checks each PE's out_q against a pipeline-delayed golden.
-//   The pipeline latency is LAT clocks (identical for both grids); in a loop that
-//   drives an operand and takes one posedge per iteration, the output seen at
-//   iteration t belongs to the operand driven at iteration t-D (D = LAT-1). A
-//   small ring buffer holds the per-cycle golden so each output is checked
-//   against the operand that produced it.
-//
-//   Operands are distinct per PE: N independent corner-biased A matrices (one
-//   per row) and N independent B matrices (one per column), so PE[r][c]
-//   evaluates the plain matmul A[r] . B[c] and any wrong row/col fan-out shows
-//   up as a mismatch. The per-PE golden reuses the mode tables, packing and
-//   result reconstruction of the single-PE testbench. Every check reports which
-//   relation broke: BFP!=GOLD, BPL!=GOLD, or BFP!=BPL.
-//
-//   Three streaming passes, all 11 modes, with a reset between experiment types:
-//     1. Single-shot  - sel_acc = 0, acc = 0; a fresh operand every cycle, each
-//                       PE out_q(t) == golden(A_(t-D)[r] . B_(t-D)[c]).
-//     2. Accumulate   - real K-tile matmul: per-PE seed via acc, then stream
-//                       NUM_ACC distinct operand tiles with sel_acc feeding back,
-//                       out_q == seed + sum over the NUM_ACC tiles of golden.
-//     3. Scaling      - enable an nr x nc top-left rectangle (en_row[r]&en_col[c])
-//                       for every 1<=nr,nc<=N and stream: enabled PEs track the
-//                       delayed golden, disabled ones stay 0 (clock gated, held);
-//                       both grids must match golden and hold 0 identically.
-//     4. Distinct-exp - single-shot stream with unequal exponents; reports
-//                       results compared, results differing, max |bfp-bpl| in
-//                       LSBs, and the validity count described above.
+//   Each of the three streaming patterns (single-shot, accumulate, scaling) is
+//   run for every mode with TWO exponent experiments and THREE checks:
+//     - Equal exponents: every BFP aligner is transparent, so out_q must equal
+//       the plain matmul golden bit-for-bit (check 1, value), and every output
+//       exponent equals the common scale.
+//     - Distinct exponents (one per row for A, one per column for B): each PE's
+//       output exponent must equal the independent egold model from its row+col
+//       source exponents (check 2, exponents - catches fan-out), and its output
+//       mantissa must sit inside the independent cascade window computed by a
+//       software model of the dispatch + tree + accumulator (check 3, mantissa).
+//   The mantissa/exponent goldens use only the driven operand/exponent words and
+//   the per-mode control tables - never a DUT-internal signal - so a fault
+//   anywhere in the chain is caught. The accumulate pattern holds one exponent
+//   per PE across its tiles (the running-max rescale across tiles is covered by
+//   tb_acc_array_bpl_b_bfp), keeping the accumulate window tight and independent.
 //
 // Parameters:
 //   N                - grid side; the array is N x N PEs (default 2 for a fast build)
@@ -75,7 +43,7 @@
 
 /* verilator lint_off UNUSEDSIGNAL */
 
-module tb_top_NxN_global #(
+module tb_top_NxN_bpl_b_bfp #(
     parameter int N                = 2,
     parameter int NUM_STREAM       = 40,
     parameter int NUM_ACC          = 8,
@@ -86,16 +54,16 @@ module tb_top_NxN_global #(
     localparam real CLK_HALF   = CLK_PERIOD / 2.0;
     localparam real T_SETTLE   = CLK_PERIOD / 10.0;
 
-    localparam int NUM_BLK   = 4;
-    localparam int BLK_WIDTH = 64;
-    localparam int PE_WIDTH  = NUM_BLK * BLK_WIDTH;
-    localparam int NUM_MODE  = 11;
-    localparam int NUM_ROW   = N;
-    localparam int NUM_COL   = N;
-    localparam int MAXM      = 2;
-    localparam int MAXK      = 32;
-    localparam int MAXN      = 4;
-    localparam int MAXO      = 8;
+    localparam int NUM_BLK     = 4;
+    localparam int BLK_WIDTH   = 64;
+    localparam int PE_WIDTH    = NUM_BLK * BLK_WIDTH;
+    localparam int NUM_MODE    = 11;
+    localparam int NUM_ROW     = N;
+    localparam int NUM_COL     = N;
+    localparam int MAXM        = 2;
+    localparam int MAXK        = 32;
+    localparam int MAXN        = 4;
+    localparam int MAXO        = 8;
 
     localparam int MODE_NUM  [0:NUM_MODE-1] = '{1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12};
     localparam int TAP_LEVEL [0:NUM_MODE-1] = '{0, 1, 1, 2, 3, 2, 3, 2, 1, 2, 2};
@@ -116,39 +84,166 @@ module tb_top_NxN_global #(
     localparam int NUM_LANE   = 8;
     localparam int ACC_W      = 20;
 
-    localparam int LAT   = 3;
     localparam int EXP_IN_WIDTH = 6;
     localparam int EXP_WIDTH    = 7;
-    localparam int EXP_A_WIDTH  = 4 * EXP_IN_WIDTH;
-    localparam int EXP_B_WIDTH  = 4 * 2 * EXP_IN_WIDTH;
-    localparam int EXP_VAL      = 5;
-    localparam int EXP_OUT      = 2 * EXP_VAL;
-    localparam int EXP_SPREAD   = 3;
+    localparam int CHK_WIDTH    = 2 * EXP_IN_WIDTH;
+    localparam int EXP_A_WIDTH  = NUM_BLK * EXP_IN_WIDTH;
+    localparam int EXP_B_WIDTH  = NUM_BLK * CHK_WIDTH;
+    localparam int NUM_PAIR     = 8;
+    localparam int NUM_DP8      = 16;
+    localparam int A_DP8_WIDTH  = 64;
+    localparam int B_DP8_WIDTH  = 32;
+    localparam int NUM_L0       = 8;
+    localparam int NUM_L1       = 4;
+    localparam int NUM_L2       = 2;
+    localparam int NUM_SHIFT    = 3;
 
+    localparam int LAT   = 3;
     localparam int D     = LAT - 1;
     localparam int DEPTH = LAT + 2;
 
+    localparam logic [1:0] SEL_A [0:NUM_MODE-1][0:NUM_PAIR-1] = '{
+        '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd1, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd1, 2'd2, 2'd3},
+        '{2'd0, 2'd0, 2'd1, 2'd1, 2'd2, 2'd2, 2'd3, 2'd3},
+        '{2'd0, 2'd0, 2'd1, 2'd1, 2'd2, 2'd2, 2'd3, 2'd3},
+        '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd1, 2'd2, 2'd3},
+        '{2'd0, 2'd0, 2'd1, 2'd1, 2'd0, 2'd0, 2'd1, 2'd1}
+    };
+
+    localparam logic [1:0] SEL_B [0:NUM_MODE-1][0:NUM_PAIR-1] = '{
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd1, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd1, 2'd2, 2'd3},
+        '{2'd0, 2'd0, 2'd1, 2'd1, 2'd0, 2'd0, 2'd1, 2'd1},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd1, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd1, 2'd1, 2'd2, 2'd2, 2'd3, 2'd3},
+        '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3},
+        '{2'd0, 2'd1, 2'd1, 2'd0, 2'd2, 2'd3, 2'd3, 2'd2},
+        '{2'd0, 2'd1, 2'd2, 2'd3, 2'd1, 2'd0, 2'd3, 2'd2},
+        '{2'd0, 2'd1, 2'd0, 2'd1, 2'd2, 2'd3, 2'd2, 2'd3}
+    };
+
+    localparam logic [1:0] CTR_L [0:NUM_MODE-1][0:NUM_PAIR-1] = '{
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd1, 2'd1, 2'd1, 2'd1, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd1, 2'd1, 2'd1, 2'd1},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd2, 2'd0, 2'd0, 2'd0, 2'd2, 2'd0, 2'd0},
+        '{2'd0, 2'd2, 2'd0, 2'd2, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0}
+    };
+
+    localparam logic [1:0] CTR_H [0:NUM_MODE-1][0:NUM_PAIR-1] = '{
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd1, 2'd1, 2'd1, 2'd1},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd1, 2'd1, 2'd1, 2'd1},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd3, 2'd0, 2'd0, 2'd0, 2'd3, 2'd0, 2'd0},
+        '{2'd0, 2'd3, 2'd0, 2'd3, 2'd0, 2'd0, 2'd0, 2'd0},
+        '{2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0, 2'd0}
+    };
+
+    localparam logic [NUM_SHIFT-1:0] SEL_SHIFT [0:NUM_MODE-1] = '{
+        3'b000, 3'b010, 3'b011, 3'b000, 3'b010, 3'b011, 3'b111, 3'b111, 3'b010, 3'b010, 3'b111
+    };
+
+    localparam logic IS_SIGNED_A [0:NUM_MODE-1][0:NUM_DP8-1] = '{
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b1, 1'b0, 1'b0, 1'b1, 1'b1, 1'b0, 1'b0, 1'b1, 1'b1, 1'b0, 1'b0, 1'b1, 1'b1, 1'b0, 1'b0},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b1, 1'b0, 1'b0, 1'b1, 1'b1, 1'b0, 1'b0, 1'b1, 1'b1, 1'b0, 1'b0, 1'b1, 1'b1, 1'b0, 1'b0},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b1, 1'b1, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b1, 1'b1, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b1, 1'b1, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0}
+    };
+
+    localparam logic IS_SIGNED_B [0:NUM_MODE-1][0:NUM_DP8-1] = '{
+        '{1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0},
+        '{1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0},
+        '{1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1},
+        '{1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1, 1'b1},
+        '{1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0},
+        '{1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0},
+        '{1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0},
+        '{1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0},
+        '{1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0, 1'b1, 1'b0},
+        '{1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0}
+    };
+
+    localparam int EGRP_A [0:NUM_MODE-1][0:3] = '{
+        '{0, 1, 2, 3}, '{0, 1, 2, 3}, '{0, 0, 1, 1}, '{0, 1, 2, 3}, '{0, 1, 2, 3},
+        '{0, 0, 1, 1}, '{0, 0, 1, 1}, '{0, 0, 1, 1}, '{0, 0, 1, 1}, '{0, 0, 1, 1},
+        '{0, 0, 1, 1}
+    };
+
+    localparam int EGRP_B [0:NUM_MODE-1][0:7] = '{
+        '{0, 1, 0, 1, 2, 3, 2, 3},
+        '{0, 0, 1, 1, 2, 2, 3, 3},
+        '{0, 0, 1, 1, 2, 2, 3, 3},
+        '{0, 2, 0, 2, 1, 3, 1, 3},
+        '{0, 0, 1, 1, 2, 2, 3, 3},
+        '{0, 0, 1, 1, 2, 2, 3, 3},
+        '{0, 0, 0, 0, 1, 1, 1, 1},
+        '{0, 0, 0, 0, 1, 1, 1, 1},
+        '{0, 0, 0, 0, 1, 1, 1, 1},
+        '{0, 0, 0, 0, 1, 1, 1, 1},
+        '{0, 0, 0, 0, 0, 0, 0, 0}
+    };
+
     logic                    clk_i;
     logic                    rst_ni;
-    logic [ MODE_WIDTH-1:0]  mode;
+    logic [  MODE_WIDTH-1:0] mode;
     logic                    sel_acc;
 
-    logic [   PE_WIDTH-1:0]  in_a       [0:NUM_ROW-1];
-    logic [   PE_WIDTH-1:0]  in_b       [0:NUM_COL-1];
-    logic [      ACC_W-1:0]  acc_word   [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
-    logic                    en_row     [0:NUM_ROW-1];
-    logic                    en_col     [0:NUM_COL-1];
-    logic [      ACC_W-1:0]  out_q_bfp  [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
-    logic [      ACC_W-1:0]  out_q_bpl  [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
-    logic [EXP_A_WIDTH-1:0]  in_exp_a   [0:NUM_ROW-1];
-    logic [EXP_B_WIDTH-1:0]  in_exp_b   [0:NUM_COL-1];
-    logic [  EXP_WIDTH-1:0]  acc_exp    [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
-    logic [  EXP_WIDTH-1:0]  out_exp_bfp[0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
-    logic [  EXP_WIDTH-1:0]  out_exp_bpl[0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
+    logic [    PE_WIDTH-1:0] in_a     [0:NUM_ROW-1];
+    logic [    PE_WIDTH-1:0] in_b     [0:NUM_COL-1];
+    logic [       ACC_W-1:0] acc_word [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
+    logic                    en_row   [0:NUM_ROW-1];
+    logic                    en_col   [0:NUM_COL-1];
+    logic [       ACC_W-1:0] out_q    [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
 
-    logic [   PE_WIDTH-1:0]  pe_in_a;
-    logic [   PE_WIDTH-1:0]  pe_in_b;
-    logic [      ACC_W-1:0]  pe_out   [0:NUM_LANE-1];
+    logic [ EXP_A_WIDTH-1:0] in_exp_a [0:NUM_ROW-1];
+    logic [ EXP_B_WIDTH-1:0] in_exp_b [0:NUM_COL-1];
+    logic [   EXP_WIDTH-1:0] acc_exp  [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
+    logic [   EXP_WIDTH-1:0] out_exp  [0:NUM_ROW-1][0:NUM_COL-1][0:NUM_LANE-1];
+
+    logic [    PE_WIDTH-1:0] pe_in_a;
+    logic [    PE_WIDTH-1:0] pe_in_b;
+    logic [       ACC_W-1:0] pe_out   [0:NUM_LANE-1];
+
+    int         ga_row  [0:NUM_ROW-1][0:3];
+    int         gb_col  [0:NUM_COL-1][0:7];
+    logic [6:0] exp_dp8 [0:NUM_DP8-1];
+    longint     gv_l0   [ 0:NUM_L0-1];
+    longint     gd_l0   [ 0:NUM_L0-1];
+    longint     gv_l1   [ 0:NUM_L1-1];
+    longint     gd_l1   [ 0:NUM_L1-1];
+    longint     gv_l2   [ 0:NUM_L2-1];
+    longint     gd_l2   [ 0:NUM_L2-1];
+    longint     gv_l3;
+    longint     gd_l3;
+    logic [A_DP8_WIDTH-1:0] sw_a_dp8 [0:NUM_DP8-1];
+    logic [B_DP8_WIDTH-1:0] sw_b_dp8 [0:NUM_DP8-1];
 
     logic signed [15:0] A_re   [0:MAXM-1][0:MAXK-1];
     logic signed [15:0] A_im   [0:MAXM-1][0:MAXK-1];
@@ -171,14 +266,87 @@ module tb_top_NxN_global #(
 
     int err;
     int npass;
-    longint max_diff;
-    int ndiff;
-    int nexp;
-    longint ntot;
-    int nlossy;
-    int nnz;
 
-    top_NxN_bfp #(.N(N)) dut_bfp (
+    int  exp_common_g;
+    logic [EXP_WIDTH-1:0] eexp_re [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    logic [EXP_WIDTH-1:0] eexp_im [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint wgv    [0:DEPTH-1][0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint wgd    [0:DEPTH-1][0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint wgv_im [0:DEPTH-1][0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint wgd_im [0:DEPTH-1][0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint sgv    [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint sgd    [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint sgv_im [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+    longint sgd_im [0:NUM_ROW-1][0:NUM_COL-1][0:MAXO-1];
+
+`ifdef POST_SYN_SIM
+    localparam int ACC_FLAT = NUM_ROW * NUM_COL * NUM_LANE * ACC_W;
+    localparam int EXP_FLAT = NUM_ROW * NUM_COL * NUM_LANE * EXP_WIDTH;
+
+    logic [   NUM_ROW*PE_WIDTH-1:0] in_a_flat;
+    logic [   NUM_COL*PE_WIDTH-1:0] in_b_flat;
+    logic [NUM_ROW*EXP_A_WIDTH-1:0] in_exp_a_flat;
+    logic [NUM_COL*EXP_B_WIDTH-1:0] in_exp_b_flat;
+    logic [           ACC_FLAT-1:0] acc_flat;
+    logic [           EXP_FLAT-1:0] acc_exp_flat;
+    logic [            NUM_ROW-1:0] en_row_flat;
+    logic [            NUM_COL-1:0] en_col_flat;
+    logic [           ACC_FLAT-1:0] out_q_flat;
+    logic [           EXP_FLAT-1:0] out_exp_flat;
+
+    function automatic int acc_pos(input int r, input int c, input int l);
+        return (((NUM_ROW - 1 - r) * NUM_COL + (NUM_COL - 1 - c)) * NUM_LANE + (NUM_LANE - 1 - l)) * ACC_W;
+    endfunction
+
+    function automatic int exp_pos(input int r, input int c, input int l);
+        return (((NUM_ROW - 1 - r) * NUM_COL + (NUM_COL - 1 - c)) * NUM_LANE + (NUM_LANE - 1 - l)) * EXP_WIDTH;
+    endfunction
+
+    always_comb begin
+        for (int r = 0; r < NUM_ROW; r++) begin
+            in_a_flat[(NUM_ROW-1-r)*PE_WIDTH +: PE_WIDTH]       = in_a[r];
+            in_exp_a_flat[(NUM_ROW-1-r)*EXP_A_WIDTH +: EXP_A_WIDTH] = in_exp_a[r];
+            en_row_flat[NUM_ROW-1-r]                            = en_row[r];
+        end
+        for (int c = 0; c < NUM_COL; c++) begin
+            in_b_flat[(NUM_COL-1-c)*PE_WIDTH +: PE_WIDTH]       = in_b[c];
+            in_exp_b_flat[(NUM_COL-1-c)*EXP_B_WIDTH +: EXP_B_WIDTH] = in_exp_b[c];
+            en_col_flat[NUM_COL-1-c]                            = en_col[c];
+        end
+        for (int r = 0; r < NUM_ROW; r++)
+            for (int c = 0; c < NUM_COL; c++)
+                for (int l = 0; l < NUM_LANE; l++) begin
+                    acc_flat[acc_pos(r, c, l) +: ACC_W]      = acc_word[r][c][l];
+                    acc_exp_flat[exp_pos(r, c, l) +: EXP_WIDTH] = acc_exp[r][c][l];
+                end
+    end
+
+    always_comb
+        for (int r = 0; r < NUM_ROW; r++)
+            for (int c = 0; c < NUM_COL; c++)
+                for (int l = 0; l < NUM_LANE; l++) begin
+                    out_q[r][c][l]   = out_q_flat[acc_pos(r, c, l) +: ACC_W];
+                    out_exp[r][c][l] = out_exp_flat[exp_pos(r, c, l) +: EXP_WIDTH];
+                end
+
+    top_NxN_bpl_b_bfp dut (
+        .clk_i      (clk_i),
+        .rst_ni     (rst_ni),
+        .in_a_i     (in_a_flat),
+        .in_b_i     (in_b_flat),
+        .in_exp_a_i (in_exp_a_flat),
+        .in_exp_b_i (in_exp_b_flat),
+        .mode_i     (mode),
+        .sel_acc_i  (sel_acc),
+        .acc_i      (acc_flat),
+        .acc_exp_i  (acc_exp_flat),
+        .en_row_i   (en_row_flat),
+        .en_col_i   (en_col_flat),
+        .out_q_o    (out_q_flat),
+        .out_exp_o  (out_exp_flat)
+    );
+`else
+    top_NxN_bpl_b_bfp #(.N(N)) dut (
         .clk_i      (clk_i),
         .rst_ni     (rst_ni),
         .in_a_i     (in_a),
@@ -191,26 +359,10 @@ module tb_top_NxN_global #(
         .acc_exp_i  (acc_exp),
         .en_row_i   (en_row),
         .en_col_i   (en_col),
-        .out_q_o    (out_q_bfp),
-        .out_exp_o  (out_exp_bfp)
+        .out_q_o    (out_q),
+        .out_exp_o  (out_exp)
     );
-
-    top_NxN_bpl_b_bfp #(.N(N)) dut_bpl (
-        .clk_i      (clk_i),
-        .rst_ni     (rst_ni),
-        .in_a_i     (in_a),
-        .in_b_i     (in_b),
-        .in_exp_a_i (in_exp_a),
-        .in_exp_b_i (in_exp_b),
-        .mode_i     (mode),
-        .sel_acc_i  (sel_acc),
-        .acc_i      (acc_word),
-        .acc_exp_i  (acc_exp),
-        .en_row_i   (en_row),
-        .en_col_i   (en_col),
-        .out_q_o    (out_q_bpl),
-        .out_exp_o  (out_exp_bpl)
-    );
+`endif
 
     initial clk_i = 1'b0;
     always #(CLK_HALF) clk_i = ~clk_i;
@@ -243,6 +395,155 @@ module tb_top_NxN_global #(
         endcase
         return longint'($signed({pe_out[hlane], pe_out[llane]}));
     endfunction
+
+    function automatic int out_hlane(input int lvl, input int node);
+        case (lvl)
+            1:       return 2*node;
+            2:       return (node==0)?2:6;
+            default: return 6;
+        endcase
+    endfunction
+
+    task automatic sw_dispatch(input int mi);
+        logic [63:0] a_blk, b_blk;
+        logic [3:0]  l_nib, h_nib;
+        logic [7:0]  nv8;
+        for (int p = 0; p < NUM_PAIR; p++) begin
+            a_blk = pe_in_a[int'(SEL_A[mi][p])*64 +: 64];
+            sw_a_dp8[2*p]   = a_blk;
+            sw_a_dp8[2*p+1] = a_blk;
+            b_blk = pe_in_b[int'(SEL_B[mi][p])*64 +: 64];
+            for (int e = 0; e < 8; e++) begin
+                l_nib = b_blk[e*4 +: 4];
+                h_nib = b_blk[32 + e*4 +: 4];
+                nv8   = 8'(-$signed({h_nib, l_nib}));
+                sw_b_dp8[2*p+1][e*4 +: 4] = (CTR_L[mi][p] == 2'd1) ? 4'd0 :
+                                            (CTR_L[mi][p] == 2'd2) ? nv8[3:0] : l_nib;
+                sw_b_dp8[2*p][e*4 +: 4]   = (CTR_H[mi][p] == 2'd1) ? 4'd0 :
+                                            (CTR_H[mi][p] == 2'd3) ? nv8[7:4] : h_nib;
+            end
+        end
+    endtask
+
+    function automatic longint dp8_gold(input int mi, input int d);
+        longint acc, av, bv;
+        acc = 0;
+        for (int ln = 0; ln < 8; ln++) begin
+            av = IS_SIGNED_A[mi][d] ? longint'($signed(sw_a_dp8[d][ln*8 +: 8])) : longint'(sw_a_dp8[d][ln*8 +: 8]);
+            bv = IS_SIGNED_B[mi][d] ? longint'($signed(sw_b_dp8[d][ln*4 +: 4])) : longint'(sw_b_dp8[d][ln*4 +: 4]);
+            acc = acc + av * bv;
+        end
+        return acc;
+    endfunction
+
+    task automatic set_exp_dp8_pe(input int mi, input int row, input int col);
+        logic [5:0] ea [0:3];
+        logic [5:0] eb [0:7];
+        logic [6:0] a8 [0:NUM_DP8-1];
+        logic [6:0] b8 [0:NUM_DP8-1];
+        for (int blk = 0; blk < 4; blk++) ea[blk] = 6'(ga_row[row][EGRP_A[mi][blk]]);
+        for (int h = 0; h < 8; h++)      eb[h]   = 6'(gb_col[col][EGRP_B[mi][h]]);
+        for (int p = 0; p < NUM_PAIR; p++) begin
+            a8[2*p]   = (CTR_H[mi][p] == 2'd1) ? '0 : {1'b0, ea[SEL_A[mi][p]]};
+            b8[2*p]   = (CTR_H[mi][p] == 2'd1) ? '0 : {1'b0, eb[int'(SEL_B[mi][p])*2]};
+            a8[2*p+1] = (CTR_L[mi][p] == 2'd1) ? '0 : {1'b0, ea[SEL_A[mi][p]]};
+            b8[2*p+1] = (CTR_L[mi][p] == 2'd1) ? '0 : {1'b0, eb[int'(SEL_B[mi][p])*2+1]};
+        end
+        for (int i = 0; i < NUM_DP8; i++) exp_dp8[i] = a8[i] + b8[i];
+    endtask
+
+    function automatic bit insub(input int d, input int lvl, input int node);
+        int n;
+        n = 2*(d/4) + (d%2);
+        case (lvl)
+            0:       return (n == node);
+            1:       return (n/2 == node);
+            2:       return (n/4 == node);
+            default: return 1'b1;
+        endcase
+    endfunction
+
+    function automatic int egold(input int lvl, input int node);
+        int e;
+        e = 0;
+        for (int d = 0; d < NUM_DP8; d++)
+            if (insub(d, lvl, node) && int'(exp_dp8[d]) > e) e = int'(exp_dp8[d]);
+        return e;
+    endfunction
+
+    function automatic longint fdiv(input longint x, input int k);
+        int kk;
+        kk = (k > 63) ? 63 : k;
+        return x >>> kk;
+    endfunction
+
+    task automatic cascade_golden(input int mi);
+        int s0, s1, s2, cx0, cx1, e, dhi, dlo;
+        longint vhi, dh, dl;
+        s0 = SEL_SHIFT[mi][0] ? 8 : 0;
+        s1 = SEL_SHIFT[mi][1] ? 4 : 0;
+        s2 = SEL_SHIFT[mi][2] ? 8 : 0;
+        for (int n = 0; n < NUM_L0; n++) begin
+            cx0 = 4*(n/2) + (n%2);
+            cx1 = cx0 + 2;
+            e   = egold(0, n);
+            dhi = e - int'(exp_dp8[cx0]);
+            dlo = e - int'(exp_dp8[cx1]);
+            gv_l0[n] = fdiv(dp8_gold(mi, cx0) <<< s0, dhi) + fdiv(dp8_gold(mi, cx1), dlo);
+            gd_l0[n] = longint'((dhi > 0) ? 1 : 0) + longint'((dlo > 0) ? 1 : 0);
+        end
+        for (int j = 0; j < NUM_L1; j++) begin
+            gv_l1[j] = (gv_l0[2*j] <<< s1) + gv_l0[2*j+1];
+            gd_l1[j] = (gd_l0[2*j] <<< s1) + gd_l0[2*j+1];
+        end
+        for (int k = 0; k < NUM_L2; k++) begin
+            e   = egold(2, k);
+            dhi = e - egold(1, 2*k);
+            dlo = e - egold(1, 2*k+1);
+            vhi = gv_l1[2*k] <<< s2;
+            dh  = gd_l1[2*k] <<< s2;
+            dl  = gd_l1[2*k+1];
+            gv_l2[k] = fdiv(vhi, dhi) + fdiv(gv_l1[2*k+1], dlo);
+            gd_l2[k] = ((dhi > 0) ? (fdiv(dh, dhi) + 1) : dh)
+                     + ((dlo > 0) ? (fdiv(dl, dlo) + 1) : dl);
+        end
+        e   = egold(3, 0);
+        dhi = e - egold(2, 0);
+        dlo = e - egold(2, 1);
+        gv_l3 = fdiv(gv_l2[0], dhi) + fdiv(gv_l2[1], dlo);
+        gd_l3 = ((dhi > 0) ? (fdiv(gd_l2[0], dhi) + 1) : gd_l2[0])
+              + ((dlo > 0) ? (fdiv(gd_l2[1], dlo) + 1) : gd_l2[1]);
+    endtask
+
+    function automatic longint node_gv(input int lvl, input int node);
+        case (lvl)
+            0:       return gv_l0[node];
+            1:       return gv_l1[node];
+            2:       return gv_l2[node];
+            default: return gv_l3;
+        endcase
+    endfunction
+
+    function automatic longint node_gd(input int lvl, input int node);
+        case (lvl)
+            0:       return gd_l0[node];
+            1:       return gd_l1[node];
+            2:       return gd_l2[node];
+            default: return gd_l3;
+        endcase
+    endfunction
+
+    task automatic pack_exp_a(input int mi, input int row);
+        for (int blk = 0; blk < 4; blk++)
+            in_exp_a[row][blk*EXP_IN_WIDTH +: EXP_IN_WIDTH] = 6'(ga_row[row][EGRP_A[mi][blk]]);
+    endtask
+
+    task automatic pack_exp_b(input int mi, input int col);
+        for (int blk = 0; blk < 4; blk++) begin
+            in_exp_b[col][blk*CHK_WIDTH+EXP_IN_WIDTH +: EXP_IN_WIDTH] = 6'(gb_col[col][EGRP_B[mi][2*blk]]);
+            in_exp_b[col][blk*CHK_WIDTH +: EXP_IN_WIDTH]              = 6'(gb_col[col][EGRP_B[mi][2*blk+1]]);
+        end
+    endtask
 
     task automatic rand_a(input int mi);
         int M, K, PA, cplx;
@@ -376,165 +677,174 @@ module tb_top_NxN_global #(
             end
     endtask
 
-    task automatic cmp3(input int mi, input int rr, input int cc, input int o, input string part,
-                        input longint g, input longint rb, input longint rs);
-        if (rb !== g) begin
-            err = err + 1;
-            $display("  [BFP!=GOLD] mode %0d PE[%0d][%0d] out %0d %s: golden=%0d bfp=%0d",
-                     MODE_NUM[mi], rr, cc, o, part, g, rb);
-        end
-        if (rs !== g) begin
-            err = err + 1;
-            $display("  [BPL!=GOLD] mode %0d PE[%0d][%0d] out %0d %s: golden=%0d bpl=%0d",
-                     MODE_NUM[mi], rr, cc, o, part, g, rs);
-        end
-        if (rb !== rs) begin
-            err = err + 1;
-            $display("  [BFP!=BPL]  mode %0d PE[%0d][%0d] out %0d %s: bfp=%0d bpl=%0d",
-                     MODE_NUM[mi], rr, cc, o, part, rb, rs);
-        end
-    endtask
-
     task automatic stream_check(input int mi, input int slot, input int nr, input int nc);
         int NOUT, lvl, rn, in;
-        longint rb_re, rb_im, rs_re, rs_im;
+        longint r;
         NOUT = MM_DIMS[mi][6]; lvl = TAP_LEVEL[mi];
         for (int rr = 0; rr < NUM_ROW; rr++)
             for (int cc = 0; cc < NUM_COL; cc++) begin
+                for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q[rr][cc][l];
                 if (rr < nr && cc < nc) begin
                     for (int o = 0; o < NOUT; o++) begin
                         rn = MM_OUT[mi][o][2];
                         in = MM_OUT[mi][o][3];
-                        for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q_bfp[rr][cc][l];
-                        rb_re = read_result(lvl, rn);
-                        if (in >= 0) rb_im = read_result(lvl, in);
-                        for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q_bpl[rr][cc][l];
-                        rs_re = read_result(lvl, rn);
-                        if (in >= 0) rs_im = read_result(lvl, in);
-                        cmp3(mi, rr, cc, o, "Re", gold_re[slot][rr][cc][o], rb_re, rs_re);
-                        if (in >= 0)
-                            cmp3(mi, rr, cc, o, "Im", gold_im[slot][rr][cc][o], rb_im, rs_im);
+                        r = read_result(lvl, rn);
+                        if (r !== gold_re[slot][rr][cc][o]) begin
+                            err = err + 1;
+                            $display("  mode %0d PE[%0d][%0d] out %0d Re: golden=%0d dut=%0d",
+                                     MODE_NUM[mi], rr, cc, o, gold_re[slot][rr][cc][o], r);
+                        end
+                        if (exp_common_g >= 0 && out_exp[rr][cc][exp_lane(lvl, rn)] !== EXP_WIDTH'(exp_common_g)) begin
+                            err = err + 1;
+                            $display("  mode %0d PE[%0d][%0d] out %0d Re exp: dut=%0d gold=%0d",
+                                     MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, rn)], exp_common_g);
+                        end
+                        if (in >= 0) begin
+                            r = read_result(lvl, in);
+                            if (r !== gold_im[slot][rr][cc][o]) begin
+                                err = err + 1;
+                                $display("  mode %0d PE[%0d][%0d] out %0d Im: golden=%0d dut=%0d",
+                                         MODE_NUM[mi], rr, cc, o, gold_im[slot][rr][cc][o], r);
+                            end
+                            if (exp_common_g >= 0 && out_exp[rr][cc][exp_lane(lvl, in)] !== EXP_WIDTH'(exp_common_g)) begin
+                                err = err + 1;
+                                $display("  mode %0d PE[%0d][%0d] out %0d Im exp: dut=%0d gold=%0d",
+                                         MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, in)], exp_common_g);
+                            end
+                        end
                     end
-                    check_exp(mi, rr + 1, cc + 1);
                 end else begin
-                    for (int l = 0; l < NUM_LANE; l++) begin
-                        if (out_q_bfp[rr][cc][l] !== '0) begin
+                    for (int l = 0; l < NUM_LANE; l++)
+                        if (out_q[rr][cc][l] !== '0 || out_exp[rr][cc][l] !== '0) begin
                             err = err + 1;
-                            $display("  scale mode %0d PE[%0d][%0d] lane %0d bfp not held (=%0d)",
-                                     MODE_NUM[mi], rr, cc, l, $signed(out_q_bfp[rr][cc][l]));
+                            $display("  scale mode %0d PE[%0d][%0d] lane %0d not held (q=%0d e=%0d)",
+                                     MODE_NUM[mi], rr, cc, l, $signed(out_q[rr][cc][l]), out_exp[rr][cc][l]);
                         end
-                        if (out_q_bpl[rr][cc][l] !== '0) begin
-                            err = err + 1;
-                            $display("  scale mode %0d PE[%0d][%0d] lane %0d bpl not held (=%0d)",
-                                     MODE_NUM[mi], rr, cc, l, $signed(out_q_bpl[rr][cc][l]));
-                        end
-                    end
                 end
             end
-    endtask
-
-    task automatic set_exponents(input bit distinct);
-        int e;
-        for (int rr = 0; rr < NUM_ROW; rr++)
-            for (int b = 0; b < 4; b++) begin
-                e = distinct ? (EXP_VAL + ((rr + b) % 4)) : EXP_VAL;
-                in_exp_a[rr][b*EXP_IN_WIDTH +: EXP_IN_WIDTH] = EXP_IN_WIDTH'(e);
-            end
-        for (int cc = 0; cc < NUM_COL; cc++)
-            for (int b = 0; b < 8; b++) begin
-                e = distinct ? (EXP_VAL + ((cc + b) % 3)) : EXP_VAL;
-                in_exp_b[cc][b*EXP_IN_WIDTH +: EXP_IN_WIDTH] = EXP_IN_WIDTH'(e);
-            end
-    endtask
-
-    task automatic rand_exponents;
-        int base;
-        base = int'($urandom_range(0, 40));
-        for (int rr = 0; rr < NUM_ROW; rr++)
-            for (int b = 0; b < 4; b++)
-                in_exp_a[rr][b*EXP_IN_WIDTH +: EXP_IN_WIDTH] =
-                    EXP_IN_WIDTH'(base + int'($urandom_range(0, EXP_SPREAD)));
-        for (int cc = 0; cc < NUM_COL; cc++)
-            for (int b = 0; b < 8; b++)
-                in_exp_b[cc][b*EXP_IN_WIDTH +: EXP_IN_WIDTH] =
-                    EXP_IN_WIDTH'(base + int'($urandom_range(0, EXP_SPREAD)));
-    endtask
-
-    task automatic diff_scan(input int mi, input int slot, input int nr, input int nc);
-        int NOUT, lvl, rn, in;
-        longint rb_re, rb_im, rs_re, rs_im, d;
-        NOUT = MM_DIMS[mi][6]; lvl = TAP_LEVEL[mi];
-        for (int rr = 0; rr < nr; rr++)
-            for (int cc = 0; cc < nc; cc++) begin
-                for (int o = 0; o < NOUT; o++) begin
-                    rn = MM_OUT[mi][o][2];
-                    in = MM_OUT[mi][o][3];
-                    for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q_bfp[rr][cc][l];
-                    rb_re = read_result(lvl, rn);
-                    if (in >= 0) rb_im = read_result(lvl, in);
-                    for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q_bpl[rr][cc][l];
-                    rs_re = read_result(lvl, rn);
-                    if (in >= 0) rs_im = read_result(lvl, in);
-                    ntot = ntot + 1;
-                    if (rb_re !== gold_re[slot][rr][cc][o]) nlossy = nlossy + 1;
-                    if (rb_re != 0) nnz = nnz + 1;
-                    d = rb_re - rs_re; if (d < 0) d = -d;
-                    if (d != 0) begin
-                        ndiff = ndiff + 1;
-                        if (d > max_diff) max_diff = d;
-                    end
-                    if (in >= 0) begin
-                        ntot = ntot + 1;
-                        d = rb_im - rs_im; if (d < 0) d = -d;
-                        if (d != 0) begin
-                            ndiff = ndiff + 1;
-                            if (d > max_diff) max_diff = d;
-                        end
-                    end
-                end
-                for (int l = 0; l < NUM_LANE; l++)
-                    if (out_exp_bpl[rr][cc][l] !== out_exp_bfp[rr][cc][l]) begin
-                        nexp = nexp + 1;
-                        if (nexp <= 5)
-                            $display("  [EXP DIFF] mode %0d PE[%0d][%0d] lane %0d: bfp=%0d bpl=%0d",
-                                     MODE_NUM[mi], rr, cc, l, out_exp_bfp[rr][cc][l], out_exp_bpl[rr][cc][l]);
-                    end
-            end
-    endtask
-
-    task automatic check_exp(input int mi, input int nr, input int nc);
-        for (int rr = 0; rr < nr; rr++)
-            for (int cc = 0; cc < nc; cc++)
-                for (int l = 0; l < NUM_LANE; l++) begin
-                    if (out_exp_bfp[rr][cc][l] !== EXP_WIDTH'(EXP_OUT)) begin
-                        err = err + 1;
-                        $display("  [BFP EXP] mode %0d PE[%0d][%0d] lane %0d: exp=%0d expected %0d",
-                                 MODE_NUM[mi], rr, cc, l, out_exp_bfp[rr][cc][l], EXP_OUT);
-                    end
-                    if (out_exp_bpl[rr][cc][l] !== out_exp_bfp[rr][cc][l]) begin
-                        err = err + 1;
-                        $display("  [BFP!=BPL EXP] mode %0d PE[%0d][%0d] lane %0d: bfp=%0d bpl=%0d",
-                                 MODE_NUM[mi], rr, cc, l, out_exp_bfp[rr][cc][l], out_exp_bpl[rr][cc][l]);
-                    end
-                end
-    endtask
-
-    task automatic clear_acc_exp(input int e);
-        for (int rr = 0; rr < NUM_ROW; rr++)
-            for (int cc = 0; cc < NUM_COL; cc++)
-                for (int l = 0; l < NUM_LANE; l++) begin
-                    acc_word[rr][cc][l] = '0;
-                    acc_exp [rr][cc][l] = EXP_WIDTH'(e);
-                end
     endtask
 
     task automatic clear_acc;
         for (int rr = 0; rr < NUM_ROW; rr++)
             for (int cc = 0; cc < NUM_COL; cc++)
-                for (int l = 0; l < NUM_LANE; l++) begin
-                    acc_word[rr][cc][l] = '0;
-                    acc_exp [rr][cc][l] = EXP_WIDTH'(EXP_OUT);
+                for (int l = 0; l < NUM_LANE; l++) acc_word[rr][cc][l] = '0;
+    endtask
+
+    task automatic clear_bfp_exp;
+        for (int rr = 0; rr < NUM_ROW; rr++) in_exp_a[rr] = '0;
+        for (int cc = 0; cc < NUM_COL; cc++) in_exp_b[cc] = '0;
+        for (int rr = 0; rr < NUM_ROW; rr++)
+            for (int cc = 0; cc < NUM_COL; cc++)
+                for (int l = 0; l < NUM_LANE; l++) acc_exp[rr][cc][l] = '0;
+    endtask
+
+    task automatic set_equal_exp(input int base);
+        for (int rr = 0; rr < NUM_ROW; rr++)
+            for (int blk = 0; blk < 4; blk++)
+                in_exp_a[rr][blk*EXP_IN_WIDTH +: EXP_IN_WIDTH] = 6'(base);
+        for (int cc = 0; cc < NUM_COL; cc++)
+            for (int blk = 0; blk < 4; blk++) begin
+                in_exp_b[cc][blk*CHK_WIDTH+EXP_IN_WIDTH +: EXP_IN_WIDTH] = 6'(base);
+                in_exp_b[cc][blk*CHK_WIDTH +: EXP_IN_WIDTH]              = 6'(base);
+            end
+    endtask
+
+    task automatic draw_distinct_exp(input int mi);
+        for (int rr = 0; rr < NUM_ROW; rr++) begin
+            for (int g = 0; g < 4; g++) ga_row[rr][g] = int'($urandom_range(0, 63));
+            pack_exp_a(mi, rr);
+        end
+        for (int cc = 0; cc < NUM_COL; cc++) begin
+            for (int g = 0; g < 8; g++) gb_col[cc][g] = int'($urandom_range(0, 63));
+            pack_exp_b(mi, cc);
+        end
+    endtask
+
+    function automatic int exp_lane(input int lvl, input int node);
+        return (lvl == 0) ? node : out_hlane(lvl, node);
+    endfunction
+
+    task automatic set_eexp(input int mi);
+        int NOUT, lvl, rn, in;
+        NOUT = MM_DIMS[mi][6]; lvl = TAP_LEVEL[mi];
+        for (int rr = 0; rr < NUM_ROW; rr++)
+            for (int cc = 0; cc < NUM_COL; cc++) begin
+                set_exp_dp8_pe(mi, rr, cc);
+                for (int o = 0; o < NOUT; o++) begin
+                    rn = MM_OUT[mi][o][2]; in = MM_OUT[mi][o][3];
+                    eexp_re[rr][cc][o] = EXP_WIDTH'(egold(lvl, rn));
+                    eexp_im[rr][cc][o] = (in >= 0) ? EXP_WIDTH'(egold(lvl, in)) : '0;
                 end
+            end
+    endtask
+
+    task automatic stream_golden_bfp(input int mi, input int slot);
+        int NOUT, lvl, rn, in;
+        NOUT = MM_DIMS[mi][6]; lvl = TAP_LEVEL[mi];
+        for (int rr = 0; rr < NUM_ROW; rr++)
+            for (int cc = 0; cc < NUM_COL; cc++) begin
+                pe_in_a = in_a[rr]; pe_in_b = in_b[cc];
+                set_exp_dp8_pe(mi, rr, cc);
+                sw_dispatch(mi);
+                cascade_golden(mi);
+                for (int o = 0; o < NOUT; o++) begin
+                    rn = MM_OUT[mi][o][2]; in = MM_OUT[mi][o][3];
+                    wgv[slot][rr][cc][o] = node_gv(lvl, rn);
+                    wgd[slot][rr][cc][o] = node_gd(lvl, rn);
+                    if (in >= 0) begin
+                        wgv_im[slot][rr][cc][o] = node_gv(lvl, in);
+                        wgd_im[slot][rr][cc][o] = node_gd(lvl, in);
+                    end
+                end
+            end
+    endtask
+
+    task automatic stream_check_bfp(input int mi, input int slot, input int nr, input int nc);
+        int NOUT, lvl, rn, in;
+        longint r, gv, gd;
+        NOUT = MM_DIMS[mi][6]; lvl = TAP_LEVEL[mi];
+        for (int rr = 0; rr < NUM_ROW; rr++)
+            for (int cc = 0; cc < NUM_COL; cc++) begin
+                for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q[rr][cc][l];
+                if (rr < nr && cc < nc) begin
+                    for (int o = 0; o < NOUT; o++) begin
+                        rn = MM_OUT[mi][o][2]; in = MM_OUT[mi][o][3];
+                        r  = read_result(lvl, rn);
+                        gv = wgv[slot][rr][cc][o]; gd = wgd[slot][rr][cc][o];
+                        if (r > gv || r < gv - gd - 1) begin
+                            err = err + 1;
+                            $display("  D mode %0d PE[%0d][%0d] out %0d Re: dut=%0d win[%0d,%0d]",
+                                     MODE_NUM[mi], rr, cc, o, r, gv - gd - 1, gv);
+                        end
+                        if (out_exp[rr][cc][exp_lane(lvl, rn)] !== eexp_re[rr][cc][o]) begin
+                            err = err + 1;
+                            $display("  D mode %0d PE[%0d][%0d] out %0d Re exp: dut=%0d gold=%0d",
+                                     MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, rn)], eexp_re[rr][cc][o]);
+                        end
+                        if (in >= 0) begin
+                            r  = read_result(lvl, in);
+                            gv = wgv_im[slot][rr][cc][o]; gd = wgd_im[slot][rr][cc][o];
+                            if (r > gv || r < gv - gd - 1) begin
+                                err = err + 1;
+                                $display("  D mode %0d PE[%0d][%0d] out %0d Im: dut=%0d win[%0d,%0d]",
+                                         MODE_NUM[mi], rr, cc, o, r, gv - gd - 1, gv);
+                            end
+                            if (out_exp[rr][cc][exp_lane(lvl, in)] !== eexp_im[rr][cc][o]) begin
+                                err = err + 1;
+                                $display("  D mode %0d PE[%0d][%0d] out %0d Im exp: dut=%0d gold=%0d",
+                                         MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, in)], eexp_im[rr][cc][o]);
+                            end
+                        end
+                    end
+                end else begin
+                    for (int l = 0; l < NUM_LANE; l++)
+                        if (out_q[rr][cc][l] !== '0 || out_exp[rr][cc][l] !== '0) begin
+                            err = err + 1;
+                            $display("  D scale mode %0d PE[%0d][%0d] lane %0d not held (q=%0d e=%0d)",
+                                     MODE_NUM[mi], rr, cc, l, $signed(out_q[rr][cc][l]), out_exp[rr][cc][l]);
+                        end
+                end
+            end
     endtask
 
     task automatic enable_all;
@@ -550,9 +860,9 @@ module tb_top_NxN_global #(
             return;
         end
         case (lvl)
-            1:       begin hlane = 2*node;        llane = 2*node + 1;    end
+            1:       begin hlane = 2*node;        llane = 2*node + 1;   end
             2:       begin hlane = (node==0)?2:6; llane = (node==0)?3:7; end
-            default: begin hlane = 6;             llane = 7;             end
+            default: begin hlane = 6;             llane = 7;            end
         endcase
         acc_word[row][col][hlane] = val[2*ACC_W-1:ACC_W];
         acc_word[row][col][llane] = val[ACC_W-1:0];
@@ -568,188 +878,235 @@ module tb_top_NxN_global #(
         #(T_SETTLE);
     endtask
 
+    task automatic set_acc_exp_pe(input int row, input int col, input int lvl,
+                                  input int node, input logic [EXP_WIDTH-1:0] e);
+        if (lvl == 0) begin acc_exp[row][col][node] = e; return; end
+        case (lvl)
+            1:       begin acc_exp[row][col][2*node] = e;        acc_exp[row][col][2*node+1] = e;      end
+            2:       begin acc_exp[row][col][(node==0)?2:6] = e; acc_exp[row][col][(node==0)?3:7] = e; end
+            default: begin acc_exp[row][col][6] = e;             acc_exp[row][col][7] = e;             end
+        endcase
+    endtask
+
+    task automatic setup_exp(input int mi, input bit distinct, output int base);
+        if (distinct) begin
+            draw_distinct_exp(mi);
+            set_eexp(mi);
+            exp_common_g = -1;
+            base         = 0;
+        end else begin
+            base         = int'($urandom_range(0, 63));
+            set_equal_exp(base);
+            exp_common_g = 2 * base;
+        end
+    endtask
+
+    task automatic run_single_shot(input int mi, input bit distinct, input int nstream, input int nr, input int nc);
+        int slot, cs, base;
+        reset_dut();
+        mode = MODE_WIDTH'(MODE_NUM[mi]);
+        sel_acc = 1'b0; clear_acc(); clear_bfp_exp();
+        for (int rr = 0; rr < NUM_ROW; rr++) en_row[rr] = (rr < nr) ? 1'b1 : 1'b0;
+        for (int cc = 0; cc < NUM_COL; cc++) en_col[cc] = (cc < nc) ? 1'b1 : 1'b0;
+        setup_exp(mi, distinct, base);
+        for (int t = 0; t < nstream + D; t++) begin
+            slot = t % DEPTH;
+            if (t < nstream) begin
+                gen_operands(mi);
+                if (distinct) stream_golden_bfp(mi, slot);
+                else          stream_golden(mi, slot);
+            end else begin
+                for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
+                for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
+            end
+            sel_acc = 1'b0;
+            @(posedge clk_i);
+            #(T_SETTLE);
+            cs = t - D;
+            if (cs >= 0) begin
+                if (distinct) stream_check_bfp(mi, cs % DEPTH, nr, nc);
+                else          stream_check(mi, cs % DEPTH, nr, nc);
+            end
+        end
+    endtask
+
+    task automatic run_accumulate(input int mi, input bit distinct);
+        int NOUT, lvl, rn, in, base;
+        longint r, gvhi, gdd;
+        reset_dut();
+        mode = MODE_WIDTH'(MODE_NUM[mi]);
+        lvl  = TAP_LEVEL[mi]; NOUT = MM_DIMS[mi][6];
+        clear_acc(); clear_bfp_exp(); enable_all();
+        setup_exp(mi, distinct, base);
+        for (int rr = 0; rr < NUM_ROW; rr++)
+            for (int cc = 0; cc < NUM_COL; cc++)
+                for (int o = 0; o < NOUT; o++) begin
+                    rn = MM_OUT[mi][o][2]; in = MM_OUT[mi][o][3];
+                    acc_seed[rr][cc][o] = longint'(rand_signed(16));
+                    accg_re[rr][cc][o]  = acc_seed[rr][cc][o];
+                    sgv[rr][cc][o] = 0; sgd[rr][cc][o] = 0;
+                    set_acc_pe(rr, cc, lvl, rn, acc_seed[rr][cc][o]);
+                    set_acc_exp_pe(rr, cc, lvl, rn, distinct ? eexp_re[rr][cc][o] : EXP_WIDTH'(exp_common_g));
+                    if (in >= 0) begin
+                        acc_seed_im[rr][cc][o] = longint'(rand_signed(16));
+                        accg_im[rr][cc][o]     = acc_seed_im[rr][cc][o];
+                        sgv_im[rr][cc][o] = 0; sgd_im[rr][cc][o] = 0;
+                        set_acc_pe(rr, cc, lvl, in, acc_seed_im[rr][cc][o]);
+                        set_acc_exp_pe(rr, cc, lvl, in, distinct ? eexp_im[rr][cc][o] : EXP_WIDTH'(exp_common_g));
+                    end
+                end
+        for (int t = 0; t < NUM_ACC + D; t++) begin
+            if (t < NUM_ACC) begin
+                gen_operands(mi);
+                for (int rr = 0; rr < NUM_ROW; rr++)
+                    for (int cc = 0; cc < NUM_COL; cc++) begin
+                        A_re = A_re_s[rr]; A_im = A_im_s[rr];
+                        B_re = B_re_s[cc]; B_im = B_im_s[cc];
+                        golden(mi);
+                        for (int o = 0; o < NOUT; o++) begin
+                            accg_re[rr][cc][o] += X_re[o];
+                            if (MM_OUT[mi][o][3] >= 0) accg_im[rr][cc][o] += X_im[o];
+                        end
+                        if (distinct) begin
+                            pe_in_a = in_a[rr]; pe_in_b = in_b[cc];
+                            set_exp_dp8_pe(mi, rr, cc);
+                            sw_dispatch(mi);
+                            cascade_golden(mi);
+                            for (int o = 0; o < NOUT; o++) begin
+                                rn = MM_OUT[mi][o][2]; in = MM_OUT[mi][o][3];
+                                sgv[rr][cc][o] += node_gv(lvl, rn);
+                                sgd[rr][cc][o] += node_gd(lvl, rn) + 1;
+                                if (in >= 0) begin
+                                    sgv_im[rr][cc][o] += node_gv(lvl, in);
+                                    sgd_im[rr][cc][o] += node_gd(lvl, in) + 1;
+                                end
+                            end
+                        end
+                    end
+                sel_acc = (t == 0) ? 1'b0 : 1'b1;
+            end else begin
+                for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
+                for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
+                sel_acc = 1'b1;
+            end
+            @(posedge clk_i);
+            #(T_SETTLE);
+        end
+        for (int rr = 0; rr < NUM_ROW; rr++)
+            for (int cc = 0; cc < NUM_COL; cc++) begin
+                for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q[rr][cc][l];
+                for (int o = 0; o < NOUT; o++) begin
+                    rn = MM_OUT[mi][o][2]; in = MM_OUT[mi][o][3];
+                    r = read_result(lvl, rn);
+                    if (distinct) begin
+                        gvhi = acc_seed[rr][cc][o] + sgv[rr][cc][o];
+                        gdd  = sgd[rr][cc][o];
+                        if (r > gvhi || r < gvhi - gdd) begin
+                            err = err + 1;
+                            $display("  Dacc mode %0d PE[%0d][%0d] out %0d Re: dut=%0d win[%0d,%0d]",
+                                     MODE_NUM[mi], rr, cc, o, r, gvhi - gdd, gvhi);
+                        end
+                        if (out_exp[rr][cc][exp_lane(lvl, rn)] !== eexp_re[rr][cc][o]) begin
+                            err = err + 1;
+                            $display("  Dacc mode %0d PE[%0d][%0d] out %0d Re exp: dut=%0d gold=%0d",
+                                     MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, rn)], eexp_re[rr][cc][o]);
+                        end
+                    end else begin
+                        if (r !== accg_re[rr][cc][o]) begin
+                            err = err + 1;
+                            $display("  acc mode %0d PE[%0d][%0d] out %0d Re: golden=%0d dut=%0d",
+                                     MODE_NUM[mi], rr, cc, o, accg_re[rr][cc][o], r);
+                        end
+                        if (out_exp[rr][cc][exp_lane(lvl, rn)] !== EXP_WIDTH'(exp_common_g)) begin
+                            err = err + 1;
+                            $display("  acc mode %0d PE[%0d][%0d] out %0d Re exp: dut=%0d gold=%0d",
+                                     MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, rn)], exp_common_g);
+                        end
+                    end
+                    if (in >= 0) begin
+                        r = read_result(lvl, in);
+                        if (distinct) begin
+                            gvhi = acc_seed_im[rr][cc][o] + sgv_im[rr][cc][o];
+                            gdd  = sgd_im[rr][cc][o];
+                            if (r > gvhi || r < gvhi - gdd) begin
+                                err = err + 1;
+                                $display("  Dacc mode %0d PE[%0d][%0d] out %0d Im: dut=%0d win[%0d,%0d]",
+                                         MODE_NUM[mi], rr, cc, o, r, gvhi - gdd, gvhi);
+                            end
+                            if (out_exp[rr][cc][exp_lane(lvl, in)] !== eexp_im[rr][cc][o]) begin
+                                err = err + 1;
+                                $display("  Dacc mode %0d PE[%0d][%0d] out %0d Im exp: dut=%0d gold=%0d",
+                                         MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, in)], eexp_im[rr][cc][o]);
+                            end
+                        end else begin
+                            if (r !== accg_im[rr][cc][o]) begin
+                                err = err + 1;
+                                $display("  acc mode %0d PE[%0d][%0d] out %0d Im: golden=%0d dut=%0d",
+                                         MODE_NUM[mi], rr, cc, o, accg_im[rr][cc][o], r);
+                            end
+                            if (out_exp[rr][cc][exp_lane(lvl, in)] !== EXP_WIDTH'(exp_common_g)) begin
+                                err = err + 1;
+                                $display("  acc mode %0d PE[%0d][%0d] out %0d Im exp: dut=%0d gold=%0d",
+                                         MODE_NUM[mi], rr, cc, o, out_exp[rr][cc][exp_lane(lvl, in)], exp_common_g);
+                            end
+                        end
+                    end
+                end
+            end
+    endtask
+
+    task automatic run_pass(input int mi, input int pat, input bit distinct);
+        case (pat)
+            0: run_single_shot(mi, distinct, NUM_STREAM, NUM_ROW, NUM_COL);
+            1: run_accumulate(mi, distinct);
+            default:
+                for (int nr = 1; nr <= NUM_ROW; nr++)
+                    for (int nc = 1; nc <= NUM_COL; nc++)
+                        run_single_shot(mi, distinct, NUM_STREAM_SCALE, nr, nc);
+        endcase
+    endtask
+
     initial begin
-        int err0, NOUT, lvl, rn, in, slot, cs;
-        longint rb_re, rb_im, rs_re, rs_im;
-        $display("\nStarting top_NxN_global 3-way (golden/baseline-BFP/bit-plane-B) streaming verification (%0dx%0d PEs, %0d modes, NUM_STREAM=%0d NUM_ACC=%0d)...\n",
+        int err0;
+        string pat_name [0:2];
+        string exp_name [0:1];
+        pat_name[0] = "single-shot"; pat_name[1] = "accumulate"; pat_name[2] = "scaling";
+        exp_name[0] = "equal-exp";   exp_name[1] = "distinct-exp";
+        $display("\nStarting top_NxN_bpl_b_bfp streaming verification (%0dx%0d PEs, %0d modes, NUM_STREAM=%0d NUM_ACC=%0d)...\n",
                  NUM_ROW, NUM_COL, NUM_MODE, NUM_STREAM, NUM_ACC);
 `ifdef VCD
         $dumpfile("activity.vcd");
-        $dumpvars(0, tb_top_NxN_global.dut_bfp.gen_pe_row[0].gen_pe_col[0].pe_bfp_i);
-        $dumpvars(0, tb_top_NxN_global.dut_bpl.gen_pe_row[0].gen_pe_col[0].pe_bpl_b_bfp_i);
+        $dumpvars(0, tb_top_NxN_bpl_b_bfp.dut);
 `endif
 
         for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
         for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
         mode = '0; sel_acc = 1'b0;
-        set_exponents(1'b0);
-        clear_acc(); enable_all();
-        err = 0; npass = 0;
+        clear_acc(); clear_bfp_exp(); enable_all();
+        err = 0; npass = 0; exp_common_g = -1;
 
-        $display("Streaming single-shot pass (%0d operands/mode)...", NUM_STREAM);
-        for (int mi = 0; mi < NUM_MODE; mi++) begin
-            reset_dut();
-            mode = MODE_WIDTH'(MODE_NUM[mi]);
-            sel_acc = 1'b0; clear_acc(); enable_all();
-            err0 = err;
-            for (int t = 0; t < NUM_STREAM + D; t++) begin
-                slot = t % DEPTH;
-                if (t < NUM_STREAM) begin
-                    gen_operands(mi);
-                    stream_golden(mi, slot);
-                end else begin
-                    for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
-                    for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
+        for (int pat = 0; pat < 3; pat++)
+            for (int ex = 0; ex < 2; ex++) begin
+                $display("\n=== %s : %s ===", pat_name[pat], exp_name[ex]);
+                for (int mi = 0; mi < NUM_MODE; mi++) begin
+                    err0 = err;
+                    run_pass(mi, pat, ex[0]);
+                    if (err == err0) begin
+                        npass = npass + 1;
+                        $display("  mode %0d: PASS", MODE_NUM[mi]);
+                    end else
+                        $display("  mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
                 end
-                sel_acc = 1'b0;
-                @(posedge clk_i);
-                #(T_SETTLE);
-                cs = t - D;
-                if (cs >= 0) stream_check(mi, cs % DEPTH, NUM_ROW, NUM_COL);
             end
-            if (err == err0) begin
-                npass = npass + 1;
-                $display("  mode %0d: PASS", MODE_NUM[mi]);
-            end else
-                $display("  mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
-        end
-
-        $display("\nStreaming accumulation pass (seed + sum of %0d distinct tiles)...", NUM_ACC);
-        for (int mi = 0; mi < NUM_MODE; mi++) begin
-            reset_dut();
-            mode = MODE_WIDTH'(MODE_NUM[mi]);
-            lvl  = TAP_LEVEL[mi];
-            NOUT = MM_DIMS[mi][6];
-            clear_acc(); enable_all();
-            err0 = err;
-            for (int rr = 0; rr < NUM_ROW; rr++)
-                for (int cc = 0; cc < NUM_COL; cc++)
-                    for (int o = 0; o < NOUT; o++) begin
-                        acc_seed[rr][cc][o] = longint'(rand_signed(16));
-                        accg_re[rr][cc][o]  = acc_seed[rr][cc][o];
-                        set_acc_pe(rr, cc, lvl, MM_OUT[mi][o][2], acc_seed[rr][cc][o]);
-                        if (MM_OUT[mi][o][3] >= 0) begin
-                            acc_seed_im[rr][cc][o] = longint'(rand_signed(16));
-                            accg_im[rr][cc][o]     = acc_seed_im[rr][cc][o];
-                            set_acc_pe(rr, cc, lvl, MM_OUT[mi][o][3], acc_seed_im[rr][cc][o]);
-                        end
-                    end
-            for (int t = 0; t < NUM_ACC + D; t++) begin
-                if (t < NUM_ACC) begin
-                    gen_operands(mi);
-                    for (int rr = 0; rr < NUM_ROW; rr++)
-                        for (int cc = 0; cc < NUM_COL; cc++) begin
-                            A_re = A_re_s[rr]; A_im = A_im_s[rr];
-                            B_re = B_re_s[cc]; B_im = B_im_s[cc];
-                            golden(mi);
-                            for (int o = 0; o < NOUT; o++) begin
-                                accg_re[rr][cc][o] += X_re[o];
-                                if (MM_OUT[mi][o][3] >= 0) accg_im[rr][cc][o] += X_im[o];
-                            end
-                        end
-                    sel_acc = (t == 0) ? 1'b0 : 1'b1;
-                end else begin
-                    for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
-                    for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
-                    sel_acc = 1'b1;
-                end
-                @(posedge clk_i);
-                #(T_SETTLE);
-            end
-            for (int rr = 0; rr < NUM_ROW; rr++)
-                for (int cc = 0; cc < NUM_COL; cc++)
-                    for (int o = 0; o < NOUT; o++) begin
-                        rn = MM_OUT[mi][o][2];
-                        in = MM_OUT[mi][o][3];
-                        for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q_bfp[rr][cc][l];
-                        rb_re = read_result(lvl, rn);
-                        if (in >= 0) rb_im = read_result(lvl, in);
-                        for (int l = 0; l < NUM_LANE; l++) pe_out[l] = out_q_bpl[rr][cc][l];
-                        rs_re = read_result(lvl, rn);
-                        if (in >= 0) rs_im = read_result(lvl, in);
-                        cmp3(mi, rr, cc, o, "Re", accg_re[rr][cc][o], rb_re, rs_re);
-                        if (in >= 0)
-                            cmp3(mi, rr, cc, o, "Im", accg_im[rr][cc][o], rb_im, rs_im);
-                    end
-            if (err == err0)
-                $display("  acc mode %0d: PASS", MODE_NUM[mi]);
-            else
-                $display("  acc mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
-        end
-
-        $display("\nStreaming scaling pass (enabled rectangle streams; disabled PEs held 0)...");
-        for (int mi = 0; mi < NUM_MODE; mi++) begin
-            err0 = err;
-            for (int nr = 1; nr <= NUM_ROW; nr++)
-                for (int nc = 1; nc <= NUM_COL; nc++) begin
-                    reset_dut();
-                    mode = MODE_WIDTH'(MODE_NUM[mi]);
-                    sel_acc = 1'b0; clear_acc();
-                    for (int rr = 0; rr < NUM_ROW; rr++) en_row[rr] = (rr < nr) ? 1'b1 : 1'b0;
-                    for (int cc = 0; cc < NUM_COL; cc++) en_col[cc] = (cc < nc) ? 1'b1 : 1'b0;
-                    for (int t = 0; t < NUM_STREAM_SCALE + D; t++) begin
-                        slot = t % DEPTH;
-                        if (t < NUM_STREAM_SCALE) begin
-                            gen_operands(mi);
-                            stream_golden(mi, slot);
-                        end else begin
-                            for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
-                            for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
-                        end
-                        sel_acc = 1'b0;
-                        @(posedge clk_i);
-                        #(T_SETTLE);
-                        cs = t - D;
-                        if (cs >= 0) stream_check(mi, cs % DEPTH, nr, nc);
-                    end
-                end
-            if (err == err0)
-                $display("  scale mode %0d: PASS", MODE_NUM[mi]);
-            else
-                $display("  scale mode %0d: FAIL (%0d mismatches)", MODE_NUM[mi], err - err0);
-        end
-
-        $display("\nRandom-exponent divergence scan (baseline-BFP vs bit-plane-B, %0d operands/mode,\n          exponents redrawn every vector: random base 0..40 + per-group delta 0..%0d)...", NUM_STREAM, EXP_SPREAD);
-        max_diff = 0; ndiff = 0; nexp = 0; ntot = 0; nlossy = 0; nnz = 0;
-        for (int mi = 0; mi < NUM_MODE; mi++) begin
-            reset_dut();
-            mode = MODE_WIDTH'(MODE_NUM[mi]);
-            sel_acc = 1'b0; clear_acc_exp(0); enable_all();
-            for (int t = 0; t < NUM_STREAM + D; t++) begin
-                slot = t % DEPTH;
-                if (t < NUM_STREAM) begin
-                    rand_exponents();
-                    gen_operands(mi);
-                    stream_golden(mi, slot);
-                end else begin
-                    for (int rr = 0; rr < NUM_ROW; rr++) in_a[rr] = '0;
-                    for (int cc = 0; cc < NUM_COL; cc++) in_b[cc] = '0;
-                end
-                sel_acc = 1'b0;
-                @(posedge clk_i);
-                #(T_SETTLE);
-                cs = t - D;
-                if (cs >= 0) diff_scan(mi, cs % DEPTH, NUM_ROW, NUM_COL);
-            end
-            $display("  distinct-exp mode %0d: scanned", MODE_NUM[mi]);
-        end
-        $display("\n  distinct-exponent scan: %0d results compared, %0d differ, max |bfp-bpl| = %0d LSB",
-                 ntot, ndiff, max_diff);
-        $display("  VALIDITY: %0d/%0d results altered by alignment, %0d/%0d non-zero",
-                 nlossy, ntot, nnz, ntot);
-        if (nlossy == 0)
-            $display("  WARNING: no alignment loss observed - the scan is VACUOUS");
-        if (nnz == 0)
-            $display("  WARNING: all results are zero - the scan is VACUOUS");
-        $display("  exponent mismatches between the two grids: %0d", nexp);
-        if (nexp != 0) err = err + nexp;
 
 `ifdef VCD
         $dumpoff;
 `endif
-        $display("\ntop_NxN_global 3-way verification (golden==baseline-BFP==bit-plane-B): %0d/%0d single-shot modes passed (%0d total mismatches)\n",
-                 npass, NUM_MODE, err);
         $finish;
     end
+
+    final
+        $display("\ntop_NxN_bpl_b_bfp streaming verification: %0d/%0d (mode x pattern x experiment) passed (%0d total mismatches)\n",
+                 npass, 3 * 2 * NUM_MODE, err);
 
 endmodule

@@ -37,14 +37,19 @@ HIER = {
                      "ACC-Array":  848.848, "PE glue":   434.601},
     "Bit-Plane-A-BFP":{"DP8-Array": 2904.803, "CPR-Tree": 1874.828,
                      "ACC-Array":  884.831, "PE glue":   378.613},
+    "Bit-Plane-B-BFP":{"DP8-Array": 1871.605, "CPR-Tree": 1858.892,
+                     "ACC-Array":  884.948, "PE glue":   401.008},
 }
 
 FLAT = {"Baseline": 3816.519, "Square": 3320.303, "Baseline-BFP": 5345.990, "Square-BFP": 5204.929,
+        "Bit-Plane-B-BFP": 4585.206,
         "Bit-Plane-A-BFP": 5148.898}
 
-VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP"]
+VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP",
+            "Bit-Plane-B-BFP"]
 SECTIONS = ["DP8-Array", "CPR-Tree", "ACC-Array", "PE glue"]
-CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-A-BFP": "Baseline-BFP"}
+CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-A-BFP": "Baseline-BFP",
+           "Bit-Plane-B-BFP": "Baseline-BFP"}
 COLORS = {
     "DP8-Array": "#d4a480cc",
     "CPR-Tree":  "#778d5ecc",

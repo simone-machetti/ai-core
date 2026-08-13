@@ -51,6 +51,10 @@ make syn PROJECT=ai-core TOP_LEVEL=pe_sqr_bfp OUT_DIR=pe_sqr_bfp_hier_syn \
     KEEP_MODULES="pe_array_sqr_bfp acc_array_sqr_bfp dp_8_sqr ext_inject_sqr_bfp"
 
 make syn PROJECT=ai-core TOP_LEVEL=dp_8_bpl_a_bfp OUT_DIR=dp_8_bpl_a_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=dp_8_bpl_b_bfp OUT_DIR=dp_8_bpl_b_bfp_syn
 
 make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_a_bfp OUT_DIR=pe_bpl_a_bfp_hier_syn \
     KEEP_MODULES="pe_array_bpl_a_bfp acc_array_bpl_bfp dp_8_bpl_a_bfp"
+
+make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_b_bfp OUT_DIR=pe_bpl_b_bfp_hier_syn \
+    KEEP_MODULES="pe_array_bpl_b_bfp acc_array_bpl_bfp dp_8_bpl_b_bfp"
