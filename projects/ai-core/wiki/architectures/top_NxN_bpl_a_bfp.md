@@ -55,9 +55,9 @@ top_NxN_bpl_a_bfp #(.N(8)) top_NxN_bpl_a_bfp_i (
 Against [top_NxN_bfp](./top_NxN_bfp.md) exactly **two instances change**:
 
 | per    | `top_NxN_bfp`                                 | `top_NxN_bpl_a_bfp`                      |
-| ------ | --------------------------------------------- | -------------------------------------- |
-| grid   | `ctrl`, `sel_acc` pipeline                    | same                                   |
-| row    | `disp_array_a`, `disp_array_exp_a_bfp`, `icg` | same                                   |
+| ------ | --------------------------------------------- | ---------------------------------------- |
+| grid   | `ctrl`, `sel_acc` pipeline                    | same                                     |
+| row    | `disp_array_a`, `disp_array_exp_a_bfp`, `icg` | same                                     |
 | column | `disp_array_b`, `disp_array_exp_b_bfp`, `icg` | **`disp_array_b_bpl_a_bfp`**, same, same |
 | tile   | `pe_bfp`, `icg`                               | **`pe_bpl_a_bfp`**, same                 |
 

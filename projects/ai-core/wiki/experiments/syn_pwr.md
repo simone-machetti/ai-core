@@ -1,6 +1,6 @@
-# Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane-A BFP
+# Synthesis Power — Baseline / Square / Baseline-BFP / Square-BFP / Bit-Plane-A BFP / Bit-Plane-B BFP
 
-VCD-annotated dynamic-power comparison of the five PE-grid variants — [top_NxN](../architectures/top_NxN.md), [top_NxN_sqr](../architectures/top_NxN_sqr.md), [top_NxN_bfp](../architectures/top_NxN_bfp.md), [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md), [top_NxN_bpl_a_bfp](../architectures/top_NxN_bpl_a_bfp.md) — measured on the complete synthesized 2×2 grids and assembled from per-component unit power for 8×8 and 16×16.
+VCD-annotated dynamic-power comparison of the six PE-grid variants — [top_NxN](../architectures/top_NxN.md), [top_NxN_sqr](../architectures/top_NxN_sqr.md), [top_NxN_bfp](../architectures/top_NxN_bfp.md), [top_NxN_sqr_bfp](../architectures/top_NxN_sqr_bfp.md), [top_NxN_bpl_a_bfp](../architectures/top_NxN_bpl_a_bfp.md), [top_NxN_bpl_b_bfp](../architectures/top_NxN_bpl_b_bfp.md) — measured on the complete synthesized 2×2 grids and assembled from per-component unit power for 8×8 and 16×16.
 
 ## Purpose
 
@@ -21,7 +21,7 @@ make post-syn-dpa PROJECT=ai-core TOP_LEVEL=top_NxN_sqr_bfp OUT_DIR=top_2x2_sqr_
     TB=tb_top_NxN_sqr_bfp_pwr CLK_PERIOD_NS=10 BLACKBOX_MODULES="pe_sqr_bfp ctrl_sqr …"
 ```
 
-Stimulus is the five `tb/tb_top_NxN[_sqr|_bpl][_bfp]_pwr.sv` benches — 100 uniform-random operand sets per mode, streamed one per clock with every row and column enabled, single-shot only (`sel_acc` low, `acc` zero, no scaling), all 11 modes back to back with no reset between them so the VCD holds one continuous busy window. The benches are byte-identical apart from the DUT, so the comparison is against the same stimulus. `CLK_PERIOD_NS=10` (100 MHz); dumping starts after reset deassertion, so the reset transient is not charged to the average. OpenSTA cannot parse Verilator's `$var real` / `r…` lines, so the flow strips them from the VCD before `read_vcd`; annotation is then complete (**0 unannotated pins**) on all five variants.
+Stimulus is the six `tb/tb_top_NxN[_sqr|_bpl][_bfp]_pwr.sv` benches — 100 uniform-random operand sets per mode, streamed one per clock with every row and column enabled, single-shot only (`sel_acc` low, `acc` zero, no scaling), all 11 modes back to back with no reset between them so the VCD holds one continuous busy window. The benches are byte-identical apart from the DUT, so the comparison is against the same stimulus. `CLK_PERIOD_NS=10` (100 MHz); dumping starts after reset deassertion, so the reset transient is not charged to the average. OpenSTA cannot parse Verilator's `$var real` / `r…` lines, so the flow strips them from the VCD before `read_vcd`; annotation is then complete (**0 unannotated pins**) on all six variants.
 
 All commands are in [run_syn_pwr.sh](../../scripts/run_syn_pwr.sh). Numbers land in `doc/data/res_syn_pwr.xlsx` and `doc/charts/hist_syn_pwr.png`; the chart is normalized to the baseline grid of the same size, so it carries ratios rather than absolute mW.
 
@@ -37,47 +37,49 @@ Same counts as [Synthesis Area](syn_area.md), except the clock gates are **split
 
 Per-component unit power from the 2×2 runs, mW:
 
-| Component           | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane-A BFP |
-| ------------------- | -------- | ------- | ------------ | ---------- | ------------- |
-| `ctrl` / `ctrl_sqr` | 0.00127  | 0.00177 | 0.00136      | 0.00162    | 0.00137       |
-| `const`             | —        | 0.00001 | —            | 0.00002    | —             |
-| `disp_array_a`      | 0.10100  | 0.12300 | 0.10200      | 0.12250    | 0.12200       |
-| `disp_array_b`      | 0.09975  | 0.10700 | 0.10100      | 0.10800    | **0.14850**   |
-| `disp_array_exp_a`  | —        | —       | 0.01380      | 0.01020    | 0.01370       |
-| `disp_array_exp_b`  | —        | —       | 0.01610      | 0.01665    | 0.01615       |
-| `pe_array_alpha`    | —        | 0.40000 | —            | 0.29050    | —             |
-| `pe_array_beta`     | —        | 0.36500 | —            | 0.27200    | —             |
-| `pe` (per variant)  | 0.68225  | 0.51700 | 0.91850      | 0.82000    | **0.90700**   |
-| `icg` (per PE)      | 0.02080  | 0.01970 | 0.02610      | 0.02620    | 0.02620       |
-| `icg` (per row/col) | 0.00591  | 0.01490 | 0.00673      | 0.00673    | 0.00673       |
+| Component           | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane-A BFP | Bit-Plane-B BFP |
+| ------------------- | -------- | ------- | ------------ | ---------- | --------------- | --------------- |
+| `ctrl` / `ctrl_sqr` | 0.00127  | 0.00177 | 0.00136      | 0.00162    | 0.00137         | 0.00130         |
+| `const`             | —        | 0.00001 | —            | 0.00002    | —               | —               |
+| `disp_array_a`      | 0.10100  | 0.12300 | 0.10200      | 0.12250    | 0.12200         | **0.13200**     |
+| `disp_array_b`      | 0.09975  | 0.10700 | 0.10100      | 0.10800    | **0.14850**     | 0.11500         |
+| `disp_array_exp_a`  | —        | —       | 0.01380      | 0.01020    | 0.01370         | 0.01340         |
+| `disp_array_exp_b`  | —        | —       | 0.01610      | 0.01665    | 0.01615         | 0.01610         |
+| `pe_array_alpha`    | —        | 0.40000 | —            | 0.29050    | —               | —               |
+| `pe_array_beta`     | —        | 0.36500 | —            | 0.27200    | —               | —               |
+| `pe` (per variant)  | 0.68225  | 0.51700 | 0.91850      | 0.82000    | **0.90700**     | **0.77125**     |
+| `icg` (per PE)      | 0.02080  | 0.01970 | 0.02610      | 0.02620    | 0.02620         | 0.02620         |
+| `icg` (per row/col) | 0.00591  | 0.01490 | 0.00673      | 0.00673    | 0.00673         | 0.00673         |
 
-Note `disp_array_a` — the *same* netlist — reports 0.122 mW in the bit-plane grid against 0.102 in the baseline-BFP grid. Its A bus drives 32 bit-plane multiplexer selects per DP8 instead of Booth encoders, a different capacitive load, and OpenSTA charges net switching power to the driver.
+Note that the *same* netlist reports different power in different grids, because OpenSTA charges net switching power to the driver and the load differs. `disp_array_a` reports 0.122 mW in the bit-plane-A grid against 0.102 in baseline-BFP — its A bus drives 32 bit-plane multiplexer selects per DP8 instead of Booth encoders. Symmetrically, the unmodified `disp_array_b` reports 0.115 mW in the bit-plane-B grid against 0.101 in baseline-BFP, where its raw int4 lanes now drive 16 mux selects per DP8.
 
 Grid totals, mW:
 
-| Grid  | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane-A BFP | Square/Base | Sqr-BFP/Base-BFP | Bpl-A-BFP/Base-BFP | Basis     |
-| ----- | -------- | ------- | ------------ | ---------- | ------------- | ----------- | ---------------- | ---------------- | --------- |
-| 2×2   | 3.240    | 4.200   | 4.272        | 5.053      | 4.362         | +29.6 %     | +18.3 %          | +2.1 %           | measured  |
-| 8×8   | 46.698   | 42.551  | 62.427       | 60.825     | 62.237        | −8.9 %      | −2.6 %           | −0.30 %          | assembled |
-| 16×16 | 183.385  | 153.796 | 245.761      | 229.962    | 243.922       | −16.1 %     | −6.4 %           | −0.75 %          | assembled |
+| Grid  | Baseline | Square  | Baseline-BFP | Square-BFP | Bit-Plane-A BFP | Bit-Plane-B BFP | Square/Base | Sqr-BFP/Base-BFP | Bpl-A/Base-BFP | Bpl-B/Base-BFP | Basis     |
+| ----- | -------- | ------- | ------------ | ---------- | --------------- | --------------- | ----------- | ---------------- | -------------- | -------------- | --------- |
+| 2×2   | 3.240    | 4.200   | 4.272        | 5.053      | 4.362           | 3.771           | +29.6 %     | +18.3 %          | +2.1 %         | **−11.7 %**    | measured  |
+| 8×8   | 46.698   | 42.551  | 62.427       | 60.825     | 62.237          | 53.358          | −8.9 %      | −2.6 %           | −0.30 %        | **−14.5 %**    | assembled |
+| 16×16 | 183.385  | 153.796 | 245.761      | 229.962    | 243.922         | 208.788         | −16.1 %     | −6.4 %           | −0.75 %        | **−15.0 %**    | assembled |
 
-Three readings, each against its own baseline:
+Four readings, each against its own baseline:
 
 - **Square vs baseline** — the square costs 29.6 % more at 2×2 but saves **8.9 % at 8×8 and 16.1 % at 16×16**. The per-PE (`pe` + per-PE `icg`) saving is 0.16635 mW/tile (−23.7 % per PE) against 0.765 mW per row+column for the α/β generators, putting the **power crossover at N ≈ 4.9** — the square wins from 5×5 — well *before* the area crossover at N = 7.5, and the 8×8 power margin (−8.9 %) is far larger than the area margin (−0.9 %). Replacing a multiplier array with a squarer array removes more toggling than it removes gates; the ratio tends to ≈ 0.76.
 - **Square-BFP vs baseline-BFP** — the same pattern, softened: +18.3 % at 2×2, **−2.6 % at 8×8, −6.4 % at 16×16**, crossover **N ≈ 6.0** (wins from 6×6), tending to ≈ 0.90. The BFP PE toggles ~35 % more, so the squarer's per-tile power saving shrinks to 0.098 mW/tile; but the **tree-less** α/β generators cost only 0.5625 mW per row+column (vs the square's 0.765), keeping the crossover early.
 
 - **Bit-plane BFP vs baseline-BFP** — the mirror image of its area result: +2.1 % at 2×2, **−0.30 % at 8×8, −0.75 % at 16×16**, crossover **N ≈ 5.9**, tending to only ≈ 0.988 (−1.2 %). Where area crosses over at N = 1, power does not cross until 6×6, and the asymptote is a tenth of the area asymptote. Both halves of the trade are worse in power than in area: the per-PE saving is 0.0114 mW/tile (**−1.2 %** per PE, against −3.7 % in area), while the dispatcher's overhead is **+47 %** power (0.1485 vs 0.101 mW) against +32 % area — 0.0674 mW per row+column. Replacing Booth with bit-plane selection removes gates more effectively than it removes toggling: the 32 multiplexers per DP8 switch on A's bit planes every cycle, and the pair-sum adders that moved to the dispatcher now toggle there once per column instead of going quiet inside idle PEs.
 
+- **Bit-plane-B BFP vs baseline-BFP** — the one variant that wins on power as decisively as on area: **−11.7 % already at 2×2**, −14.5 % at 8×8, −15.0 % at 16×16, crossover **N = 1**, tending to −15.6 %. Both halves of the trade invert relative to the A build: the per-PE saving is 0.1473 mW/tile (**−16.0 %** per PE) while the dispatcher overhead is only 0.0300 mW per row — so the crossover disappears entirely. Halving the bit planes halves the multiplexers *and* the compressor rows that switch every cycle, which is why the power margin (−15.6 % asymptote) slightly **exceeds** the area margin (−14.2 %) rather than falling an order of magnitude short of it as in the A build.
+
 The BFP sideband costs ~34 % power on both axes (`Baseline-BFP/Baseline ≈ 1.34` at 8×8 and 16×16), dominated by the aligners in the PE.
 
 Split by category at 8×8 (PE includes its per-PE clock gate), mW:
 
-| Category | Baseline | Square | Baseline-BFP | Square-BFP | Bit-Plane-A BFP |
-| -------- | -------- | ------ | ------------ | ---------- | ------------- |
-| PE       | 45.00    | 34.35  | 60.45        | 54.16      | 59.72         |
-| α/β      | 0.00     | 6.12   | 0.00         | 4.50       | 0.00          |
-| Dispatch | 1.61     | 1.84   | 1.86         | 2.06       | 2.40          |
-| Clock    | 0.10     | 0.24   | 0.11         | 0.11       | 0.11          |
+| Category | Baseline | Square | Baseline-BFP | Square-BFP | Bit-Plane-A BFP | Bit-Plane-B BFP |
+| -------- | -------- | ------ | ------------ | ---------- | --------------- | --------------- |
+| PE       | 45.00    | 34.35  | 60.45        | 54.16      | 59.72           | 51.04           |
+| α/β      | 0.00     | 6.12   | 0.00         | 4.50       | 0.00            | 0.00            |
+| Dispatch | 1.61     | 1.84   | 1.86         | 2.06       | 2.40            | 2.21            |
+| Clock    | 0.10     | 0.24   | 0.11         | 0.11       | 0.11            | 0.11            |
 
 The α/β generators are the whole of the square overhead and are unconditionally active (they run every cycle regardless of mode), which is why the 2×2 penalty exists and why the crossover exists at all — and why the tree-less BFP generators, which toggle less, pull the square-BFP crossover in.
 

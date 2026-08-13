@@ -8,7 +8,7 @@ Everything structural is [pe_array_bfp](./pe_array_bfp.md) — the crossed L0 pa
 
 ## What changes at the interface
 
-|                 | `pe_array_bfp`         | `pe_array_bpl_a_bfp`                   |
+|                 | `pe_array_bfp`         | `pe_array_bpl_a_bfp`                 |
 | --------------- | ---------------------- | ------------------------------------ |
 | `b_dp8_i`       | 32 bits — 8 × raw int4 | **40 bits** — 8 × 5-bit exact signed |
 | `b_sum_dp8_i`   | —                      | **24 bits** — 4 × 6-bit pair sums    |
@@ -22,13 +22,13 @@ Both B buses come from [disp_array_b_bpl_a_bfp](./disp_array_b_bpl_a_bfp.md), fo
 None — fixed to the PE configuration. Identical to [pe_array_bfp](./pe_array_bfp.md) except for the widths the wider DP8 output drives:
 
 | Localparam                    | `pe_array_bfp` | `pe_array_bpl_a_bfp` | Meaning                                     |
-| ----------------------------- | -------------- | ------------------ | ------------------------------------------- |
-| `DP8_WIDTH`                   | 20             | **22**             | each DP8 carry-save row (sign-consistent).  |
-| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8      | 8 / 4 / 8          | per-level left shift (L3 has none).         |
-| `L0_EXT`…`L3_EXT`             | 0 / 0 / 0 / 0  | **1 / 1 / 0 / 0**  | guard bits added by each level's `cpr_w_n`. |
-| `L0_WIDTH`…`L3_WIDTH`         | 28/32/40/40    | **31/36/44/44**    | internal node width at each level.          |
-| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18/29/37/38    | **18/36/40/40**    | tap width exported to the accumulator.      |
-| `EXP_IN_WIDTH` / `EXP_WIDTH`  | 6 / 7          | 6 / 7              | dispatched format exponent / product scale. |
+| ----------------------------- | -------------- | -------------------- | ------------------------------------------- |
+| `DP8_WIDTH`                   | 20             | **22**               | each DP8 carry-save row (sign-consistent).  |
+| `SH0`/`SH1`/`SH2`             | 8 / 4 / 8      | 8 / 4 / 8            | per-level left shift (L3 has none).         |
+| `L0_EXT`…`L3_EXT`             | 0 / 0 / 0 / 0  | **1 / 1 / 0 / 0**    | guard bits added by each level's `cpr_w_n`. |
+| `L0_WIDTH`…`L3_WIDTH`         | 28/32/40/40    | **31/36/44/44**      | internal node width at each level.          |
+| `L0_TAP_WIDTH`…`L3_TAP_WIDTH` | 18/29/37/38    | **18/36/40/40**      | tap width exported to the accumulator.      |
+| `EXP_IN_WIDTH` / `EXP_WIDTH`  | 6 / 7          | 6 / 7                | dispatched format exponent / product scale. |
 
 The nodes follow `L0 = DP8 + SH0 + L0_EXT`, `L1 = L0 + SH1 + L1_EXT`, `L2 = L1 + SH2 + L2_EXT`, `L3 = L2 + L3_EXT`. The **L1 tap carries its node in full** (36 = 36); L0, L2 and L3 truncate to the accumulator's tap format.
 

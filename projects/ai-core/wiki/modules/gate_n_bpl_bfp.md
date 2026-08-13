@@ -4,13 +4,20 @@
 
 ## Purpose
 
-The bit-plane [dp_8_bpl_a_bfp](./dp_8_bpl_a_bfp.md) decomposes `Σ aₖ·bₖ` over the **bit planes of A** instead of Booth-recoding B. Each lane pair contributes one 4:1 multiplexer per bit plane, selecting between `0`, `b₂ⱼ`, `b₂ⱼ₊₁` and `b₂ⱼ + b₂ⱼ₊₁`. That fourth input — the pair sum — is a function of **B alone**.
+A bit-plane DP8 decomposes `Σ aₖ·bₖ` over the bit planes of one operand instead of Booth-recoding. Each lane pair contributes one 4:1 multiplexer per bit plane, selecting between `0`, the two lane values, and **their sum** — and that fourth input is a function of the *tabulated* operand alone.
 
-This gate is where it is computed. Because it is a function of B alone it belongs in the **per-column** dispatch ([disp_array_b_bpl_a_bfp](./disp_array_b_bpl_a_bfp.md)), not inside a PE: the adders are paid `N` times per grid instead of `N²` times. That amortization is the whole reason the bit-plane variant exists — see [PE Grid (Bit-Plane-A BFP)](../architectures/top_NxN_bpl_a_bfp.md).
+This gate is where it is computed. Because it depends on one operand only it belongs in that operand's **shared dispatch**, not inside a PE: the adders are paid `N` times per grid instead of `N²` times. That amortization is the whole reason the bit-plane variants exist.
 
-Emitting both sets **already resolved to signed values** is what lets `dp_8_bpl_a_bfp` drop its `is_signed_b_i` port entirely: B's signedness is consumed here, once per column, and never reaches the PEs.
+**One gate, two builds** — the module is shared, instantiated with the roles exchanged:
 
-Contrast [gate_b_n](./gate_b_n.md), the pass/zero/negate conditioning gate that sits *upstream* of this one — this gate does no conditioning of its own, it widens and sums whatever the conditioning gate produced.
+| build                                                | tabulated operand | `WIDTH` | lives in                                                             | instances             |
+| ---------------------------------------------------- | ----------------- | ------- | -------------------------------------------------------------------- | --------------------- |
+| [bit-plane A](../architectures/top_NxN_bpl_a_bfp.md) | B (int4)          | 4       | per-**column** [disp_array_b_bpl_a_bfp](./disp_array_b_bpl_a_bfp.md) | 16 — one per DP8      |
+| [bit-plane B](../architectures/top_NxN_bpl_b_bfp.md) | A (int8)          | 8       | per-**row** [disp_array_a_bpl_b_bfp](./disp_array_a_bpl_b_bfp.md)    | 8 — one per lane pair |
+
+Emitting both sets **already resolved to signed values** is what lets the DP8 core drop the signedness port for that operand entirely: it is consumed in the dispatcher and never reaches the PEs — `is_signed_b_i` in [dp_8_bpl_a_bfp](./dp_8_bpl_a_bfp.md), `is_signed_a_i` in [dp_8_bpl_b_bfp](./dp_8_bpl_b_bfp.md).
+
+Contrast [gate_b_n](./gate_b_n.md), the pass/zero/negate conditioning gate that sits *upstream* of this one in the A build — this gate does no conditioning of its own, it widens and sums whatever it is given.
 
 ## Parameters
 
@@ -84,12 +91,14 @@ The `ext_n` widening is what makes the `add_n` exact: adding two `WIDTH+1`-bit s
 
 Words pair as `(0,1)`, `(2,3)`, `(4,5)`, `(6,7)` — the same adjacency the DP8's lane pairs use, so `sum_o[k]` is exactly what lane pair `k`'s multiplexer wants on its `11` input. The pairing never crosses a DP8 boundary, which matters for the complex modes: the two's-complement negate carry chained by the upstream [gate_b_n](./gate_b_n.md) crosses the **H/L half** boundary, never a lane pair, so a negated operand still pairs correctly.
 
-### Why this gate sits *after* the conditioning gate
+### Where it sits, in each build
 
-Order matters. The sums must be of the values the DP8 actually multiplies — zeroed for an idle lane, negated for a complex-mode imaginary term. Placing this gate before [gate_b_n](./gate_b_n.md) would sum the raw nibbles and the multiplexer's `11` input would disagree with its `01`/`10` inputs. In [disp_array_b_bpl_a_bfp](./disp_array_b_bpl_a_bfp.md) it is therefore instantiated strictly downstream of the conditioning gate.
+In the **A build** order matters: the sums must be of the values the DP8 actually multiplies — zeroed for an idle lane, negated for a complex-mode imaginary term. Placing this gate before [gate_b_n](./gate_b_n.md) would sum the raw nibbles and the multiplexer's `11` input would disagree with its `01`/`10` inputs. In [disp_array_b_bpl_a_bfp](./disp_array_b_bpl_a_bfp.md) it is therefore instantiated strictly downstream of the conditioning gate.
+
+In the **B build** there is nothing to sit after: the A path carries no conditioning gate, because a lane is idled by zeroing its **B**. In [disp_array_a_bpl_b_bfp](./disp_array_a_bpl_b_bfp.md) the gate follows the block select directly. That also allows the cheaper instantiation — both DP8s of a pair share an A block and a signedness flag, so one gate per pair suffices where the A build needs one per DP8.
 
 ## Verification
 
-Exercised through [tb_disp_array_bpl_a_bfp](../testbenches/tb_disp_array_bpl_a_bfp.md), whose golden model reproduces the widening and the four pairwise sums for all 11 modes — including the negate modes driven with the real carry-chained control, so the sums are checked on genuinely negated operands.
+Exercised through both dispatch benches, whose golden models reproduce the widening and the four pairwise sums for all 11 modes: [tb_disp_array_bpl_a_bfp](../testbenches/tb_disp_array_bpl_a_bfp.md) at `WIDTH = 4` — including the negate modes driven with the real carry-chained control, so the sums are checked on genuinely negated operands — and [tb_disp_array_bpl_b_bfp](../testbenches/tb_disp_array_bpl_b_bfp.md) at `WIDTH = 8`, where the golden also has to agree that both DP8s of a pair receive the same gate output.
 
 Source: [gate_n_bpl_bfp.sv](../../rtl/gate_n_bpl_bfp.sv)
