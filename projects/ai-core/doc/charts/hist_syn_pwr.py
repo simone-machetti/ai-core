@@ -144,7 +144,7 @@ for gi, sz in enumerate(SIZES):
             ha="center", va="top", fontsize=11, fontweight="bold")
 
 ax.set_ylabel("Normalized dynamic power [Baseline = 1]")
-ax.set_title("Dynamic Power — Baseline / Square / Baseline-BFP / Square-BFP Matrix Grid (ASAP7)")
+ax.set_title(f"Dynamic Power — {' / '.join(VARIANTS)} Matrix Grid (ASAP7)")
 ax.set_ylim(0, max(tot) * 1.15)
 ax.grid(axis="y", linestyle="--", alpha=0.35, zorder=0)
 

@@ -166,7 +166,7 @@ for gi, sz in enumerate(SIZES):
             ha="center", va="top", fontsize=11, fontweight="bold")
 
 ax.set_ylabel("Normalized cell area [Baseline = 1]")
-ax.set_title("Synthesis Cell Area — Baseline / Square / Baseline-BFP / Square-BFP Matrix Grid (ASAP7)")
+ax.set_title(f"Synthesis Cell Area — {' / '.join(VARIANTS)} Matrix Grid (ASAP7)")
 ax.set_ylim(0, max(tot) * 1.15)
 ax.grid(axis="y", linestyle="--", alpha=0.35, zorder=0)
 
