@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The 3:2 building block of the carry-save compressors [cpr_c_n](./cpr_c_n.md) and [cpr_w_n](./cpr_w_n.md) — it adds three single-bit inputs and emits their two-bit result as a sum bit (weight 1) and a carry-out bit (weight 2). Reused from `ai-core-legacy`.
+The 3:2 building block of the carry-save compressors [cpr_c_n](./cpr_c_n.md) and [cpr_w_n](./cpr_w_n.md) — it adds three single-bit inputs and emits their two-bit result as a sum bit (weight 1) and a carry-out bit (weight 2).
 
 ## Parameters
 
