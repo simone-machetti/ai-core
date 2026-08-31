@@ -4,7 +4,7 @@ Multi-project sandbox for prototyping RTL designs, built around the `ai-core` de
 
 Projects:
 
-- [`ai-core`](projects/ai-core/README.md) — next-generation AI-Core architecture (clean redesign, in progress).
+- `ai-core` — next-generation AI-Core architecture (clean redesign, in progress).
 
 This README documents the shared EDA flow: the `make` targets, their parameters, and the typical pipeline. For a project's designs, top-levels, RTL parameters, and experiments, see that project's own README.
 
