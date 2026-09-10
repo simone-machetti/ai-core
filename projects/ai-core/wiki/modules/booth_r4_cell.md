@@ -2,6 +2,8 @@
 
 `booth_r4_cell` — a single radix-4 Booth selector: turns one 3-bit window of the recoded multiplier into one partial product of the multiplicand.
 
+Also the weight-4 cell of [dp_8_nr4sd_bfp](./dp_8_nr4sd_bfp.md), where the window it reads is `{b₃, b₂, c₁}` — the Booth window with the NR4SD⁺ carry of the pair below in place of the bit below, emitted by [nr4sd_r4](./nr4sd_r4.md). The cell itself is unchanged.
+
 ## Purpose
 
 Maps a 3-bit Booth selector onto one of the five radix-4 multiples `{0, +1×, +2×, -1×, -2×}` of the multiplicand `mult_i`, producing one partial product. The output is two bits wider than the input to hold the doubled (`2×`) and negated cases. It is instantiated `PP_SIZE` times by [booth_r4](./booth_r4.md), once per selector window.

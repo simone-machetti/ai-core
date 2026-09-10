@@ -34,8 +34,9 @@ AREA = {
     "pe_array_alpha_sqr_bfp": 1226.688, "pe_array_beta_sqr_bfp": 1070.755,
     "pe_bpl_a_bfp": 5148.898, "disp_array_b_bpl_a_bfp": 616.224,
     "pe_bpl_b_bfp": 4585.206, "disp_array_a_bpl_b_bfp": 397.495,
+    "pe_nr4sd_bfp": 4659.404, "disp_array_b_nr4sd_bfp": 526.907,
     "glue_bas": 1.779, "glue_sqr": 20.383, "glue_bfp": 1.779, "glue_sqr_bfp": 3.470,
-    "glue_bpl_a_bfp": 4.753, "glue_bpl_b_bfp": 4.755,
+    "glue_bpl_a_bfp": 4.753, "glue_bpl_b_bfp": 4.755, "glue_nr4sd_bfp": 1.254,
 }
 
 VAR_AREA = {
@@ -70,6 +71,11 @@ VAR_AREA = {
         "OT": [("disp_array_a_bpl_b_bfp", "N"), ("disp_array_b", "N"),
                ("disp_array_exp_a_bfp", "N"), ("disp_array_exp_b_bfp", "N"),
                ("icg", "2N"), ("ctrl", "1"), ("glue_bpl_b_bfp", "1")]},
+    "NR4SD-BFP": {
+        "PE": [("pe_nr4sd_bfp", "N2"), ("icg", "N2")], "AB": [],
+        "OT": [("disp_array_a", "N"), ("disp_array_b_nr4sd_bfp", "N"),
+               ("disp_array_exp_a_bfp", "N"), ("disp_array_exp_b_bfp", "N"),
+               ("icg", "2N"), ("ctrl", "1"), ("glue_nr4sd_bfp", "1")]},
 }
 
 VAR_PWR = {
@@ -96,12 +102,17 @@ VAR_PWR = {
         "PE": [(0.77125, "N2"), (0.02620, "N2")], "AB": [],
         "OT": [(0.13200, "N"), (0.11500, "N"), (0.01340, "N"), (0.01610, "N"),
                (0.00673, "2N"), (0.00130, "1")]},
+    "NR4SD-BFP": {
+        "PE": [(0.88875, "N2"), (0.02550, "N2")], "AB": [],
+        "OT": [(0.10600, "N"), (0.11600, "N"), (0.01370, "N"), (0.01615, "N"),
+               (0.00673, "2N"), (0.00135, "1")]},
 }
 
 PAIRS = [("Square", "Baseline"), ("Square-BFP", "Baseline-BFP"),
-         ("Bit-Plane-A-BFP", "Baseline-BFP"), ("Bit-Plane-B-BFP", "Baseline-BFP")]
+         ("Bit-Plane-A-BFP", "Baseline-BFP"), ("Bit-Plane-B-BFP", "Baseline-BFP"),
+         ("NR4SD-BFP", "Baseline-BFP")]
 COLORS = {"Square": "#b5793f", "Square-BFP": "#5a7043", "Bit-Plane-A-BFP": "#4a6d8c",
-          "Bit-Plane-B-BFP": "#8c5a7a"}
+          "Bit-Plane-B-BFP": "#8c5a7a", "NR4SD-BFP": "#6f6f6f"}
 MARKED = [8, 16]
 TICKS = [2, 4, 8, 16, 32, 64, 128]
 

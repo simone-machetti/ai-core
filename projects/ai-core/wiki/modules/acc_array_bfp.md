@@ -2,6 +2,8 @@
 
 `acc_array_bfp` — the BFP variant of [acc_array](./acc_array.md). Same eight-lane / lane-pair-fusion shape (window the tap, tap-level MUX, accumulate MUX, CPR 3:2, [add_n](./add_n.md), L→H carry chain, output register), plus one [align_cell_bfp](./align_cell_bfp.md) per lane between the accumulate MUX and the CPR, and an exponent sideband that tracks a **running accumulator scale**. With all exponents equal every aligner is bit-transparent, so the BFP path is bit-identical to the plain-integer [acc_array](./acc_array.md).
 
+Reused **unchanged** by [pe_nr4sd_bfp](./pe_nr4sd_bfp.md): its DP8 keeps the 20-bit output, so [pe_array_nr4sd_bfp](./pe_array_nr4sd_bfp.md) lands on the same tap widths (18/29/37/38) and needs no fork the way the bit-plane builds needed [acc_array_bpl_bfp](./acc_array_bpl_bfp.md).
+
 ## Purpose
 
 The accumulator is where the tap a mode reads meets the running or external accumulator, and in BFP those two can sit at different scales. So each lane inserts an aligner before the fold: it brings the accumulator row and the tap `(sum, carry)` pair to their common scale `max(acc_exp, tap_exp)`, the smaller-exponent side arithmetic-right-shifted (truncating), then the CPR 3:2 compresses the three aligned rows exactly as in the baseline. Node and guard widths are unchanged — an aligned addend is a right-shifted (smaller) version of its integer worst case — so the mantissa datapath is [acc_array](./acc_array.md) verbatim; this page covers the exponent path and the aligner wiring.

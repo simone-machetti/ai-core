@@ -103,4 +103,4 @@ Both sides of an idle DP8's exponent are already gated to zero by the exponent d
 
 Independently, [tb_top_NxN_global](../testbenches/tb_top_NxN_global.md) instantiates this grid **next to** [top_NxN_bfp](./top_NxN_bfp.md) in one bench and asserts `golden == baseline-BFP == bit-plane-B` at max throughput — a direct RTL-vs-RTL equivalence rather than two independent comparisons against a model.
 
-Source: [top_NxN_bpl_b_bfp.sv](../../rtl/top_NxN_bpl_b_bfp.sv) — Testbench: [tb_top_NxN_bpl_b_bfp.sv](../../tb/tb_top_NxN_bpl_b_bfp.sv) — Diagram: [top_NxN_bpl_b_bfp](../../doc/diagrams/top_NxN_bpl_b_bfp.excalidraw) — Derivation: [basics.tex](../../doc/formulas/bit-plane-bfp/basics.tex)
+Source: [top_NxN_bpl_b_bfp.sv](../../rtl/top_NxN_bpl_b_bfp.sv) — Testbench: [tb_top_NxN_bpl_b_bfp.sv](../../tb/tb_top_NxN_bpl_b_bfp.sv) — Diagram: [top_NxN_bpl_b_bfp](../../doc/diagrams/top_NxN_bpl_b_bfp.excalidraw) — Derivation: [bit_plane_b.tex](../../doc/formulas/encodings/bit_plane_b.tex)

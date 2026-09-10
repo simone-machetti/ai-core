@@ -118,4 +118,4 @@ The 5:2 produces 20 bits; a final [ext_n](./ext_n.md) sign-extends the pair to 2
 
 [tb_dp_8_bpl_b_bfp](../testbenches/tb_dp_8_bpl_b_bfp.md) checks three properties on every vector — resolve, sign-consistency, and value-equivalence against a [dp_8](./dp_8.md) fed the same raw operands — under all four signedness combinations, with the bench reproducing the dispatcher's operand preparation so the DUT is exercised through the contract it sees in the grid.
 
-Source: [dp_8_bpl_b_bfp.sv](../../rtl/dp_8_bpl_b_bfp.sv) — Testbench: [tb_dp_8_bpl_b_bfp.sv](../../tb/tb_dp_8_bpl_b_bfp.sv) — Diagram: [dp_8_bpl_b_bfp](../../doc/diagrams/dp_8_bpl_b_bfp.excalidraw) — Derivation: [basics.tex](../../doc/formulas/bit-plane-bfp/basics.tex)
+Source: [dp_8_bpl_b_bfp.sv](../../rtl/dp_8_bpl_b_bfp.sv) — Testbench: [tb_dp_8_bpl_b_bfp.sv](../../tb/tb_dp_8_bpl_b_bfp.sv) — Diagram: [dp_8_bpl_b_bfp](../../doc/diagrams/dp_8_bpl_b_bfp.excalidraw) — Derivation: [bit_plane_b.tex](../../doc/formulas/encodings/bit_plane_b.tex)

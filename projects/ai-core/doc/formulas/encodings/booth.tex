@@ -1,0 +1,77 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\setlength{\mathindent}{1.5em}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Radix-4 Booth}}\\[4pt]
+{\large signed digits from an overlapping 3-bit window of $B$}
+\end{center}
+
+\vspace{3em}
+
+\noindent\textbf{Step 1 --- the number}
+
+\noindent $B$ is an $n$-bit two's complement value ($n$ even). The top bit counts negative:
+\[
+B \;=\; -\,2^{n-1} B^{\,n-1} \;+\; \sum_{j=0}^{n-2} 2^{j} \, B^{\,j}
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- the digit}
+
+\noindent Each digit reads a 3-bit window; neighbouring digits share one bit ($B^{\,-1} = 0$):
+\[
+B \;=\; \sum_{j=0}^{n/2-1} 4^{j} \, d_j
+\qquad\qquad
+d_j \;=\; -\,2 \, B^{\,2j+1} + B^{\,2j} + B^{\,2j-1} \;\in\; \{-2, -1, 0, 1, 2\}
+\]
+
+\noindent No carry travels between digits: $d_j$ is a local function of its window.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 3 --- why it is exact}
+
+\noindent Each $B^{\,2j+1}$ below the top is counted as $-2 \cdot 4^{j}$ in $d_j$ and
+$+4^{j+1}$ in $d_{j+1}$: net $2^{\,2j+1}$, its weight in Step 1. The top bit is counted
+once, as $-2 \cdot 4^{n/2-1} = -2^{\,n-1}$: its negative weight in Step 1. The sign is
+built into the digit rule.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 4 --- the product}
+\[
+A \, B \;=\; \sum_{j=0}^{n/2-1} 4^{j} \, d_j A
+\]
+
+\noindent $d_j A$ takes one of five values:
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{c c c | r | l}
+$B^{\,2j+1}$ & $B^{\,2j}$ & $B^{\,2j-1}$ & $d_j$ & \multicolumn{1}{c}{$d_j A$} \\
+\hline
+$0$ & $0$ & $0$ & $0$  & $0$ \\
+$0$ & $0$ & $1$ & $1$  & $A$ \\
+$0$ & $1$ & $0$ & $1$  & $A$ \\
+$0$ & $1$ & $1$ & $2$  & $2A$ \\
+$1$ & $0$ & $0$ & $-2$ & $-2A$ \\
+$1$ & $0$ & $1$ & $-1$ & $-A$ \\
+$1$ & $1$ & $0$ & $-1$ & $-A$ \\
+$1$ & $1$ & $1$ & $0$  & $0$ \\
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+
+\noindent $n/2$ digits, $n/2$ partial products. Five digit values in radix four:
+redundant, three control bits, full $\pm 2$ range, no carry.
+
+\end{document}

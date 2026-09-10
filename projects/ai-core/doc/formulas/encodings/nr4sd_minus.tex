@@ -1,0 +1,83 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\setlength{\mathindent}{1.5em}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Radix-4 NR4SD$^{-}$}}\\[4pt]
+{\large non-redundant signed digits of $B$ with an early carry}
+\end{center}
+
+\vspace{3em}
+
+\noindent\textbf{Step 1 --- the number}
+
+\noindent $B$ is an $n$-bit two's complement value ($n$ even). The top bit counts negative:
+\[
+B \;=\; -\,2^{n-1} B^{\,n-1} \;+\; \sum_{j=0}^{n-2} 2^{j} \, B^{\,j}
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- recode the bit pattern in pairs, with a carry}
+
+\noindent A pair plus its carry in gives a partial sum; a sum of $2$ or more is pushed up
+as a carry, one step earlier than NR4SD$^{+}$:
+\[
+s_j \;=\; 2 \, B^{\,2j+1} + B^{\,2j} + c_j
+\qquad
+c_{j+1} \;=\; \bigl[\, s_j \geq 2 \,\bigr]
+\qquad
+d_j \;=\; s_j - 4 \, c_{j+1} \;\in\; \{-2, -1, 0, 1\}
+\qquad
+c_0 = 0
+\]
+
+\noindent $d_j$ depends on the carry, hence on every lower bit: not a local function of its pair.
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{c c c | c | r | c}
+$B^{\,2j+1}$ & $B^{\,2j}$ & $c_j$ & $s_j$ & $d_j$ & $c_{j+1}$ \\
+\hline
+$0$ & $0$ & $0$ & $0$ & $0$  & $0$ \\
+$0$ & $0$ & $1$ & $1$ & $1$  & $0$ \\
+$0$ & $1$ & $0$ & $1$ & $1$  & $0$ \\
+$0$ & $1$ & $1$ & $2$ & $-2$ & $1$ \\
+$1$ & $0$ & $0$ & $2$ & $-2$ & $1$ \\
+$1$ & $0$ & $1$ & $3$ & $-1$ & $1$ \\
+$1$ & $1$ & $0$ & $3$ & $-1$ & $1$ \\
+$1$ & $1$ & $1$ & $4$ & $0$  & $1$ \\
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 3 --- the top digit}
+
+\noindent The pairs count $B^{\,n-1}$ as $+2^{n-1}$, Step 1 as $-2^{n-1}$: the difference
+$-2^{n} = -4^{n/2}$ has the weight of the last carry, so together they are one extra digit:
+\[
+d_{n/2} \;=\; c_{n/2} - B^{\,n-1} \;\in\; \{-1, 0, 1\}
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 4 --- the number and the product}
+\[
+B \;=\; \sum_{j=0}^{n/2} 4^{j} \, d_j
+\qquad\qquad
+A \, B \;=\; \sum_{j=0}^{n/2} 4^{j} \, d_j A
+\]
+
+\noindent $d_j A \in \{\, 0,\; A,\; -A,\; -2A \,\}$: the shifted multiple only appears negated,
+so the shift and the negation always combine. $n/2 + 1$ digits, $n/2 + 1$ partial
+products. Four digit values in radix four: non-redundant, two control bits, at the
+price of a carry chain, the extra digit and the $-2A$ multiple.
+
+\end{document}

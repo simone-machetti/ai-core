@@ -2,6 +2,8 @@
 
 `dp_8` is the core MAC primitive: it multiply-accumulates eight `int8 × int4` products into a single carry-save dot product, with each operand's signedness chosen at runtime. See the diagram companion at [doc/diagrams/dp_8.md](../../doc/diagrams/dp_8.excalidraw).
 
+Siblings with a different multiplier: [dp_8_bpl_a_bfp](./dp_8_bpl_a_bfp.md) and [dp_8_bpl_b_bfp](./dp_8_bpl_b_bfp.md) (bit-plane selection, no recoding) and [dp_8_nr4sd_bfp](./dp_8_nr4sd_bfp.md) (two pre-recoded radix-4 digits per lane instead of three Booth windows, same 20-bit output).
+
 ## Purpose
 
 `dp_8` computes the length-8 dot product `Σ_{k=0..7} a_k · b_k` of eight `int8 × int4` products and returns it in **carry-save form** — two rows `sum_o`, `carry_o` whose arithmetic sum is the dot product — leaving the final carry-propagate resolve to the downstream reduction tree in [pe_array](./pe_array.md). It is the most heavily replicated primitive in the design (`pe_array` instantiates 16 of them), so it is hand-sized to the minimum width for its fixed shape while the leaf primitives it builds on stay general. Both operands are independently signed or unsigned (`is_signed_a_i` / `is_signed_b_i`) because the operating modes split each field into a signed high half and an unsigned low half, so all four sign combinations occur across the array.

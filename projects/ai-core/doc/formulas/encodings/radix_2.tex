@@ -1,0 +1,50 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\setlength{\mathindent}{1.5em}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Radix 2}}\\[4pt]
+{\large plain binary --- one digit per bit of $B$}
+\end{center}
+
+\vspace{3em}
+
+\noindent\textbf{Step 1 --- the number}
+
+\noindent $B$ is an $n$-bit two's complement value with bits $B^{\,j} \in \{0, 1\}$.
+The top bit counts negative:
+\[
+B \;=\; -\,2^{n-1} B^{\,n-1} \;+\; \sum_{j=0}^{n-2} 2^{j} \, B^{\,j}
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- the product}
+\[
+A \, B \;=\; -\,2^{n-1} \, B^{\,n-1} A \;+\; \sum_{j=0}^{n-2} 2^{j} \, B^{\,j} A
+\]
+
+\noindent $B^{\,j} A$ is a selection, not a product:
+
+\vspace{1em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{c | l}
+$B^{\,j}$ & \multicolumn{1}{c}{$B^{\,j} A$} \\
+\hline
+$0$ & $0$ \\
+$1$ & $A$ \\
+\end{tabular}
+\end{center}
+
+\vspace{1.5em}
+
+\noindent $n$ digits, $n$ partial products, one multiple ($A$). The sign never enters the
+digits: it is the weight of the top plane, so exactly one row is subtracted.
+
+\end{document}

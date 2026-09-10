@@ -31,12 +31,13 @@ AREA = {
     "Square-BFP":     1892.601,
     "Bit-Plane-A-BFP":2904.803,
     "Bit-Plane-B-BFP":1871.605,
+    "NR4SD-BFP":      2353.970,
 }
 
 VARIANTS = ["Baseline", "Square", "Baseline-BFP", "Square-BFP", "Bit-Plane-A-BFP",
-            "Bit-Plane-B-BFP"]
+            "Bit-Plane-B-BFP", "NR4SD-BFP"]
 CORRESP = {"Square": "Baseline", "Square-BFP": "Baseline-BFP", "Bit-Plane-A-BFP": "Baseline-BFP",
-           "Bit-Plane-B-BFP": "Baseline-BFP"}
+           "Bit-Plane-B-BFP": "Baseline-BFP", "NR4SD-BFP": "Baseline-BFP"}
 COLORS = {"DP8-Array": "#d4a480cc"}
 
 PITCH, WIDTH = 0.80, 0.72

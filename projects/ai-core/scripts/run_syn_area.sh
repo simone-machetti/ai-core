@@ -3,9 +3,10 @@
 # Author: Simone Machetti
 #
 # Description:
-#   Area synthesis runs for the five PE-grid variants - baseline (top_NxN),
+#   Area synthesis runs for the seven PE-grid variants - baseline (top_NxN),
 #   square (top_NxN_sqr), BFP (top_NxN_bfp), square-BFP (top_NxN_sqr_bfp) and
-#   bit-plane-A BFP (top_NxN_bpl_a_bfp) and bit-plane-B BFP (top_NxN_bpl_b_bfp).
+#   bit-plane-A BFP (top_NxN_bpl_a_bfp), bit-plane-B BFP (top_NxN_bpl_b_bfp) and
+#   NR4SD BFP (top_NxN_nr4sd_bfp).
 #   Every run is at 2x2 only: pass A synthesizes each component once on its own
 #   (netlist -> projects/ai-core/imp/<module>/output/netlist.v, area ->
 #   report/area.rpt), pass B synthesizes the 2x2 grids linking those netlists via
@@ -37,6 +38,9 @@ BB_BPL_B_BFP="pe_bpl_b_bfp ctrl disp_array_a_bpl_b_bfp disp_array_exp_a_bfp disp
 
 BB_BPL_A_BFP="pe_bpl_a_bfp ctrl disp_array_a disp_array_exp_a_bfp disp_array_b_bpl_a_bfp \
             disp_array_exp_b_bfp icg"
+
+BB_NR4SD_BFP="pe_nr4sd_bfp ctrl disp_array_a disp_array_exp_a_bfp disp_array_b_nr4sd_bfp \
+              disp_array_exp_b_bfp icg"
 
 # -----------------------------------------------------------------------------
 # Pass A - per-module runs
@@ -77,6 +81,10 @@ make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_a_bfp OUT_DIR=pe_bpl_a_bfp_syn
 make syn PROJECT=ai-core TOP_LEVEL=disp_array_a_bpl_b_bfp OUT_DIR=disp_array_a_bpl_b_bfp_syn
 make syn PROJECT=ai-core TOP_LEVEL=pe_bpl_b_bfp OUT_DIR=pe_bpl_b_bfp_syn
 
+# NR4SD BFP
+make syn PROJECT=ai-core TOP_LEVEL=disp_array_b_nr4sd_bfp OUT_DIR=disp_array_b_nr4sd_bfp_syn
+make syn PROJECT=ai-core TOP_LEVEL=pe_nr4sd_bfp OUT_DIR=pe_nr4sd_bfp_syn
+
 # -----------------------------------------------------------------------------
 # Pass B - 2x2 grids (blackboxed)
 # -----------------------------------------------------------------------------
@@ -97,3 +105,6 @@ make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bpl_a_bfp OUT_DIR=top_2x2_bpl_a_bfp_s
 
 make syn PROJECT=ai-core TOP_LEVEL=top_NxN_bpl_b_bfp OUT_DIR=top_2x2_bpl_b_bfp_syn PARAMS="N=2" \
     BLACKBOX_MODULES="$BB_BPL_B_BFP"
+
+make syn PROJECT=ai-core TOP_LEVEL=top_NxN_nr4sd_bfp OUT_DIR=top_2x2_nr4sd_bfp_syn PARAMS="N=2" \
+    BLACKBOX_MODULES="$BB_NR4SD_BFP"

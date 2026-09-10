@@ -1,0 +1,129 @@
+\documentclass[fleqn]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\setlength{\mathindent}{1.5em}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{NR4SD$^{+}$/Booth, 2 PPs per slice}}\\[4pt]
+{\large a 4-bit slice of $B$ plus the carry from the slice below, in two digits}
+\end{center}
+
+\vspace{3em}
+
+\noindent\textbf{Step 1 --- the slice and its carry in}
+
+\noindent $B$ is split into nibbles as in the Booth 2-PP sheet: every nibble is read as
+signed, and the nibble above receives the top bit of the one below as a carry in $c$.
+For a nibble $b_3 b_2 b_1 b_0$ the value to encode is
+\[
+V \;=\; -\,8\,b_3 + 4\,b_2 + 2\,b_1 + b_0 + c
+\;\in\; [-8, 8]
+\]
+\[
+c \;=\; \begin{cases}
+0 & \text{lowest nibble, or a whole 4-bit operand}\\
+b_3 \text{ of the nibble below} & \text{otherwise}
+\end{cases}
+\]
+
+\noindent Two NR4SD$^{+}$ digits span $[-5, 10]$ and miss $-6, -7, -8$: on its own the encoding
+needs a third digit. The fix is one Booth digit on top.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- the low pair: NR4SD$^{+}$ with the carry in}
+
+\noindent The low pair is recoded as in NR4SD$^{+}$, with $c$ as its carry in:
+\[
+s_0 \;=\; 2\,b_1 + b_0 + c
+\qquad
+c_1 \;=\; \bigl[\, s_0 \geq 3 \,\bigr]
+\qquad
+d_0 \;=\; s_0 - 4\,c_1 \;\in\; \{-1, 0, 1, 2\}
+\]
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{c c c | c | r | c}
+$b_1$ & $b_0$ & $c$ & $s_0$ & $d_0$ & $c_1$ \\
+\hline
+$0$ & $0$ & $0$ & $0$ & $0$  & $0$ \\
+$0$ & $0$ & $1$ & $1$ & $1$  & $0$ \\
+$0$ & $1$ & $0$ & $1$ & $1$  & $0$ \\
+$0$ & $1$ & $1$ & $2$ & $2$  & $0$ \\
+$1$ & $0$ & $0$ & $2$ & $2$  & $0$ \\
+$1$ & $0$ & $1$ & $3$ & $-1$ & $1$ \\
+$1$ & $1$ & $0$ & $3$ & $-1$ & $1$ \\
+$1$ & $1$ & $1$ & $4$ & $0$  & $1$ \\
+\end{tabular}
+\end{center}
+
+\newpage
+
+\noindent\textbf{Step 3 --- the top pair: a Booth digit with the carry as its bit below}
+
+\noindent The top pair is read as a signed 2-bit value and the carry $c_1$ is added to it.
+That is exactly Booth's window $(b_3, b_2, b_{\text{below}})$ with $c_1$ in place of the bit below:
+\[
+d_1 \;=\; -\,2\,b_3 + b_2 + c_1 \;\in\; \{-2, -1, 0, 1, 2\}
+\]
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{c c c | r}
+$b_3$ & $b_2$ & $c_1$ & $d_1$ \\
+\hline
+$0$ & $0$ & $0$ & $0$  \\
+$0$ & $0$ & $1$ & $1$  \\
+$0$ & $1$ & $0$ & $1$  \\
+$0$ & $1$ & $1$ & $2$  \\
+$1$ & $0$ & $0$ & $-2$ \\
+$1$ & $0$ & $1$ & $-1$ \\
+$1$ & $1$ & $0$ & $-1$ \\
+$1$ & $1$ & $1$ & $0$  \\
+\end{tabular}
+\end{center}
+
+\noindent No carry leaves the top pair: there is no third digit.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 4 --- why it is exact}
+
+\noindent Group the value of Step 1 by pairs and substitute the two digits:
+\[
+V \;=\; 4\,(-\,2\,b_3 + b_2) + \underbrace{(2\,b_1 + b_0 + c)}_{s_0 \,=\, d_0 + 4\,c_1}
+\;=\; 4\,(-\,2\,b_3 + b_2 + c_1) + d_0
+\;=\; 4\,d_1 + d_0
+\]
+
+\noindent The pair of digits reaches $4 \cdot 2 + 2 = 10$ upwards and $4 \cdot (-2) - 1 = -9$
+downwards, so $[-9, 10] \supset [-8, 8]$ covers every slice with any carry in. The
+$-2$ of the Booth digit is what recovers $-6, -7, -8$; the NR4SD$^{+}$ low digit keeps
+its four values, so the low cell never needs $-2A$.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 5 --- the product and the dot product}
+\[
+A\,V \;=\; 4\,d_1 A + d_0 A
+\]
+\[
+d_0 A \in \{\, 0,\; A,\; 2A,\; -A \,\}
+\qquad\qquad
+d_1 A \in \{\, 0,\; \pm A,\; \pm 2A \,\}
+\]
+
+\noindent Two partial products per lane: an NR4SD$^{+}$ cell (2 control bits) at weight $1$
+and a Booth cell (3-bit window) at weight $4$. Five control bits per lane against six for
+three NR4SD$^{+}$ digits and nine for three Booth digits.
+
+\noindent The slice values are those of the Booth 2-PP sheet, only the digits differ, so
+Steps 4 and 5 of that sheet apply unchanged: a low nibble read as signed is off by
+$-16\,b_3$, the nibble above gains $+b_3$ through $c$, and the $\times 16$ of the tree
+cancels the two, element by element, whatever the grouping of the DP8s.
+
+\end{document}
