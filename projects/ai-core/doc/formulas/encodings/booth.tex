@@ -2,76 +2,101 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{array}
+\usepackage[left=2cm,right=2cm,top=1.5cm,bottom=1.5cm]{geometry}
 \setlength{\mathindent}{1.5em}
+
+\newcommand{\Rf}{R\bigl(B_i^{\,2j+1},\, B_i^{\,2j},\, B_i^{\,2j-1}\bigr)}
 
 \begin{document}
 
 \begin{center}
-{\LARGE \textbf{Radix-4 Booth}}\\[4pt]
-{\large signed digits from an overlapping 3-bit window of $B$}
+{\LARGE \textbf{Booth Radix-4}}\\[4pt]
+{\large DP8 (8$\times$4) --- decomposition over the Booth digits of $B$}
 \end{center}
 
-\vspace{3em}
+\vspace{1.5em}
 
-\noindent\textbf{Step 1 --- the number}
-
-\noindent $B$ is an $n$-bit two's complement value ($n$ even). The top bit counts negative:
+\noindent\textbf{Step 1 --- the dot product}
 \[
-B \;=\; -\,2^{n-1} B^{\,n-1} \;+\; \sum_{j=0}^{n-2} 2^{j} \, B^{\,j}
+\sum_{i=0}^{7} A_i \, B_i
 \]
 
 \vspace{0.5em}
 
-\noindent\textbf{Step 2 --- the digit}
+\noindent\textbf{Step 2 --- recode $B$ into radix-4 digits and exchange the sums}
 
-\noindent Each digit reads a 3-bit window; neighbouring digits share one bit ($B^{\,-1} = 0$):
+\noindent Each $B_i$ is a 4-bit value read as signed; an overlapping 3-bit window gives one
+digit per bit pair, $B_i = \sum_{j=0}^{1} 4^{j} d_i^{\,j}$ with
+$d_i^{\,j} = -\,2\,B_i^{\,2j+1} + B_i^{\,2j} + B_i^{\,2j-1} \in \{-2,\dots,2\}$, so
 \[
-B \;=\; \sum_{j=0}^{n/2-1} 4^{j} \, d_j
-\qquad\qquad
-d_j \;=\; -\,2 \, B^{\,2j+1} + B^{\,2j} + B^{\,2j-1} \;\in\; \{-2, -1, 0, 1, 2\}
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{i=0}^{7} \Biggl[\, \sum_{j=0}^{1} 4^{j} d_i^{\,j} \Biggr] A_i
+  \;=\; \sum_{j=0}^{1} 4^{j} \sum_{i=0}^{7} d_i^{\,j} \, A_i
 \]
 
-\noindent No carry travels between digits: $d_j$ is a local function of its window.
+\noindent The bit below the nibble, $B_i^{\,-1}$, is $0$ for a whole 4-bit operand and the
+top bit of the nibble below when $B_i$ is a slice of a wider $B$ (Step 5).
 
 \vspace{0.5em}
 
-\noindent\textbf{Step 3 --- why it is exact}
-
-\noindent Each $B^{\,2j+1}$ below the top is counted as $-2 \cdot 4^{j}$ in $d_j$ and
-$+4^{j+1}$ in $d_{j+1}$: net $2^{\,2j+1}$, its weight in Step 1. The top bit is counted
-once, as $-2 \cdot 4^{n/2-1} = -2^{\,n-1}$: its negative weight in Step 1. The sign is
-built into the digit rule.
-
-\vspace{0.5em}
-
-\noindent\textbf{Step 4 --- the product}
+\noindent\textbf{Step 3 --- the partial product}
 \[
-A \, B \;=\; \sum_{j=0}^{n/2-1} 4^{j} \, d_j A
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{j=0}^{1} 4^{j} \sum_{i=0}^{7}
+        \underbrace{\Bigl[\, d_i^{\,j} \, A_i \Bigr]}_{\textstyle \Rf}
 \]
 
-\noindent $d_j A$ takes one of five values:
+\noindent $\Rf$ depends on the three bits of the window and takes one of five values:
 
 \vspace{0.5em}
 
 \begin{center}
-\renewcommand{\arraystretch}{1.35}
-\begin{tabular}{c c c | r | l}
-$B^{\,2j+1}$ & $B^{\,2j}$ & $B^{\,2j-1}$ & $d_j$ & \multicolumn{1}{c}{$d_j A$} \\
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{c c c | c | l}
+$B_i^{\,2j+1}$ & $B_i^{\,2j}$ & $B_i^{\,2j-1}$ & $d_i^{\,j}$ & \multicolumn{1}{c}{$R$} \\
 \hline
 $0$ & $0$ & $0$ & $0$  & $0$ \\
-$0$ & $0$ & $1$ & $1$  & $A$ \\
-$0$ & $1$ & $0$ & $1$  & $A$ \\
-$0$ & $1$ & $1$ & $2$  & $2A$ \\
-$1$ & $0$ & $0$ & $-2$ & $-2A$ \\
-$1$ & $0$ & $1$ & $-1$ & $-A$ \\
-$1$ & $1$ & $0$ & $-1$ & $-A$ \\
+$0$ & $0$ & $1$ & $+1$ & $A_i$ \\
+$0$ & $1$ & $0$ & $+1$ & $A_i$ \\
+$0$ & $1$ & $1$ & $+2$ & $2A_i$ \\
+$1$ & $0$ & $0$ & $-2$ & $-2A_i$ \\
+$1$ & $0$ & $1$ & $-1$ & $-A_i$ \\
+$1$ & $1$ & $0$ & $-1$ & $-A_i$ \\
 $1$ & $1$ & $1$ & $0$  & $0$ \\
 \end{tabular}
 \end{center}
 
 \vspace{0.5em}
 
-\noindent $n/2$ digits, $n/2$ partial products. Five digit values in radix four:
-redundant, three control bits, full $\pm 2$ range, no carry.
+\noindent\textbf{Step 4 --- split the work}
+
+\noindent The encoding is a function of $B$ alone, so it is done in the dispatcher, which
+sends the digits $d_i^{\,j}$ --- the control signals of the selection multiplexers --- to the
+PE; only the selection of the multiple stays inside:
+\[
+\underbrace{\bigl\{\, B_i^{\,2j+1},\; B_i^{\,2j},\; B_i^{\,2j-1} \,\bigr\}
+  \;\longrightarrow\; d_i^{\,j}}_{\textstyle \text{dispatcher: encoding}}
+\qquad\longrightarrow\qquad
+\underbrace{\sum_{j=0}^{1} 4^{j} \sum_{i=0}^{7} d_i^{\,j} \, A_i}_{\textstyle \text{PE: selection}}
+\]
+
+\noindent Each $d_i^{\,j}$ travels as its 3-bit window $\{B_i^{\,2j+1}, B_i^{\,2j}, B_i^{\,2j-1}\}$,
+which the cell decodes into one of $\{0, \pm A_i, \pm 2A_i\}$: 6 control bits per lane.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 5 --- slices of a wider $B$}
+
+\noindent A lower nibble $L$ read as signed is short by $16\,b_3$; the bit below hands $+b_3$ to the
+upper nibble $H$ in the DP8 above, and the $\times 16$ of the tree cancels the two,
+element by element, whatever the grouping of the DP8s:
+\[
+16\,(H + b_3)\,A \;+\; (L - 16\,b_3)\,A \;=\; (16\,H + L)\,A
+\]
+
+\vspace{0.5em}
+
+\noindent $B$ is the narrow operand: 2 digits $\times$ 8 lanes = 16 selections of
+10 bits per DP8, each over $\{0, \pm A_i, \pm 2A_i\}$.
 
 \end{document}

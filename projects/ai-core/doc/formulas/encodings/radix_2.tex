@@ -2,49 +2,82 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{array}
+\usepackage[left=2cm,right=2cm,top=1.5cm,bottom=1.5cm]{geometry}
 \setlength{\mathindent}{1.5em}
+
+\newcommand{\Rf}{R\bigl(B_i^{\,j}\bigr)}
 
 \begin{document}
 
 \begin{center}
-{\LARGE \textbf{Radix 2}}\\[4pt]
-{\large plain binary --- one digit per bit of $B$}
-\end{center}
-
-\vspace{3em}
-
-\noindent\textbf{Step 1 --- the number}
-
-\noindent $B$ is an $n$-bit two's complement value with bits $B^{\,j} \in \{0, 1\}$.
-The top bit counts negative:
-\[
-B \;=\; -\,2^{n-1} B^{\,n-1} \;+\; \sum_{j=0}^{n-2} 2^{j} \, B^{\,j}
-\]
-
-\vspace{0.5em}
-
-\noindent\textbf{Step 2 --- the product}
-\[
-A \, B \;=\; -\,2^{n-1} \, B^{\,n-1} A \;+\; \sum_{j=0}^{n-2} 2^{j} \, B^{\,j} A
-\]
-
-\noindent $B^{\,j} A$ is a selection, not a product:
-
-\vspace{1em}
-
-\begin{center}
-\renewcommand{\arraystretch}{1.35}
-\begin{tabular}{c | l}
-$B^{\,j}$ & \multicolumn{1}{c}{$B^{\,j} A$} \\
-\hline
-$0$ & $0$ \\
-$1$ & $A$ \\
-\end{tabular}
+{\LARGE \textbf{Radix-2}}\\[4pt]
+{\large DP8 (8$\times$4) --- one digit per bit of $B$}
 \end{center}
 
 \vspace{1.5em}
 
-\noindent $n$ digits, $n$ partial products, one multiple ($A$). The sign never enters the
-digits: it is the weight of the top plane, so exactly one row is subtracted.
+\noindent\textbf{Step 1 --- the dot product}
+\[
+\sum_{i=0}^{7} A_i \, B_i
+\]
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 2 --- expand $B$ into its bits and exchange the sums}
+
+\noindent Each $B_i$ is a 4-bit value read as signed: the top bit counts negative,
+$B_i = \sum_{j=0}^{3} w_j \, B_i^{\,j}$ with $w = (1, 2, 4, -8)$, so
+\[
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{i=0}^{7} \Biggl[\, \sum_{j=0}^{3} w_j \, B_i^{\,j} \Biggr] A_i
+  \;=\; \sum_{j=0}^{3} w_j \sum_{i=0}^{7} B_i^{\,j} \, A_i
+\]
+
+\noindent When $B_i$ is a lower slice of a wider $B$ the top bit is read unsigned, $w_3 = +8$.
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 3 --- the partial product}
+\[
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{j=0}^{3} w_j \sum_{i=0}^{7}
+        \underbrace{\Bigl[\, B_i^{\,j} \, A_i \Bigr]}_{\textstyle \Rf}
+\]
+
+\noindent $\Rf$ depends on one bit and takes one of two values; the sign never enters
+the digit, it is the weight of the top plane, so exactly one row is subtracted:
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{c | c | l}
+$B_i^{\,j}$ & $d_i^{\,j}$ & \multicolumn{1}{c}{$R$} \\
+\hline
+$0$ & $0$ & $0$ \\
+$1$ & $1$ & $A_i$ \\
+\end{tabular}
+\end{center}
+
+\vspace{0.8em}
+
+\noindent\textbf{Step 4 --- split the work}
+
+\noindent There is nothing to encode: the digit is the bit itself, and the dispatcher sends
+it to the PE as the control signal of the selection; only the selection stays inside:
+\[
+\underbrace{\bigl\{\, B_i^{\,j} \,\bigr\} \;\longrightarrow\; d_i^{\,j}}_{\textstyle \text{dispatcher: encoding}}
+\qquad\longrightarrow\qquad
+\underbrace{\sum_{j=0}^{3} w_j \sum_{i=0}^{7} d_i^{\,j} \, A_i}_{\textstyle \text{PE: selection}}
+\]
+
+\noindent Each $d_i^{\,j}$ travels as its bit, which the cell turns into one of $\{0, A_i\}$:
+4 control bits per lane.
+
+\vspace{0.8em}
+
+\noindent $B$ is the narrow operand: 4 digits $\times$ 8 lanes = 32 selections of
+8 bits per DP8, one multiple ($A_i$) and no encoder, at twice the rows of every
+radix-4 scheme.
 
 \end{document}

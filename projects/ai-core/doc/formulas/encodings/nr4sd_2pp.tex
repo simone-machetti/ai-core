@@ -2,128 +2,134 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{array}
+\usepackage[left=2cm,right=2cm,top=1.5cm,bottom=1.5cm]{geometry}
 \setlength{\mathindent}{1.5em}
+
+\newcommand{\Rl}{R_0\bigl(B_i^{\,1},\, B_i^{\,0},\, c_i\bigr)}
+\newcommand{\Rh}{R_1\bigl(B_i^{\,3},\, B_i^{\,2},\, c_i'\bigr)}
 
 \begin{document}
 
 \begin{center}
-{\LARGE \textbf{NR4SD$^{+}$/Booth, 2 PPs per slice}}\\[4pt]
-{\large a 4-bit slice of $B$ plus the carry from the slice below, in two digits}
+{\LARGE \textbf{NR4SD$^{+}$ / Booth, 2 PPs}}\\[4pt]
+{\large DP8 (8$\times$4) --- NR4SD$^{+}$ low digit, Booth top digit, two per nibble}
 \end{center}
 
-\vspace{3em}
+\vspace{1.5em}
 
-\noindent\textbf{Step 1 --- the slice and its carry in}
-
-\noindent $B$ is split into nibbles as in the Booth 2-PP sheet: every nibble is read as
-signed, and the nibble above receives the top bit of the one below as a carry in $c$.
-For a nibble $b_3 b_2 b_1 b_0$ the value to encode is
+\noindent\textbf{Step 1 --- the dot product}
 \[
-V \;=\; -\,8\,b_3 + 4\,b_2 + 2\,b_1 + b_0 + c
-\;\in\; [-8, 8]
+\sum_{i=0}^{7} A_i \, B_i
 \]
-\[
-c \;=\; \begin{cases}
-0 & \text{lowest nibble, or a whole 4-bit operand}\\
-b_3 \text{ of the nibble below} & \text{otherwise}
-\end{cases}
-\]
-
-\noindent Two NR4SD$^{+}$ digits span $[-5, 10]$ and miss $-6, -7, -8$: on its own the encoding
-needs a third digit. The fix is one Booth digit on top.
 
 \vspace{0.5em}
 
-\noindent\textbf{Step 2 --- the low pair: NR4SD$^{+}$ with the carry in}
+\noindent\textbf{Step 2 --- recode $B$ into radix-4 digits and exchange the sums}
 
-\noindent The low pair is recoded as in NR4SD$^{+}$, with $c$ as its carry in:
+\noindent Each $B_i$ is a 4-bit value read as signed, plus a carry in $c_i$. The low pair is
+recoded NR4SD$^{+}$ and pushes a carry $c_i'$ into the top pair, which is read as a Booth
+digit:
 \[
-s_0 \;=\; 2\,b_1 + b_0 + c
+s_i = 2\,B_i^{\,1} + B_i^{\,0} + c_i
 \qquad
-c_1 \;=\; \bigl[\, s_0 \geq 3 \,\bigr]
+c_i' = \bigl[\, s_i \geq 3 \,\bigr]
 \qquad
-d_0 \;=\; s_0 - 4\,c_1 \;\in\; \{-1, 0, 1, 2\}
+d_i^{\,0} = s_i - 4\,c_i' \in \{-1, 0, 1, 2\}
+\qquad
+d_i^{\,1} = -\,2\,B_i^{\,3} + B_i^{\,2} + c_i' \in \{-2,\dots,2\}
+\]
+\[
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{i=0}^{7} \Biggl[\, \sum_{j=0}^{1} 4^{j} d_i^{\,j} \Biggr] A_i
+  \;=\; \sum_{j=0}^{1} 4^{j} \sum_{i=0}^{7} d_i^{\,j} \, A_i
 \]
 
+\noindent Two NR4SD$^{+}$ digits span $[-5, 10]$ and miss $-6, -7, -8$; the Booth top digit
+brings the $-2$, so two digits span $[-9, 10]$ and cover a signed nibble plus carry in.
+The carry in $c_i$ is $0$ for a whole 4-bit operand and the top bit of the nibble below
+when $B_i$ is a slice of a wider $B$ (Step 5).
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 3 --- the partial products}
+\[
+\sum_{i=0}^{7} A_i \, B_i
+  \;=\; \sum_{i=0}^{7}
+        \underbrace{\Bigl[\, d_i^{\,0} \, A_i \Bigr]}_{\textstyle \Rl}
+  \;+\; 4 \sum_{i=0}^{7}
+        \underbrace{\Bigl[\, d_i^{\,1} \, A_i \Bigr]}_{\textstyle \Rh}
+\]
+
+\noindent $\Rl$ depends on the low pair and the carry in and takes one of four values;
+$\Rh$ is the Booth table with $c_i'$ as the bit below:
+
+\vspace{0.5em}
+
 \begin{center}
-\renewcommand{\arraystretch}{1.35}
-\begin{tabular}{c c c | c | r | c}
-$b_1$ & $b_0$ & $c$ & $s_0$ & $d_0$ & $c_1$ \\
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{c c c | c | c | l}
+$B_i^{\,1}$ & $B_i^{\,0}$ & $c_i$ & $c_i'$ & $d_i^{\,0}$ & \multicolumn{1}{c}{$R_0$} \\
 \hline
 $0$ & $0$ & $0$ & $0$ & $0$  & $0$ \\
-$0$ & $0$ & $1$ & $1$ & $1$  & $0$ \\
-$0$ & $1$ & $0$ & $1$ & $1$  & $0$ \\
-$0$ & $1$ & $1$ & $2$ & $2$  & $0$ \\
-$1$ & $0$ & $0$ & $2$ & $2$  & $0$ \\
-$1$ & $0$ & $1$ & $3$ & $-1$ & $1$ \\
-$1$ & $1$ & $0$ & $3$ & $-1$ & $1$ \\
-$1$ & $1$ & $1$ & $4$ & $0$  & $1$ \\
+$0$ & $0$ & $1$ & $0$ & $+1$ & $A_i$ \\
+$0$ & $1$ & $0$ & $0$ & $+1$ & $A_i$ \\
+$0$ & $1$ & $1$ & $0$ & $+2$ & $2A_i$ \\
+$1$ & $0$ & $0$ & $0$ & $+2$ & $2A_i$ \\
+$1$ & $0$ & $1$ & $1$ & $-1$ & $-A_i$ \\
+$1$ & $1$ & $0$ & $1$ & $-1$ & $-A_i$ \\
+$1$ & $1$ & $1$ & $1$ & $0$  & $0$ \\
 \end{tabular}
-\end{center}
-
-\newpage
-
-\noindent\textbf{Step 3 --- the top pair: a Booth digit with the carry as its bit below}
-
-\noindent The top pair is read as a signed 2-bit value and the carry $c_1$ is added to it.
-That is exactly Booth's window $(b_3, b_2, b_{\text{below}})$ with $c_1$ in place of the bit below:
-\[
-d_1 \;=\; -\,2\,b_3 + b_2 + c_1 \;\in\; \{-2, -1, 0, 1, 2\}
-\]
-
-\begin{center}
-\renewcommand{\arraystretch}{1.35}
-\begin{tabular}{c c c | r}
-$b_3$ & $b_2$ & $c_1$ & $d_1$ \\
-\hline
-$0$ & $0$ & $0$ & $0$  \\
-$0$ & $0$ & $1$ & $1$  \\
-$0$ & $1$ & $0$ & $1$  \\
-$0$ & $1$ & $1$ & $2$  \\
-$1$ & $0$ & $0$ & $-2$ \\
-$1$ & $0$ & $1$ & $-1$ \\
-$1$ & $1$ & $0$ & $-1$ \\
-$1$ & $1$ & $1$ & $0$  \\
-\end{tabular}
-\end{center}
-
-\noindent No carry leaves the top pair: there is no third digit.
-
-\vspace{0.5em}
-
-\noindent\textbf{Step 4 --- why it is exact}
-
-\noindent Group the value of Step 1 by pairs and substitute the two digits:
-\[
-V \;=\; 4\,(-\,2\,b_3 + b_2) + \underbrace{(2\,b_1 + b_0 + c)}_{s_0 \,=\, d_0 + 4\,c_1}
-\;=\; 4\,(-\,2\,b_3 + b_2 + c_1) + d_0
-\;=\; 4\,d_1 + d_0
-\]
-
-\noindent The pair of digits reaches $4 \cdot 2 + 2 = 10$ upwards and $4 \cdot (-2) - 1 = -9$
-downwards, so $[-9, 10] \supset [-8, 8]$ covers every slice with any carry in. The
-$-2$ of the Booth digit is what recovers $-6, -7, -8$; the NR4SD$^{+}$ low digit keeps
-its four values, so the low cell never needs $-2A$.
-
-\vspace{0.5em}
-
-\noindent\textbf{Step 5 --- the product and the dot product}
-\[
-A\,V \;=\; 4\,d_1 A + d_0 A
-\]
-\[
-d_0 A \in \{\, 0,\; A,\; 2A,\; -A \,\}
 \qquad\qquad
-d_1 A \in \{\, 0,\; \pm A,\; \pm 2A \,\}
+\begin{tabular}{c c c | c | l}
+$B_i^{\,3}$ & $B_i^{\,2}$ & $c_i'$ & $d_i^{\,1}$ & \multicolumn{1}{c}{$R_1$} \\
+\hline
+$0$ & $0$ & $0$ & $0$  & $0$ \\
+$0$ & $0$ & $1$ & $+1$ & $A_i$ \\
+$0$ & $1$ & $0$ & $+1$ & $A_i$ \\
+$0$ & $1$ & $1$ & $+2$ & $2A_i$ \\
+$1$ & $0$ & $0$ & $-2$ & $-2A_i$ \\
+$1$ & $0$ & $1$ & $-1$ & $-A_i$ \\
+$1$ & $1$ & $0$ & $-1$ & $-A_i$ \\
+$1$ & $1$ & $1$ & $0$  & $0$ \\
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+
+\noindent\textbf{Step 4 --- split the work}
+
+\noindent The encoding is a function of $B$ alone, so it is done in the dispatcher, which
+sends the digits $d_i^{\,j}$ --- the control signals of the selection multiplexers --- to the
+PE; only the selection of the multiple stays inside:
+\[
+\underbrace{\bigl\{\, B_i^{\,1},\, B_i^{\,0},\, c_i \,\bigr\} \;\longrightarrow\; d_i^{\,0}
+  \qquad
+  \bigl\{\, B_i^{\,3},\, B_i^{\,2},\, c_i' \,\bigr\} \;\longrightarrow\; d_i^{\,1}}_{\textstyle \text{dispatcher: encoding}}
+\qquad\longrightarrow\qquad
+\underbrace{\sum_{i=0}^{7} d_i^{\,0} \, A_i \;+\; 4 \sum_{i=0}^{7} d_i^{\,1} \, A_i}_{\textstyle \text{PE: selection}}
 \]
 
-\noindent Two partial products per lane: an NR4SD$^{+}$ cell (2 control bits) at weight $1$
-and a Booth cell (3-bit window) at weight $4$. Five control bits per lane against six for
-three NR4SD$^{+}$ digits and nine for three Booth digits.
+\noindent $d_i^{\,0}$ travels as its 2-bit code
+$\bigl(B_i^{\,0} \oplus c_i,\; B_i^{\,1} \oplus (B_i^{\,0} \wedge c_i)\bigr)$, with
+$00 \to 0$, $01 \to +1$, $10 \to +2$, $11 \to -1$, which the low cell uses directly;
+$d_i^{\,1}$ travels as the Booth window $\{B_i^{\,3}, B_i^{\,2}, c_i'\}$ with
+$c_i' = B_i^{\,1} \wedge (B_i^{\,0} \vee c_i)$, which the top cell decodes: 5 control bits per lane.
 
-\noindent The slice values are those of the Booth 2-PP sheet, only the digits differ, so
-Steps 4 and 5 of that sheet apply unchanged: a low nibble read as signed is off by
-$-16\,b_3$, the nibble above gains $+b_3$ through $c$, and the $\times 16$ of the tree
-cancels the two, element by element, whatever the grouping of the DP8s.
+\vspace{0.5em}
+
+\noindent\textbf{Step 5 --- slices of a wider $B$}
+
+\noindent A lower nibble $L$ read as signed is short by $16\,b_3$; the carry in hands $+b_3$ to the
+upper nibble $H$ in the DP8 above, and the $\times 16$ of the tree cancels the two,
+element by element, whatever the grouping of the DP8s:
+\[
+16\,(H + b_3)\,A \;+\; (L - 16\,b_3)\,A \;=\; (16\,H + L)\,A
+\]
+
+\vspace{0.5em}
+
+\noindent $B$ is the narrow operand: 2 digits $\times$ 8 lanes = 16 selections of
+10 bits per DP8, the low one over $\{0, A_i, 2A_i, -A_i\}$ (2 control bits), the top one
+over $\{0, \pm A_i, \pm 2A_i\}$ (3 control bits).
 
 \end{document}
