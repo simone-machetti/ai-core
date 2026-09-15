@@ -12,7 +12,7 @@ Create an empty project skeleton under `projects/<name>/` that plugs into the sh
 The project name comes from the skill invocation (e.g. `/add-project my-accel`).
 
 - If no name was given, ask the user for one.
-- Require a lowercase kebab-case name (letters, digits, hyphens), matching the existing convention (e.g. `ai-core`).
+- Require a lowercase kebab-case name (letters, digits, hyphens), matching the existing convention (e.g. `unified-core`).
 - Abort if `projects/<name>/` already exists — report it and stop.
 
 Use `<name>` below to mean the resolved name.
@@ -96,7 +96,7 @@ Render the title `<Name>` as a readable form of the project name (e.g. `my-accel
 
 ## 5. Register the project in the root README
 
-Add a bullet for the new project to the `Projects:` list in the root `README.md`, mirroring the existing `ai-core` entry:
+Add a bullet for the new project to the `Projects:` list in the root `README.md`, mirroring the existing `unified-core` entry:
 
 ```markdown
 - [`<name>`](projects/<name>/README.md) — <one-line description>.

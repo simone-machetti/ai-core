@@ -1,18 +1,18 @@
-# AI Core
+# Unified Core
 
-Multi-project sandbox for prototyping RTL designs, built around the `ai-core` design project. The flow (Verilator simulation, Yosys synthesis, OpenROAD place-and-route, OpenSTA timing & dynamic power) is project-agnostic and lives at the repository root; each design sits under `projects/<name>/`, so additional projects can be added later without touching the shared flow.
+Multi-project sandbox for prototyping RTL designs, built around the `unified-core` design project. The flow (Verilator simulation, Yosys synthesis, OpenROAD place-and-route, OpenSTA timing & dynamic power) is project-agnostic and lives at the repository root; each design sits under `projects/<name>/`, so additional projects can be added later without touching the shared flow.
 
 Projects:
 
-- `ai-core` — next-generation AI-Core architecture (clean redesign, in progress).
+- `unified-core` — next-generation Unified-Core architecture (clean redesign, in progress).
 
 This README documents the shared EDA flow: the `make` targets, their parameters, and the typical pipeline. For a project's designs, top-levels, RTL parameters, and experiments, see that project's own README.
 
 ## Cloning
 
 ```bash
-git clone https://github.com/simone-machetti/ai-core.git
-cd ai-core
+git clone https://github.com/simone-machetti/unified-core.git
+cd unified-core
 ```
 
 ## Quick start

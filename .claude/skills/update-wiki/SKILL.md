@@ -11,7 +11,7 @@ Background: OKF (Open Knowledge Format) defines the file format; the operating m
 
 ## 1. Resolve the target project and wiki
 
-- The project name comes from the invocation (e.g. `/update-wiki ai-core`). If none is given, default to `ai-core`.
+- The project name comes from the invocation (e.g. `/update-wiki unified-core`). If none is given, default to `unified-core`.
 - The wiki bundle is `projects/<project>/wiki/`. If it does not exist, tell the user and offer to scaffold it (`index.md` + `log.md` + the category folders) first — do not invent a different location.
 - The source material is the sibling folders `projects/<project>/{rtl,tb,doc}`. Treat these as **read-only** inputs; never edit them from this skill.
 
