@@ -16,7 +16,8 @@
 # -----------------------------------------------------------------------------
 # Knobs
 # -----------------------------------------------------------------------------
-set CHANNEL_UM $::env(SEL_MACRO_CHANNEL)
+set CHANNEL_X_UM $::env(SEL_MACRO_CHANNEL)
+set CHANNEL_Y_UM $::env(SEL_MACRO_CHANNEL_Y)
 
 # -----------------------------------------------------------------------------
 # Database handles
@@ -61,8 +62,8 @@ set core_y0 [expr {[$core yMin] / $dbu}]
 set core_w  [expr {([$core xMax] - [$core xMin]) / $dbu}]
 set core_h  [expr {([$core yMax] - [$core yMin]) / $dbu}]
 
-set span_w [expr {$N * $tile_w + ($N - 1) * $CHANNEL_UM}]
-set span_h [expr {$N * $tile_h + ($N - 1) * $CHANNEL_UM}]
+set span_w [expr {$N * $tile_w + ($N - 1) * $CHANNEL_X_UM}]
+set span_h [expr {$N * $tile_h + ($N - 1) * $CHANNEL_Y_UM}]
 set org_x  [expr {$core_x0 + ($core_w - $span_w) / 2.0}]
 set org_y  [expr {$core_y0 + ($core_h - $span_h) / 2.0}]
 
@@ -75,7 +76,7 @@ if {$org_x < $core_x0 || $org_y < $core_y0} {
 # -----------------------------------------------------------------------------
 foreach t $tiles {
     lassign $t name r c
-    set x [expr {$org_x + $c * ($tile_w + $CHANNEL_UM)}]
-    set y [expr {$org_y + $r * ($tile_h + $CHANNEL_UM)}]
+    set x [expr {$org_x + $c * ($tile_w + $CHANNEL_X_UM)}]
+    set y [expr {$org_y + $r * ($tile_h + $CHANNEL_Y_UM)}]
     place_macro -macro_name $name -location [list $x $y] -orientation R0
 }
