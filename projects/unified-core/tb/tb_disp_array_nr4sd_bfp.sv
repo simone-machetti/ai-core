@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
 // Author: Simone Machetti
+// SPDX-License-Identifier: Apache-2.0
 //
 // Description:
 //   Self-checking testbench for the NR4SD dispatch pair, disp_array_a and

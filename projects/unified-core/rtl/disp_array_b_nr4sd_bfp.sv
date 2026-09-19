@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
 // Author: Simone Machetti
+// SPDX-License-Identifier: Apache-2.0
 //
 // Description:
 //   B-operand dispatch array for the NR4SD variant - disp_array_b with the hybrid

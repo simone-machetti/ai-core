@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
 // Author: Simone Machetti
+// SPDX-License-Identifier: Apache-2.0
 //
 // Description:
 //   Per-DP8 constants for the square-BFP datapath - the const_sqr analogue for

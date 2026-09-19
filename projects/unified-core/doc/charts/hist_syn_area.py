@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 #
 # Description:
 #   Stacked-bar chart of synthesized cell area for the seven PE-grid variants -

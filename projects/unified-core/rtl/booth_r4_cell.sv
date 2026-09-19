@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
 // Author: Simone Machetti
+// SPDX-License-Identifier: Apache-2.0
 //
 // Description:
 //   Radix-4 Booth encoder cell. Maps a 3-bit selector (sel_i), derived from two

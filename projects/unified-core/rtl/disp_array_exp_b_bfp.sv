@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
 // Author: Simone Machetti
+// SPDX-License-Identifier: Apache-2.0
 //
 // Description:
 //   B-exponent dispatch array - the BFP exponent sideband counterpart of

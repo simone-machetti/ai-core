@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copied verbatim from OpenROAD-flow-scripts (flow/util/def2stream.py).
+# Copyright (c) 2018-2023, The Regents of the University of California
+# SPDX-License-Identifier: BSD-3-Clause
+# -----------------------------------------------------------------------------
+
 import pya
 import re
 import json

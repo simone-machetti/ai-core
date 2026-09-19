@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 # -----------------------------------------------------------------------------
 
 set OUT_DIR    $::env(REPO_HOME)/projects/$::env(SEL_PROJECT)/imp/$::env(SEL_OUT_DIR)/output
@@ -32,7 +33,7 @@ set PIN_LAYER_HOR   $::env(SEL_PIN_LAYERS_HOR)
 set PIN_LAYER_VER   $::env(SEL_PIN_LAYERS_VER)
 set MIN_ROUTE_LAYER M2
 set MAX_ROUTE_LAYER $::env(SEL_MAX_ROUTE_LAYER)
-set MIN_CLK_LAYER   M4
+set MIN_CLK_LAYER   $::env(SEL_MIN_CLK_LAYER)
 set TAPCELL         TAPCELL_ASAP7_75t_R
 set TIEHI_PORT      TIEHIx1_ASAP7_75t_R/H
 set TIELO_PORT      TIELOx1_ASAP7_75t_R/L

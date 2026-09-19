@@ -94,7 +94,7 @@ The tree's buffers and repair's cells are legalized into the rows, the invariant
 | Knob                 | Where           | Default       | Effect / tradeoff                                            |
 | -------------------- | --------------- | ------------- | ------------------------------------------------------------ |
 | `CLK_UNCERTAINTY_PS` | make            | 0             | Margin available to CTS-era setup repair                     |
-| `MIN_CLK_LAYER`      | `init_tech.tcl` | M4            | Clock wires' lowest layer — RC quality of the tree's routing |
+| `MIN_CLK_LAYER`      | make            | M4            | Clock wires' lowest layer — RC quality of the tree's routing |
 | CTS options          | `3_cts.tcl`     | clustering on | Tree size/power vs skew fine-tuning (`-buf_list`, targets)   |
 | `PNR_REPAIR`         | make            | 1             | `0` = no setup repair after the tree (routability-only run)  |
 

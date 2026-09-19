@@ -18,7 +18,7 @@ Routing is solved in two resolutions:
 
 ### Layer management
 
-Two policies shape where wires may go. The **layer window** (`set_routing_layers`) restricts signals to M2 up to `MAX_ROUTE_LAYER` (M7 by default): M1 belongs to cells and power rails; M8/M9, the thick 80 nm-pitch layers, join the window with `MAX_ROUTE_LAYER=M9` — worth it for a parent design routing over hardened macros, whose M1–M5 are blocked — priced with the RC estimates of `setRC_extra.tcl`, since the platform's RC file stops at M7. Clocks get a *higher floor* (M4–M7): mid/upper layers have lower resistance, giving the tree lower latency and skew. The **layer adjustment** (`set_global_routing_layer_adjustment 0.25`) tells the global router to pretend 25 % of each layer's capacity doesn't exist — safety margin so its plan doesn't saturate what the detailed router (which also fights rule geometry, not just capacity) can deliver.
+Two policies shape where wires may go. The **layer window** (`set_routing_layers`) restricts signals to M2 up to `MAX_ROUTE_LAYER` (M7 by default): M1 belongs to cells and power rails; M8/M9, the thick 80 nm-pitch layers, join the window with `MAX_ROUTE_LAYER=M9` — worth it for a parent design routing over hardened macros, whose M1–M5 are blocked — priced with the RC estimates of `setRC_extra.tcl`, since the platform's RC file stops at M7. Clocks get a *higher floor* (`MIN_CLK_LAYER`, M4 by default, so M4–M7): mid/upper layers have lower resistance, giving the tree lower latency and skew. The floor has to stay below the top of the window: a tile capped at M4, as on the `smic-n3` stack, takes `MIN_CLK_LAYER=M3`, since the router rejects a one-layer clock window. The **layer adjustment** (`set_global_routing_layer_adjustment 0.25`) tells the global router to pretend 25 % of each layer's capacity doesn't exist — safety margin so its plan doesn't saturate what the detailed router (which also fights rule geometry, not just capacity) can deliver.
 
 ### Timing repair with real wires
 
@@ -99,15 +99,15 @@ TritonRoute consumes the guides and produces DRC-clean metal, iterating (`Comple
 
 ## Knobs
 
-| Knob                  | Where           | Default | Effect / tradeoff                                                   |
-| --------------------- | --------------- | ------- | ------------------------------------------------------------------- |
-| `MIN_ROUTE_LAYER`     | `init_tech.tcl` | M2      | Bottom of the signal layer window                                   |
-| `MAX_ROUTE_LAYER`     | make            | M7      | Top of the window: M5 when hardening a tile, M9 for a macro parent  |
-| `PNR_REPAIR`          | make            | 1       | `0` = no post-route repair and no re-route (routability-only run)   |
-| `MIN_CLK_LAYER`       | `init_tech.tcl` | M4      | Clock RC quality vs stealing upper-layer capacity                   |
-| layer adjustment      | `4_route.tcl`   | 0.25    | Global-plan safety margin: wirelength vs detailed-route convergence |
-| congestion iterations | `4_route.tcl`   | 30      | Negotiation effort on marginal designs                              |
-| `PNR_THREADS`         | make            | all     | Detailed routing dominates: threads ↔ runtime ↔ memory peak         |
+| Knob                  | Where           | Default | Effect / tradeoff                                                          |
+| --------------------- | --------------- | ------- | -------------------------------------------------------------------------- |
+| `MIN_ROUTE_LAYER`     | `init_tech.tcl` | M2      | Bottom of the signal layer window                                          |
+| `MAX_ROUTE_LAYER`     | make            | M7      | Top of the window: M5 when hardening a tile, M9 for a macro parent         |
+| `PNR_REPAIR`          | make            | 1       | `0` = no post-route repair and no re-route (routability-only run)          |
+| `MIN_CLK_LAYER`       | make            | M4      | Clock RC quality vs stealing upper-layer capacity; below `MAX_ROUTE_LAYER` |
+| layer adjustment      | `4_route.tcl`   | 0.25    | Global-plan safety margin: wirelength vs detailed-route convergence        |
+| congestion iterations | `4_route.tcl`   | 30      | Negotiation effort on marginal designs                                     |
+| `PNR_THREADS`         | make            | all     | Detailed routing dominates: threads ↔ runtime ↔ memory peak                |
 
 ## Notes and caveats
 

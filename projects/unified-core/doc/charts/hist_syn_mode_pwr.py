@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 #
 # Description:
 #   Grouped stacked-bar charts of VCD-annotated dynamic power per operating mode

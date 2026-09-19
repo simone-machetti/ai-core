@@ -100,7 +100,7 @@ Place-and-route from the synthesized netlist to the final layout (`make pnr`), s
 - ASAP7 platform physical setup (routing tracks, PDN grid strategy, wire RC, RC extraction rules)
 - Hierarchical mode: hardened-block abstracts `.lef`/`.lib`/`.gds` (`MACRO_DIRS`) + project-owned macro-placement TCL (`FLOORPLAN`)
 - Project-owned pin-constraint TCL (`PINS`) and constraint additions such as per-port I/O budgets (`SDC`)
-- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `MAX_ROUTE_LAYER`, `CLK_UNCERTAINTY_PS`, `IO_DELAY_PCT`, `SDC`, `PNR_STEP`, `PNR_THREADS`, `PNR_REPAIR`, `MACRO_DIRS`, `FLOORPLAN`, `MACRO_CHANNEL`, `MACRO_CHANNEL_Y`, `PDN`, `PINS`, `PIN_LAYERS_HOR`, `PIN_LAYERS_VER`, `PIN_ARGS` (optional)
+- Make parameters: `PROJECT`, `TOP_LEVEL`, `CLK_PERIOD_NS`, `OUT_DIR`, `NETLIST_DIR` (required); `CORE_UTIL`, `ASPECT_RATIO`, `CORE_MARGIN`, `PLACE_DENSITY`, `MAX_ROUTE_LAYER`, `MIN_CLK_LAYER`, `CLK_UNCERTAINTY_PS`, `IO_DELAY_PCT`, `SDC`, `PNR_STEP`, `PNR_THREADS`, `PNR_REPAIR`, `MACRO_DIRS`, `FLOORPLAN`, `MACRO_CHANNEL`, `MACRO_CHANNEL_Y`, `PDN`, `PINS`, `PIN_LAYERS_HOR`, `PIN_LAYERS_VER`, `PIN_ARGS` (optional)
 
 **Outputs**
 

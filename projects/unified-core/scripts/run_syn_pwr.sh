@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 #
 # Description:
 #   Dynamic power runs for the four PE-grid variants - baseline (top_NxN), square

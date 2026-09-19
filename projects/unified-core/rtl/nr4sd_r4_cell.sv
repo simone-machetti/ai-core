@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
 // Author: Simone Machetti
+// SPDX-License-Identifier: Apache-2.0
 //
 // Description:
 //   NR4SD+ partial-product cell - the sibling of booth_r4_cell. Maps a 2-bit

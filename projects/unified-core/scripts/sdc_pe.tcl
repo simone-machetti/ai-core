@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 # -----------------------------------------------------------------------------
 #
 # I/O timing budget for hardening the `pe` tile as a hard macro: the share of

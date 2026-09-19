@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 # -----------------------------------------------------------------------------
 #
 # Pre-route wire RC estimates for the layers the platform's setRC.tcl does not

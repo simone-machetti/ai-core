@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 # -----------------------------------------------------------------------------
 
 place_macro -macro_name dp_8_i -location {8.4 8.4} -orientation R0

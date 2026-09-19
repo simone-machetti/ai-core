@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 # -----------------------------------------------------------------------------
 #
 # Macro floorplan for the baseline top_NxN grid. Places the N x N hardened `pe`

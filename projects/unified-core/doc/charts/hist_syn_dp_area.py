@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 #
 # Description:
 #   Bar chart of synthesized cell area at the DOT-PRODUCT level for the five PE

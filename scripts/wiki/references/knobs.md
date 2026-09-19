@@ -67,22 +67,22 @@ Every tunable of the flow in one place: the make-level parameters, the script-le
 
 ## Clock tree
 
-| Knob            | Level  | Default                           | Effect                                                                                       | Doc                          |
-| --------------- | ------ | --------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------- |
-| `MIN_CLK_LAYER` | script | M4                                | Clock wiring quality (RC) ↔ upper-layer capacity                                             | [08](../steps/08_pnr_cts.md) |
-| CTS options     | script | clustering on, auto buffers       | Tree size/power ↔ skew; `-buf_list` pins the masters                                         | [08](../steps/08_pnr_cts.md) |
-| `DONT_USE` list | script | fractional drives, `SDF*`, `ICG*` | What repair/CTS may *not* insert or swap to; relaxing `ICG*` would allow clock-gate resizing | [08](../steps/08_pnr_cts.md) |
+| Knob            | Level  | Default                           | Effect                                                                                         | Doc                          |
+| --------------- | ------ | --------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------- |
+| `MIN_CLK_LAYER` | make   | M4                                | Clock wiring quality (RC) ↔ upper-layer capacity; M3 for a tile capped at M4 (`smic-n3` stack) | [08](../steps/08_pnr_cts.md) |
+| CTS options     | script | clustering on, auto buffers       | Tree size/power ↔ skew; `-buf_list` pins the masters                                           | [08](../steps/08_pnr_cts.md) |
+| `DONT_USE` list | script | fractional drives, `SDF*`, `ICG*` | What repair/CTS may *not* insert or swap to; relaxing `ICG*` would allow clock-gate resizing   | [08](../steps/08_pnr_cts.md) |
 
 ## Routing
 
-| Knob                  | Level  | Default | Effect                                                                                         | Doc                                                               |
-| --------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `MIN_ROUTE_LAYER`     | script | M2      | Bottom of the signal layer window                                                              | [09](../steps/09_pnr_route.md)                                    |
-| `MAX_ROUTE_LAYER`     | make   | M7      | Top of the window: M5 when hardening a tile, M9 for a macro parent (RC from `setRC_extra.tcl`) | [09](../steps/09_pnr_route.md)                                    |
-| `PNR_REPAIR`          | make   | 1       | `0` = routability-only run: no design/timing repair, single global route, unbuffered netlist   | [07](../steps/07_pnr_place.md), [09](../steps/09_pnr_route.md)    |
-| layer adjustment      | script | 0.25    | Global-plan capacity haircut. ↑ = safer detailed routing, longer wires                         | [09](../steps/09_pnr_route.md)                                    |
-| congestion iterations | script | 30      | Negotiation effort on marginal designs                                                         | [09](../steps/09_pnr_route.md)                                    |
-| `PNR_THREADS`         | make   | 0 (all) | Parallelism. ↑ = faster routing, higher memory peak — the memory relief valve is lowering it   | [05](../steps/05_pnr_overview.md), [09](../steps/09_pnr_route.md) |
+| Knob                  | Level  | Default | Effect                                                                                                                            | Doc                                                               |
+| --------------------- | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `MIN_ROUTE_LAYER`     | script | M2      | Bottom of the signal layer window                                                                                                 | [09](../steps/09_pnr_route.md)                                    |
+| `MAX_ROUTE_LAYER`     | make   | M7      | Top of the window: M5 when hardening a tile, M9 for a macro parent (RC from `setRC_extra.tcl`); M4 and M10 on the `smic-n3` stack | [09](../steps/09_pnr_route.md)                                    |
+| `PNR_REPAIR`          | make   | 1       | `0` = routability-only run: no design/timing repair, single global route, unbuffered netlist                                      | [07](../steps/07_pnr_place.md), [09](../steps/09_pnr_route.md)    |
+| layer adjustment      | script | 0.25    | Global-plan capacity haircut. ↑ = safer detailed routing, longer wires                                                            | [09](../steps/09_pnr_route.md)                                    |
+| congestion iterations | script | 30      | Negotiation effort on marginal designs                                                                                            | [09](../steps/09_pnr_route.md)                                    |
+| `PNR_THREADS`         | make   | 0 (all) | Parallelism. ↑ = faster routing, higher memory peak — the memory relief valve is lowering it                                      | [05](../steps/05_pnr_overview.md), [09](../steps/09_pnr_route.md) |
 
 ## Finishing and outputs
 
@@ -94,14 +94,14 @@ Every tunable of the flow in one place: the make-level parameters, the script-le
 
 ## Hierarchical mode
 
-| Knob                | Default | Effect                                                                                     | Doc                                         |
-| ------------------- | ------- | ------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| `MACRO_DIRS`        | none    | The master switch: binds hardened runs as macros in pnr and post-pnr-*                     | [hierarchical](../concepts/hierarchical.md) |
-| `FLOORPLAN`         | none    | The macro-placement file — where component positions are decided                           | [hierarchical](../concepts/hierarchical.md) |
-| `cut_rows` halo     | 1 µm    | Macro keep-out ↔ lost placement area                                                       | [hierarchical](../concepts/hierarchical.md) |
-| block `CORE_UTIL`   | 40      | Hardening density: block routability ↔ parent area/power                                   | [hierarchical](../concepts/hierarchical.md) |
-| block layers/PDN    | M7/auto | `MAX_ROUTE_LAYER=M5` + `PDN=pdn_tile.tcl` at hardening: M5 pins, M6/M7 free for the parent | [hierarchical](../concepts/hierarchical.md) |
-| `MACRO_CHANNEL(_Y)` | 10      | Gap between macro columns / rows; wider = routable channels ↔ die area                     | [hierarchical](../concepts/hierarchical.md) |
+| Knob                | Default | Effect                                                                                                                               | Doc                                         |
+| ------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `MACRO_DIRS`        | none    | The master switch: binds hardened runs as macros in pnr and post-pnr-*                                                               | [hierarchical](../concepts/hierarchical.md) |
+| `FLOORPLAN`         | none    | The macro-placement file — where component positions are decided                                                                     | [hierarchical](../concepts/hierarchical.md) |
+| `cut_rows` halo     | 1 µm    | Macro keep-out ↔ lost placement area                                                                                                 | [hierarchical](../concepts/hierarchical.md) |
+| block `CORE_UTIL`   | 40      | Hardening density: block routability ↔ parent area/power                                                                             | [hierarchical](../concepts/hierarchical.md) |
+| block layers/PDN    | M7/auto | `MAX_ROUTE_LAYER=M5` + `PDN=pdn_tile.tcl` at hardening: M5 pins, M6/M7 free for the parent; one layer lower with the `smic-n3` files | [hierarchical](../concepts/hierarchical.md) |
+| `MACRO_CHANNEL(_Y)` | 10      | Gap between macro columns / rows; wider = routable channels ↔ die area                                                               | [hierarchical](../concepts/hierarchical.md) |
 
 ## The classic ladders
 

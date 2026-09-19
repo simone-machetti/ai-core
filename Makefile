@@ -1,5 +1,6 @@
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 # -----------------------------------------------------------------------------
 
 PROJECT            ?=
@@ -20,6 +21,7 @@ ASPECT_RATIO       ?= 1.0
 CORE_MARGIN        ?= 2
 PLACE_DENSITY      ?= 0.60
 MAX_ROUTE_LAYER    ?= M7
+MIN_CLK_LAYER      ?= M4
 CLK_UNCERTAINTY_PS ?= 0
 PNR_STEP           ?= all
 PNR_THREADS        ?= 0
@@ -61,6 +63,7 @@ export SEL_ASPECT_RATIO       := $(ASPECT_RATIO)
 export SEL_CORE_MARGIN        := $(CORE_MARGIN)
 export SEL_PLACE_DENSITY      := $(PLACE_DENSITY)
 export SEL_MAX_ROUTE_LAYER    := $(MAX_ROUTE_LAYER)
+export SEL_MIN_CLK_LAYER      := $(MIN_CLK_LAYER)
 export SEL_CLK_UNCERTAINTY_PS := $(CLK_UNCERTAINTY_PS)
 export SEL_PNR_STEP           := $(PNR_STEP)
 export SEL_PNR_THREADS        := $(PNR_THREADS)

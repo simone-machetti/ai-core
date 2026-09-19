@@ -3,14 +3,20 @@
 # SPDX-License-Identifier: Apache-2.0
 # -----------------------------------------------------------------------------
 #
-# Power grid for a block hardened as a hard macro that will be assembled under a
-# parent reserving the upper layers for over-macro routing. Rails on M1/M2 plus a
-# single M5 mesh, exposed as M5 power pins; nothing is placed on M6/M7, so the
-# hardened block obstructs only M1-M5 and leaves M6+M7 free for the parent to
-# route over the macro. Pair with MAX_ROUTE_LAYER=M5 when hardening the block,
-# and with pdn_macro.tcl (which drops the parent M6 straps onto these M5 pins) in
-# the assembly. Mirrors the ASAP7 grid-strategy stripe geometry, topped at M5.
-# This is the file for the stock ASAP7 stack; BEOL=smic-n3 takes pdn_tile_smic-n3.tcl.
+# pdn_tile.tcl for the smic-n3 metal stack (BEOL=smic-n3): power grid for a block
+# hardened as a hard macro under a parent that routes over it. On this stack the
+# first coarse layer is M4, so the block is capped one layer lower than on
+# ASAP7: rails on M1/M2, vertical M3 straps that tie the rails together, and a
+# horizontal M4 mesh exposed as the block power pins. M4 runs parallel to the
+# rails and cannot tie them by itself, hence the M3 straps. Nothing is placed on
+# M5 or above, so the hardened block obstructs only M1-M4. Pair with
+# MAX_ROUTE_LAYER=M4 and PIN_LAYERS_VER=M3 when hardening the block, and with
+# pdn_macro_smic-n3.tcl (which drops the parent M5 straps onto these M4 pins)
+# in the assembly.
+#
+# The M3 straps are ASAP7's M5 straps scaled by the pitch ratio 44/48, which
+# lands on 0.11, a legal M3 special-route width; the M4 straps are the 80 nm
+# strap of the stack's flat strategy, turned horizontal.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -29,11 +35,13 @@ global_connect
 set_voltage_domain -name {CORE} -power {VDD} -ground {VSS}
 
 # -----------------------------------------------------------------------------
-# Standard cell grid (M1/M2 rails, M5 mesh exposed as the block power pins)
+# Standard cell grid (M1/M2 rails, M3 ties, M4 mesh exposed as the block power pins)
 # -----------------------------------------------------------------------------
-define_pdn_grid -name {top} -voltage_domains {CORE} -pins {M5}
+define_pdn_grid -name {top} -voltage_domains {CORE} -pins {M4}
 add_pdn_stripe -grid {top} -layer {M1} -width {0.018} -pitch {0.54} -offset {0} -followpins
 add_pdn_stripe -grid {top} -layer {M2} -width {0.018} -pitch {0.54} -offset {0} -followpins
-add_pdn_stripe -grid {top} -layer {M5} -width {0.12} -spacing {0.072} -pitch {5.4} -offset {0.300}
+add_pdn_stripe -grid {top} -layer {M3} -width {0.11} -spacing {0.066} -pitch {4.95} -offset {0.275}
+add_pdn_stripe -grid {top} -layer {M4} -width {0.2}  -spacing {0.12}  -pitch {9.0}  -offset {0.5}
 add_pdn_connect -grid {top} -layers {M1 M2}
-add_pdn_connect -grid {top} -layers {M2 M5}
+add_pdn_connect -grid {top} -layers {M2 M3}
+add_pdn_connect -grid {top} -layers {M3 M4}

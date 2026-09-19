@@ -1,6 +1,6 @@
 # Learn ASIC Flow
 
-A complete, code-grounded walk through the ASIC implementation flow of this repository — from RTL to a routed, power-analyzed layout in ASAP7. Every page quotes the flow scripts in `scripts/` verbatim and links back to them. See [log.md](log.md) for the change history.
+A complete, code-grounded walk through the ASIC implementation flow of this repository — from RTL to a routed, power-analyzed layout in ASAP7. Every page quotes the flow scripts in `scripts/` verbatim and links back to them.
 
 > Organized as: **concepts/** — the cross-cutting background every step assumes (the pipeline itself, the PDK, the timing constraints, the hierarchical macro flow); **steps/** — one page per pipeline stage, numbered in flow order, each a walkthrough of the scripts that implement it; **references/** — lookup material that is consulted rather than read.
 

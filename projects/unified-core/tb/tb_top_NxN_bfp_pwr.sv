@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
 // Author: Simone Machetti
+// SPDX-License-Identifier: Apache-2.0
 //
 // Description:
 //   Power-stimulus testbench for the BFP N x N PE grid, top_NxN_bfp. It drives

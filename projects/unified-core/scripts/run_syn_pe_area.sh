@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # Author: Simone Machetti
+# SPDX-License-Identifier: Apache-2.0
 #
 # Description:
 #   Intra-PE area breakdown for the four PE variants - baseline (pe), square
